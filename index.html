@@ -2257,7 +2257,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       uiPrefs: 'bruno-ac-ui-prefs-v1',
       catOpen: 'bruno-ac-cat-open-v1'
     },
-    swCache: 'bruno-ac-v4',
+    swCache: 'bruno-ac-v5',
     exportPrefix: 'bruno-ac',
     product: 'bruno-ac',
     /* Demo changeout QA expects (matches BRUNO_SEED.meta.verified) */
@@ -3952,6 +3952,29 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       if (rules[i][1].test(s)) return rules[i][0];
     }
     return 'Other';
+  }
+
+  function catalogUsedKeys() {
+    var used = {};
+    var rows = (state && state.materialsUsed) || [];
+    for (var i = 0; i < rows.length; i++) {
+      var m = rows[i];
+      if (!m) continue;
+      var q = Number(m.qty) || 0;
+      if (q <= 0) continue;
+      if (m.id) used['id:' + String(m.id)] = true;
+      if (m.item) used['item:' + String(m.item).toLowerCase()] = true;
+      if (m.part) used['part:' + String(m.part).toLowerCase()] = true;
+    }
+    return used;
+  }
+
+  function isCatalogRowUsed(c, used) {
+    if (!c || !used) return false;
+    if (c.id && used['id:' + String(c.id)]) return true;
+    if (c.item && used['item:' + String(c.item).toLowerCase()]) return true;
+    if (c.part && String(c.part).trim() && used['part:' + String(c.part).toLowerCase()]) return true;
+    return false;
   }
 
   var CAT_ORDER = [
