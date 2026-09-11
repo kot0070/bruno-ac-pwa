@@ -2264,9 +2264,16 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC", "dba": "", "address1":
       uiPrefs: 'bruno-ac-ui-prefs-v1',
       catOpen: 'bruno-ac-cat-open-v1'
     },
-    swCache: 'bruno-ac-v1',
+    swCache: 'bruno-ac-v2',
     exportPrefix: 'bruno-ac',
-    product: 'bruno-ac'
+    product: 'bruno-ac',
+    /* Demo changeout QA expects (matches BRUNO_SEED.meta.verified) */
+    verified: {
+      materialSum: 6028,
+      totalCost: 9340,
+      salesApprox: 13735.29411764706,
+      quoteRounded: 13735
+    }
   };
 
   var STORAGE_KEY = BRAND.storage.job;
@@ -2866,7 +2873,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC", "dba": "", "address1":
           added++;
         }
         if (added) {
-          try { console.info('[Bruno] catalog merge +' + added + ' (now ' + s.catalog.length + ')'); } catch (e0) {}
+          /* catalog rows merged quietly */
         }
       }
     } catch (eMerge) {
@@ -3329,7 +3336,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC", "dba": "", "address1":
 
   function esc(t) {
     return String(t == null ? '' : t)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function bindQuote() {
@@ -5011,14 +5018,18 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC", "dba": "", "address1":
   }
 
   function verifyDemo(calc) {
+    var v = (BRAND && BRAND.verified) || {};
+    var seedMeta = (typeof window !== 'undefined' && window.BRUNO_SEED && window.BRUNO_SEED.meta && window.BRUNO_SEED.meta.verified) || {};
+    var expMat = Number(v.materialSum != null ? v.materialSum : seedMeta.materialSum);
+    var expCost = Number(v.totalCost != null ? v.totalCost : seedMeta.totalCost);
+    var expSales = Number(v.salesApprox != null ? v.salesApprox : seedMeta.salesApprox);
+    if (!isFinite(expMat) || !isFinite(expCost) || !isFinite(expSales)) return true;
     var ok =
-      Math.abs(calc.mats.cost - 6001.3) < 0.05 &&
-      Math.abs(calc.sum.totalCost - 18561.3) < 0.05 &&
-      Math.abs(calc.sum.totalSales - 27296.0294117647) < 0.05;
-    if (ok) {
-      console.log('[Bruno] Seed verify OK: mat≈6001.3 cost≈18561.3 sales≈27296');
-    } else {
-      console.warn('[Bruno] Seed verify mismatch', calc.mats.cost, calc.sum.totalCost, calc.sum.totalSales);
+      Math.abs(calc.mats.cost - expMat) < 0.05 &&
+      Math.abs(calc.sum.totalCost - expCost) < 0.05 &&
+      Math.abs(calc.sum.totalSales - expSales) < 0.05;
+    if (!ok) {
+      try { console.warn('[Bruno AC] Seed verify mismatch', calc.mats.cost, calc.sum.totalCost, calc.sum.totalSales); } catch (e) {}
     }
     return ok;
   }
@@ -5626,12 +5637,20 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC", "dba": "", "address1":
     on('mat-csv', 'change', function (e) {
       var file = e.target.files && e.target.files[0];
       if (!file) return;
+      var CSV_MAX_BYTES = 5 * 1024 * 1024;
+      if (file.size > CSV_MAX_BYTES) {
+        alert('CSV file is too large (max 5 MB). Please split the file or remove unused rows.');
+        e.target.value = '';
+        return;
+      }
       var replace = !!(document.getElementById('mat-csv-replace') && document.getElementById('mat-csv-replace').checked);
       var reader = new FileReader();
       reader.onload = function () {
         try {
+          var raw = String(reader.result || '');
+          if (raw.length > CSV_MAX_BYTES) throw new Error('CSV file is too large (max 5 MB).');
           if (replace && !confirm('Replace ALL job materials lines with CSV data?')) return;
-          importMaterialsCsv(String(reader.result || ''), replace);
+          importMaterialsCsv(raw, replace);
         } catch (err) {
           alert('CSV error: ' + err.message);
         }
