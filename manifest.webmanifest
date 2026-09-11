@@ -1,7 +1,7 @@
 {
   "name": "Bruno AC Estimating",
   "short_name": "Bruno AC",
-  "description": "Offline HVAC / air-conditioning estimating, quotes, and job costing. © 2026 Bruno AC. All rights reserved.",
+  "description": "Offline HVAC / air-conditioning estimating, quotes, and job costing. © 2026 Bruno AC Services LLC. All rights reserved.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
