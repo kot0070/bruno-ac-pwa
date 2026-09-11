@@ -1,5 +1,5 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v5';
+const CACHE = 'bruno-ac-v6';
 const SHELL = [
   './',
   './index.html',
@@ -45,4 +45,8 @@ self.addEventListener('fetch', (event) => {
       return cached || net;
     })
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
