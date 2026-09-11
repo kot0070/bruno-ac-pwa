@@ -15,3 +15,7 @@
 Unchanged: mat 6028, equip 600, labor 2712, cost 9340, sales 13735.294…, ROUND 13735.
 
 Branding: Bruno AC Services LLC
+
+
+## M3 follow-up (recheck)
+Also guarded `Summary!D35` and `Summary!D39` so Quote Total does not `#DIV/0!` when profit≥1 (H20/22/24/26 alone were insufficient).
