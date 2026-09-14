@@ -36,28 +36,20 @@ function renderSubnav(g){
   subnav.innerHTML=g.tabs.map(function(t){var id=t[0],label=t[1],isTool=id==='__calculator',active=id===tab;return (isTool?'<a href="./ac-calculator.html"':'<button type="button"')+' class="phase2-sub-btn'+(active?' active':'')+(isTool?' tool-link':'')+'" '+(isTool?'':'data-tab="'+esc(id)+'"')+(active?' aria-current="page"':'')+'>'+esc(label)+(isTool?' ↗':'')+(isTool?'</a>':'</button>')}).join('');
   var ctx=document.getElementById('phase2-context');
   if(ctx){var match=g.tabs.filter(function(t){return t[0]===tab})[0];ctx.textContent=g.label+' · '+(match?match[1]:(lastByGroup[g.id]||g.defaultTab))}
-  scheduleStickySync();
+  schedulePhase2NavMeasure();
 }
 function syncFromSource(){
   var tab=activeTab();var g=findGroupByTab(tab);currentGroup=g.id;lastByGroup[g.id]=tab;renderGroups();renderBottom();renderSubnav(g);
 }
-function syncStickyMetrics(){
+function syncPhase2NavHeight(){
   if(!shell)return;
-  var root=document.documentElement;
-  var header=document.querySelector('.app-header');
-  var totals=document.querySelector('.live-totals');
-  var headerH=header?Math.round(header.getBoundingClientRect().height):0;
-  var totalsH=totals?Math.round(totals.getBoundingClientRect().height):0;
   var navH=window.innerWidth>=768?Math.round(shell.getBoundingClientRect().height):0;
-  root.style.setProperty('--sticky-totals-top',headerH+'px');
-  root.style.setProperty('--sticky-nav-top',(headerH+totalsH)+'px');
-  root.style.setProperty('--nav-h',navH+'px');
-  root.style.setProperty('--sticky-chrome',(headerH+totalsH+navH)+'px');
+  document.documentElement.style.setProperty('--phase2-nav-h',navH+'px');
 }
-function scheduleStickySync(){
-  requestAnimationFrame(syncStickyMetrics);
-  setTimeout(syncStickyMetrics,80);
-  setTimeout(syncStickyMetrics,360);
+function schedulePhase2NavMeasure(){
+  requestAnimationFrame(syncPhase2NavHeight);
+  setTimeout(syncPhase2NavHeight,80);
+  setTimeout(syncPhase2NavHeight,360);
 }
 function bind(){
   shell.addEventListener('click',function(e){
@@ -66,12 +58,10 @@ function bind(){
   });
   bottom.addEventListener('click',function(e){var gb=e.target.closest('[data-group]');if(gb)setGroup(gb.getAttribute('data-group'),true)});
   if(sourceNav){new MutationObserver(function(muts){for(var i=0;i<muts.length;i++){if(muts[i].type==='attributes'&&muts[i].attributeName==='class'){syncFromSource();break}}}).observe(sourceNav,{subtree:true,attributes:true,attributeFilter:['class']})}
-  window.addEventListener('resize',function(){requestAnimationFrame(syncStickyMetrics)});
+  window.addEventListener('resize',function(){requestAnimationFrame(syncPhase2NavHeight)});
   if('ResizeObserver' in window){
-    resizeObserver=new ResizeObserver(function(){requestAnimationFrame(syncStickyMetrics)});
+    resizeObserver=new ResizeObserver(function(){requestAnimationFrame(syncPhase2NavHeight)});
     resizeObserver.observe(shell);
-    var header=document.querySelector('.app-header');var totals=document.querySelector('.live-totals');
-    if(header)resizeObserver.observe(header);if(totals)resizeObserver.observe(totals);
   }
 }
 function init(){
@@ -81,7 +71,7 @@ function init(){
   sourceNav.parentNode.insertBefore(shell,sourceNav.nextSibling);subnav=shell.querySelector('.phase2-subnav');
   bottom=document.createElement('nav');bottom.className='phase2-bottom-nav no-print';bottom.setAttribute('aria-label','Bruno AC mobile navigation');document.body.appendChild(bottom);
   var initial=activeTab();var initialGroup=findGroupByTab(initial);currentGroup=initialGroup.id;lastByGroup[initialGroup.id]=initial;
-  renderGroups();renderBottom();renderSubnav(initialGroup);bind();document.body.classList.add('phase2-nav-ready');scheduleStickySync();
+  renderGroups();renderBottom();renderSubnav(initialGroup);bind();document.body.classList.add('phase2-nav-ready');document.documentElement.classList.add('phase2-nav-ready');schedulePhase2NavMeasure();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
