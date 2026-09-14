@@ -10,8 +10,9 @@ var GROUPS=[
 var currentGroup='job';
 var shell=null,subnav=null,bottom=null,sourceNav=null,resizeObserver=null;
 var calculatorPanel=null,calculatorFrame=null,calculatorActive=false,frameResizeObserver=null;
+var resultRail=null,resultMirror=null,resultMutationObserver=null;
 var lastByGroup={job:'quote',estimate:'materials',tools:'__calculator',billing:'tm',more:'dispatch'};
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;')}
 function getGroup(id){return GROUPS.filter(function(x){return x.id===id})[0]||GROUPS[0]}
 function findGroupByTab(tab){for(var i=0;i<GROUPS.length;i++){for(var j=0;j<GROUPS[i].tabs.length;j++){if(GROUPS[i].tabs[j][0]===tab)return GROUPS[i]}}return GROUPS[0]}
 function sourceActiveTab(){var b=sourceNav&&sourceNav.querySelector('.nav-tab.active');return b?b.getAttribute('data-tab'):'quote'}
@@ -20,8 +21,8 @@ function ensureCalculatorPanel(){
   if(calculatorPanel)return calculatorPanel;
   var main=document.querySelector('main');if(!main)return null;
   calculatorPanel=document.createElement('section');calculatorPanel.id='panel-calculator';calculatorPanel.className='panel phase3-calculator-panel';calculatorPanel.setAttribute('aria-label','AC Calculator');
-  calculatorPanel.innerHTML='<div class="phase3-calculator-head"><div><h2>AC Calculator</h2><p>Code-aware scope and BOM for the current Bruno job.</p></div><button type="button" class="btn btn-sm" id="phase3-open-standalone">Open standalone</button></div><iframe class="phase3-calculator-frame" title="Bruno AC Code and BOM Calculator" src="./ac-calculator.html"></iframe>';
-  main.appendChild(calculatorPanel);calculatorFrame=calculatorPanel.querySelector('iframe');
+  calculatorPanel.innerHTML='<div class="phase3-calculator-head"><div><h2>AC Calculator</h2><p>Code-aware scope and BOM for the current Bruno job.</p></div><button type="button" class="btn btn-sm" id="phase3-open-standalone">Open standalone</button></div><div class="phase4-result-rail"><aside class="phase4-result-mirror" aria-label="Calculation result"></aside></div><iframe class="phase3-calculator-frame" title="Bruno AC Code and BOM Calculator" src="./ac-calculator.html"></iframe>';
+  main.appendChild(calculatorPanel);calculatorFrame=calculatorPanel.querySelector('iframe');resultRail=calculatorPanel.querySelector('.phase4-result-rail');resultMirror=calculatorPanel.querySelector('.phase4-result-mirror');
   var standalone=calculatorPanel.querySelector('#phase3-open-standalone');if(standalone)standalone.addEventListener('click',function(){window.location.href='./ac-calculator.html'});
   calculatorFrame.addEventListener('load',function(){calculatorFrame.dataset.loaded='1';prepareEmbeddedCalculator()});
   return calculatorPanel;
@@ -36,6 +37,31 @@ function fitCalculatorFrame(){
     var doc=calculatorFrame.contentDocument;if(!doc)return;var wrap=doc.querySelector('.wrap');if(!wrap)return;
     var rect=wrap.getBoundingClientRect();var next=Math.max(760,Math.ceil(rect.height+wrap.offsetTop+16));var current=Math.round(calculatorFrame.getBoundingClientRect().height);
     if(Math.abs(current-next)>1)calculatorFrame.style.height=next+'px';
+  }catch(e){}
+}
+function syncResultMirror(){
+  if(!calculatorPanel||!calculatorFrame||!resultRail||!resultMirror)return;
+  if(!calculatorActive||window.innerWidth<1180){resultRail.classList.remove('show');return}
+  try{
+    var doc=calculatorFrame.contentDocument;if(!doc)return;
+    var source=doc.getElementById('calcExplain');var input=doc.querySelector('.grid>.card:first-child');
+    if(!source||!input){resultRail.classList.remove('show');return}
+    resultMirror.innerHTML=source.innerHTML;
+    resultMirror.className='phase4-result-mirror'+(source.classList.contains('stale-result')?' stale-result':'');
+    var sr=source.getBoundingClientRect(),ir=input.getBoundingClientRect();
+    var top=calculatorFrame.offsetTop+sr.top,left=calculatorFrame.offsetLeft+sr.left;
+    var railHeight=Math.max(sr.height,ir.bottom-sr.top);
+    resultRail.style.top=Math.round(top)+'px';resultRail.style.left=Math.round(left)+'px';resultRail.style.width=Math.round(sr.width)+'px';resultRail.style.height=Math.round(railHeight)+'px';
+    var head=calculatorPanel.querySelector('.phase3-calculator-head');calculatorPanel.style.setProperty('--phase4-calc-head-h',(head?Math.ceil(head.getBoundingClientRect().height):0)+'px');
+    resultRail.classList.add('show');
+  }catch(e){resultRail.classList.remove('show')}
+}
+function bindResultMirrorSource(){
+  if(resultMutationObserver){try{resultMutationObserver.disconnect()}catch(e){}resultMutationObserver=null}
+  if(!calculatorFrame)return;
+  try{
+    var doc=calculatorFrame.contentDocument;var source=doc&&doc.getElementById('calcExplain');if(!source)return;
+    if('MutationObserver' in window){resultMutationObserver=new MutationObserver(function(){requestAnimationFrame(function(){syncResultMirror();fitCalculatorFrame()})});resultMutationObserver.observe(source,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']})}
   }catch(e){}
 }
 function prepareEmbeddedCalculator(){
@@ -57,11 +83,12 @@ function prepareEmbeddedCalculator(){
       +'.bruno-wide-calculator .input-groups{gap:8px}'
       +'.bruno-wide-calculator .input-group>summary{min-height:46px;padding:8px 10px}'
       +'.bruno-wide-calculator .input-group-body{padding:0 10px 10px}'
-      +'.bruno-wide-calculator #calcExplain{position:sticky;top:12px;align-self:start}'
+      +'.bruno-wide-calculator #calcExplain{visibility:hidden}'
       ;doc.head.appendChild(style);
-    fitCalculatorFrame();setTimeout(fitCalculatorFrame,100);setTimeout(fitCalculatorFrame,500);
+    bindResultMirrorSource();fitCalculatorFrame();syncResultMirror();
+    setTimeout(function(){fitCalculatorFrame();syncResultMirror()},100);setTimeout(function(){fitCalculatorFrame();syncResultMirror()},500);
     if(frameResizeObserver)try{frameResizeObserver.disconnect()}catch(e2){}
-    if('ResizeObserver' in window){frameResizeObserver=new ResizeObserver(function(){requestAnimationFrame(fitCalculatorFrame)});frameResizeObserver.observe(doc.querySelector('.wrap')||doc.documentElement)}
+    if('ResizeObserver' in window){frameResizeObserver=new ResizeObserver(function(){requestAnimationFrame(function(){fitCalculatorFrame();syncResultMirror()})});frameResizeObserver.observe(doc.querySelector('.wrap')||doc.documentElement)}
   }catch(e){}
 }
 function showCalculatorPanel(){
@@ -70,21 +97,22 @@ function showCalculatorPanel(){
   var panels=document.querySelectorAll('.panel');for(var i=0;i<panels.length;i++)panels[i].classList.remove('active');p.classList.add('active');
   renderGroups();renderBottom();renderSubnav(getGroup('tools'));schedulePhase2NavMeasure();
   if(existed&&calculatorFrame&&calculatorFrame.dataset.loaded==='1'){try{calculatorFrame.contentWindow.location.reload()}catch(e){}}
+  else requestAnimationFrame(syncResultMirror);
 }
-function hideCalculatorPanel(){calculatorActive=false;if(calculatorPanel)calculatorPanel.classList.remove('active')}
+function hideCalculatorPanel(){calculatorActive=false;if(calculatorPanel)calculatorPanel.classList.remove('active');if(resultRail)resultRail.classList.remove('show')}
 function openTab(tab){if(tab==='__calculator'){showCalculatorPanel();return}hideCalculatorPanel();var b=sourceNav&&sourceNav.querySelector('.nav-tab[data-tab="'+tab+'"]');if(b){b.click();setTimeout(syncFromSource,0)}}
 function setGroup(id,openPreferred){var g=getGroup(id);currentGroup=g.id;renderGroups();renderBottom();renderSubnav(g);if(openPreferred)openTab(lastByGroup[g.id]||g.defaultTab)}
 function renderGroups(){var host=shell.querySelector('.phase2-groups');host.innerHTML=GROUPS.map(function(g){var active=g.id===currentGroup;return '<button type="button" class="phase2-group-btn'+(active?' active':'')+'" data-group="'+esc(g.id)+'" aria-pressed="'+(active?'true':'false')+'"'+(active?' aria-current="page"':'')+'>'+esc(g.label)+'</button>'}).join('')+'<span class="phase2-context" id="phase2-context"></span>'}
 function renderBottom(){bottom.innerHTML=GROUPS.map(function(g){var active=g.id===currentGroup;return '<button type="button" class="phase2-bottom-btn'+(active?' active':'')+'" data-group="'+esc(g.id)+'" aria-pressed="'+(active?'true':'false')+'"'+(active?' aria-current="page"':'')+'><span class="ico">'+esc(g.icon)+'</span><span>'+esc(g.label)+'</span></button>'}).join('')}
 function renderSubnav(g){var tab=activeTab();subnav.innerHTML=g.tabs.map(function(t){var id=t[0],label=t[1],active=id===tab;return '<button type="button" class="phase2-sub-btn'+(active?' active':'')+'" data-tab="'+esc(id)+'"'+(active?' aria-current="page"':'')+'>'+esc(label)+'</button>'}).join('');var ctx=document.getElementById('phase2-context');if(ctx){var match=g.tabs.filter(function(t){return t[0]===tab})[0];ctx.textContent=g.label+' · '+(match?match[1]:(lastByGroup[g.id]||g.defaultTab))}schedulePhase2NavMeasure()}
-function syncFromSource(){calculatorActive=false;var tab=sourceActiveTab();var g=findGroupByTab(tab);currentGroup=g.id;lastByGroup[g.id]=tab;renderGroups();renderBottom();renderSubnav(g)}
+function syncFromSource(){calculatorActive=false;if(resultRail)resultRail.classList.remove('show');var tab=sourceActiveTab();var g=findGroupByTab(tab);currentGroup=g.id;lastByGroup[g.id]=tab;renderGroups();renderBottom();renderSubnav(g)}
 function syncPhase2NavHeight(){if(!shell)return;var navH=window.innerWidth>=768?Math.round(shell.getBoundingClientRect().height):0;document.documentElement.style.setProperty('--phase2-nav-h',navH+'px')}
 function schedulePhase2NavMeasure(){requestAnimationFrame(syncPhase2NavHeight);setTimeout(syncPhase2NavHeight,80);setTimeout(syncPhase2NavHeight,360)}
 function bind(){
   shell.addEventListener('click',function(e){var gb=e.target.closest('[data-group]');if(gb&&shell.contains(gb)){setGroup(gb.getAttribute('data-group'),true);return}var tb=e.target.closest('[data-tab]');if(tb&&shell.contains(tb))openTab(tb.getAttribute('data-tab'))});
   bottom.addEventListener('click',function(e){var gb=e.target.closest('[data-group]');if(gb)setGroup(gb.getAttribute('data-group'),true)});
   if(sourceNav)new MutationObserver(function(muts){for(var i=0;i<muts.length;i++){if(muts[i].type==='attributes'&&muts[i].attributeName==='class'){syncFromSource();break}}}).observe(sourceNav,{subtree:true,attributes:true,attributeFilter:['class']});
-  window.addEventListener('resize',function(){requestAnimationFrame(function(){syncPhase2NavHeight();syncCalculatorWideClass();fitCalculatorFrame()})});
+  window.addEventListener('resize',function(){requestAnimationFrame(function(){syncPhase2NavHeight();syncCalculatorWideClass();fitCalculatorFrame();syncResultMirror()})});
   window.addEventListener('storage',function(e){if(calculatorActive&&e.key==='bruno-ac-v1'){try{sessionStorage.setItem('bruno-phase3-after-apply','materials')}catch(x){}window.location.reload()}});
   if('ResizeObserver' in window){resizeObserver=new ResizeObserver(function(){requestAnimationFrame(syncPhase2NavHeight)});resizeObserver.observe(shell)}
 }
