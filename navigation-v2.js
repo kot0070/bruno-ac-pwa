@@ -12,7 +12,7 @@ var shell=null,subnav=null,bottom=null,sourceNav=null,resizeObserver=null;
 var calculatorPanel=null,calculatorFrame=null,calculatorActive=false,frameResizeObserver=null;
 var resultRail=null,resultMirror=null,resultMutationObserver=null;
 var lastByGroup={job:'quote',estimate:'materials',tools:'__calculator',billing:'tm',more:'dispatch'};
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;')}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function getGroup(id){return GROUPS.filter(function(x){return x.id===id})[0]||GROUPS[0]}
 function findGroupByTab(tab){for(var i=0;i<GROUPS.length;i++){for(var j=0;j<GROUPS[i].tabs.length;j++){if(GROUPS[i].tabs[j][0]===tab)return GROUPS[i]}}return GROUPS[0]}
 function sourceActiveTab(){var b=sourceNav&&sourceNav.querySelector('.nav-tab.active');return b?b.getAttribute('data-tab'):'quote'}
