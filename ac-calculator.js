@@ -36,6 +36,8 @@ function syncFromJob(){
   var h=(state.quote&&state.quote.hvac)||{},saved=(state.acCalculator&&state.acCalculator.inputs)||{};
   var src=Object.assign({},E.defaultInputs(),saved);
   if(h.systemType)src.systemType=h.systemType;if(h.jobKind)src.jobKind=h.jobKind;if(h.refrigerant)src.refrigerant=h.refrigerant;if(h.tonnageBtu)src.tonnage=h.tonnageBtu;if(h.haulAway)src.haulAway=String(h.haulAway).toLowerCase()==='yes';
+  if(!state.acCalculator&&src.systemType==='mini-split'){src.thermostat=false;src.includeFilterDrier=false;}
+  if(!state.acCalculator&&src.systemType==='package'){src.indoorLocation='other';}
   setInputs(src);applyModeDefaults(false);
 }
 function setInputs(i){
