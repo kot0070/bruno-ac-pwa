@@ -20,8 +20,12 @@ function loadState(){
         if(!Array.isArray(parsed.catalog))parsed.catalog=[];
       }
     }
-    if(!parsed||parsed.scope||parsed.bom||parsed.type==='ac-calculator-v1'||parsed.type==='ac-calculator-v2'||parsed.type==='ac-calculator-plan'){
-      alert('Stored data does not look like a Bruno AC job. Calculator will not overwrite it.');state=null;renderLocked();return false;
+    var prod=String(parsed&&parsed.product||'');
+    var storageKey=String(parsed&&parsed.storageKey||'');
+    var source=String(parsed&&parsed.meta&&parsed.meta.source||'');
+    var hasJobMarker=!!(parsed&&(parsed.quote||parsed.materialsUsed||parsed.summary||parsed.catalog||parsed.personnel||parsed.laborEquip));
+    if(!parsed||parsed.scope||parsed.bom||parsed.type==='ac-calculator-v1'||parsed.type==='ac-calculator-v2'||parsed.type==='ac-calculator-plan'||(prod&&prod!=='bruno-ac')||/bruno-electric/i.test(storageKey)||/Bruno Electric/i.test(source)||!hasJobMarker){
+      alert('Stored data does not look like a valid Bruno AC job. Calculator will not overwrite it.');state=null;renderLocked();return false;
     }
     state=parsed;
     if(!state.quote)state.quote={}; if(!state.quote.hvac)state.quote.hvac={};
