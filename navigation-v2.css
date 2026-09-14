@@ -1,4 +1,4 @@
-/* Bruno AC Phase 2 grouped navigation — presentation only */
+/* Bruno AC grouped navigation + Phase 4 tablet/PC workspace */
 .phase2-nav-shell{position:relative;z-index:82;background:var(--bg);border-bottom:1px solid var(--border)}
 .phase2-groups{display:flex;gap:.4rem;padding:.65rem 1.25rem .4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .phase2-group-btn{appearance:none;min-height:44px;flex:0 0 auto;border:1px solid var(--border);border-radius:9px;background:var(--bg-elev);color:var(--text-muted);padding:.55rem .9rem;font:inherit;font-size:.84rem;font-weight:750;cursor:pointer}
@@ -18,6 +18,32 @@ body.phase2-nav-ready main{padding-top:1rem}
 .phase3-calculator-head h2{margin:0;font-size:1.05rem}
 .phase3-calculator-head p{margin:.2rem 0 0;color:var(--text-muted);font-size:.82rem}
 .phase3-calculator-frame{display:block;width:100%;min-height:760px;border:0;border-radius:12px;background:transparent}
-@media(min-width:768px){html.phase2-nav-ready{scroll-padding-top:calc(var(--sticky-nav-top,calc(var(--header-h) + var(--totals-h))) + var(--phase2-nav-h,0px))}.phase2-nav-shell{position:sticky;top:var(--sticky-nav-top,calc(var(--header-h) + var(--totals-h)));}}
+
+/* Phase 4: tablet/PC is the primary estimating workspace. */
+@media(min-width:768px){
+  html.phase2-nav-ready{scroll-padding-top:calc(var(--sticky-nav-top,calc(var(--header-h) + var(--totals-h))) + var(--phase2-nav-h,0px))}
+  .phase2-nav-shell{position:sticky;top:var(--sticky-nav-top,calc(var(--header-h) + var(--totals-h)))}
+  body.phase2-nav-ready main{max-width:1680px;padding-left:clamp(.75rem,2vw,1.5rem);padding-right:clamp(.75rem,2vw,1.5rem)}
+  body.phase2-nav-ready .panel{border-radius:12px;padding:clamp(1rem,1.5vw,1.5rem)}
+  .phase2-groups,.phase2-subnav{padding-left:clamp(.75rem,2vw,1.5rem);padding-right:clamp(.75rem,2vw,1.5rem)}
+  .phase3-calculator-panel{padding:0!important}
+  .phase3-calculator-head{position:sticky;top:calc(var(--sticky-nav-top,0px) + var(--phase2-nav-h,0px));z-index:5;box-shadow:0 8px 18px rgba(0,0,0,.18)}
+}
+@media(min-width:900px) and (max-width:1199.98px){
+  body.phase2-nav-ready .grid-3,body.phase2-nav-ready .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .phase2-group-btn{padding:.5rem .78rem}
+  .phase2-sub-btn{padding:.4rem .68rem}
+}
+@media(min-width:1200px){
+  body.phase2-nav-ready main{max-width:1760px}
+  .phase2-groups{gap:.5rem}
+  .phase2-group-btn{min-width:104px;text-align:center}
+  .phase2-subnav{min-height:48px}
+  .phase3-calculator-head{padding:.8rem 1rem}
+}
+@media(min-width:1500px){
+  body.phase2-nav-ready main{max-width:1840px}
+  body.phase2-nav-ready .panel{padding:1.35rem 1.5rem 1.6rem}
+}
 @media(max-width:767.98px){.phase2-nav-shell{position:static}.phase2-groups{display:none}.phase2-subnav{padding:.65rem 1rem .7rem;border-top:1px solid var(--border);background:var(--bg)}.phase2-context{display:none}.phase2-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:120;display:grid;grid-template-columns:repeat(5,1fr);padding:6px max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));background:var(--bg);border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}.phase2-bottom-btn{appearance:none;min-width:0;min-height:52px;border:0;border-radius:9px;background:transparent;color:var(--text-muted);padding:5px 2px;font:inherit;font-size:10px;font-weight:750;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.phase2-bottom-btn .ico{font-size:18px;line-height:1}.phase2-bottom-btn.active{color:var(--text);background:var(--bg-card)}body.phase2-nav-ready main{padding-bottom:max(5.5rem,calc(5.5rem + env(safe-area-inset-bottom)))}body.phase2-nav-ready .app-foot{padding-bottom:max(5.5rem,calc(5.5rem + env(safe-area-inset-bottom)))}.phase3-calculator-head{align-items:flex-start;padding:.75rem}.phase3-calculator-head .btn{font-size:.72rem;white-space:nowrap}.phase3-calculator-frame{border-radius:8px}}
 @media print{.phase2-nav-shell,.phase2-bottom-nav,.phase3-calculator-panel{display:none!important}}
