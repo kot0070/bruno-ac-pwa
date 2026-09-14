@@ -1,5 +1,5 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v10';
+const CACHE = 'bruno-ac-v11';
 const SHELL = [
   './',
   './index.html',
@@ -7,7 +7,11 @@ const SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
-  './sw-register.js'
+  './sw-register.js',
+  './ac-calculator.html',
+  './ac-calculator.js',
+  './ac-calculator-engine.js',
+  './ac-calculator.css'
 ];
 
 self.addEventListener('install', (event) => {
