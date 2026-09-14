@@ -32,7 +32,21 @@ function prepareEmbeddedCalculator(){
     var doc=calculatorFrame.contentDocument;if(!doc)return;
     doc.documentElement.classList.add('bruno-embedded-calculator');
     var old=doc.getElementById('bruno-phase3-embed-style');if(old)old.remove();
-    var style=doc.createElement('style');style.id='bruno-phase3-embed-style';style.textContent='.bruno-embedded-calculator .top,.bruno-embedded-calculator .foot{display:none!important}.bruno-embedded-calculator body{background:transparent!important}.bruno-embedded-calculator .wrap{max-width:none!important;padding:0 4px 16px!important}.bruno-embedded-calculator .notice{margin-top:0}.bruno-embedded-calculator .grid{gap:12px}';doc.head.appendChild(style);
+    var style=doc.createElement('style');style.id='bruno-phase3-embed-style';style.textContent=''
+      +'.bruno-embedded-calculator .top,.bruno-embedded-calculator .foot{display:none!important}'
+      +'.bruno-embedded-calculator body{background:transparent!important}'
+      +'.bruno-embedded-calculator .wrap{max-width:none!important;padding:0 4px 16px!important}'
+      +'.bruno-embedded-calculator .notice{margin-top:0}'
+      +'.bruno-embedded-calculator .grid{gap:12px}'
+      +'.bruno-embedded-calculator .card{box-shadow:none}'
+      +'@media(min-width:1180px){'
+      +'.bruno-embedded-calculator .grid{grid-template-columns:minmax(400px,.86fr) minmax(520px,1.14fr);align-items:start}'
+      +'.bruno-embedded-calculator .grid>.card:nth-child(n+3){grid-column:1/-1}'
+      +'.bruno-embedded-calculator .grid>.card{margin-bottom:0}'
+      +'.bruno-embedded-calculator .input-groups{gap:8px}'
+      +'.bruno-embedded-calculator .input-group>summary{min-height:46px;padding:8px 10px}'
+      +'.bruno-embedded-calculator .input-group-body{padding:0 10px 10px}'
+      +'}';doc.head.appendChild(style);
     function fit(){try{var h=Math.max(760,doc.body.scrollHeight,doc.documentElement.scrollHeight);calculatorFrame.style.height=h+'px'}catch(e){}}
     fit();setTimeout(fit,100);setTimeout(fit,500);
     if(frameResizeObserver)try{frameResizeObserver.disconnect()}catch(e2){}
