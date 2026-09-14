@@ -23,7 +23,7 @@ function ensureCalculatorPanel(){
   calculatorPanel.innerHTML='<div class="phase3-calculator-head"><div><h2>AC Calculator</h2><p>Code-aware scope and BOM for the current Bruno job.</p></div><button type="button" class="btn btn-sm" id="phase3-open-standalone">Open standalone</button></div><iframe class="phase3-calculator-frame" title="Bruno AC Code and BOM Calculator" src="./ac-calculator.html?embed=1"></iframe>';
   main.appendChild(calculatorPanel);calculatorFrame=calculatorPanel.querySelector('iframe');
   var standalone=calculatorPanel.querySelector('#phase3-open-standalone');if(standalone)standalone.addEventListener('click',function(){window.location.href='./ac-calculator.html'});
-  calculatorFrame.addEventListener('load',prepareEmbeddedCalculator);
+  calculatorFrame.addEventListener('load',function(){calculatorFrame.dataset.loaded='1';prepareEmbeddedCalculator()});
   return calculatorPanel;
 }
 function prepareEmbeddedCalculator(){
@@ -31,7 +31,8 @@ function prepareEmbeddedCalculator(){
   try{
     var doc=calculatorFrame.contentDocument;if(!doc)return;
     doc.documentElement.classList.add('bruno-embedded-calculator');
-    var style=doc.createElement('style');style.textContent='.bruno-embedded-calculator .top,.bruno-embedded-calculator .foot{display:none!important}.bruno-embedded-calculator body{background:transparent!important}.bruno-embedded-calculator .wrap{max-width:none!important;padding:0 4px 16px!important}.bruno-embedded-calculator .notice{margin-top:0}.bruno-embedded-calculator .grid{gap:12px}';doc.head.appendChild(style);
+    var old=doc.getElementById('bruno-phase3-embed-style');if(old)old.remove();
+    var style=doc.createElement('style');style.id='bruno-phase3-embed-style';style.textContent='.bruno-embedded-calculator .top,.bruno-embedded-calculator .foot{display:none!important}.bruno-embedded-calculator body{background:transparent!important}.bruno-embedded-calculator .wrap{max-width:none!important;padding:0 4px 16px!important}.bruno-embedded-calculator .notice{margin-top:0}.bruno-embedded-calculator .grid{gap:12px}';doc.head.appendChild(style);
     function fit(){try{var h=Math.max(760,doc.body.scrollHeight,doc.documentElement.scrollHeight);calculatorFrame.style.height=h+'px'}catch(e){}}
     fit();setTimeout(fit,100);setTimeout(fit,500);
     if(frameResizeObserver)try{frameResizeObserver.disconnect()}catch(e2){}
@@ -39,26 +40,18 @@ function prepareEmbeddedCalculator(){
   }catch(e){}
 }
 function showCalculatorPanel(){
-  var p=ensureCalculatorPanel();if(!p)return;
+  var existed=!!calculatorPanel;var p=ensureCalculatorPanel();if(!p)return;
   calculatorActive=true;currentGroup='tools';lastByGroup.tools='__calculator';
   var panels=document.querySelectorAll('.panel');for(var i=0;i<panels.length;i++)panels[i].classList.remove('active');p.classList.add('active');
   renderGroups();renderBottom();renderSubnav(getGroup('tools'));schedulePhase2NavMeasure();
-  if(calculatorFrame){try{calculatorFrame.contentWindow.postMessage({type:'bruno-ac-calculator-reload'},location.origin)}catch(e){}}
+  if(existed&&calculatorFrame&&calculatorFrame.dataset.loaded==='1'){try{calculatorFrame.contentWindow.location.reload()}catch(e){}}
 }
 function hideCalculatorPanel(){calculatorActive=false;if(calculatorPanel)calculatorPanel.classList.remove('active')}
-function openTab(tab){
-  if(tab==='__calculator'){showCalculatorPanel();return}
-  hideCalculatorPanel();
-  var b=sourceNav&&sourceNav.querySelector('.nav-tab[data-tab="'+tab+'"]');
-  if(b){b.click();setTimeout(syncFromSource,0)}
-}
+function openTab(tab){if(tab==='__calculator'){showCalculatorPanel();return}hideCalculatorPanel();var b=sourceNav&&sourceNav.querySelector('.nav-tab[data-tab="'+tab+'"]');if(b){b.click();setTimeout(syncFromSource,0)}}
 function setGroup(id,openPreferred){var g=getGroup(id);currentGroup=g.id;renderGroups();renderBottom();renderSubnav(g);if(openPreferred)openTab(lastByGroup[g.id]||g.defaultTab)}
 function renderGroups(){var host=shell.querySelector('.phase2-groups');host.innerHTML=GROUPS.map(function(g){var active=g.id===currentGroup;return '<button type="button" class="phase2-group-btn'+(active?' active':'')+'" data-group="'+esc(g.id)+'" aria-pressed="'+(active?'true':'false')+'"'+(active?' aria-current="page"':'')+'>'+esc(g.label)+'</button>'}).join('')+'<span class="phase2-context" id="phase2-context"></span>'}
 function renderBottom(){bottom.innerHTML=GROUPS.map(function(g){var active=g.id===currentGroup;return '<button type="button" class="phase2-bottom-btn'+(active?' active':'')+'" data-group="'+esc(g.id)+'" aria-pressed="'+(active?'true':'false')+'"'+(active?' aria-current="page"':'')+'><span class="ico">'+esc(g.icon)+'</span><span>'+esc(g.label)+'</span></button>'}).join('')}
-function renderSubnav(g){
-  var tab=activeTab();subnav.innerHTML=g.tabs.map(function(t){var id=t[0],label=t[1],active=id===tab;return '<button type="button" class="phase2-sub-btn'+(active?' active':'')+'" data-tab="'+esc(id)+'"'+(active?' aria-current="page"':'')+'>'+esc(label)+'</button>'}).join('');
-  var ctx=document.getElementById('phase2-context');if(ctx){var match=g.tabs.filter(function(t){return t[0]===tab})[0];ctx.textContent=g.label+' · '+(match?match[1]:(lastByGroup[g.id]||g.defaultTab))}schedulePhase2NavMeasure();
-}
+function renderSubnav(g){var tab=activeTab();subnav.innerHTML=g.tabs.map(function(t){var id=t[0],label=t[1],active=id===tab;return '<button type="button" class="phase2-sub-btn'+(active?' active':'')+'" data-tab="'+esc(id)+'"'+(active?' aria-current="page"':'')+'>'+esc(label)+'</button>'}).join('');var ctx=document.getElementById('phase2-context');if(ctx){var match=g.tabs.filter(function(t){return t[0]===tab})[0];ctx.textContent=g.label+' · '+(match?match[1]:(lastByGroup[g.id]||g.defaultTab))}schedulePhase2NavMeasure()}
 function syncFromSource(){calculatorActive=false;var tab=sourceActiveTab();var g=findGroupByTab(tab);currentGroup=g.id;lastByGroup[g.id]=tab;renderGroups();renderBottom();renderSubnav(g)}
 function syncPhase2NavHeight(){if(!shell)return;var navH=window.innerWidth>=768?Math.round(shell.getBoundingClientRect().height):0;document.documentElement.style.setProperty('--phase2-nav-h',navH+'px')}
 function schedulePhase2NavMeasure(){requestAnimationFrame(syncPhase2NavHeight);setTimeout(syncPhase2NavHeight,80);setTimeout(syncPhase2NavHeight,360)}
@@ -75,8 +68,7 @@ function init(){
   shell=document.createElement('nav');shell.className='phase2-nav-shell no-print';shell.setAttribute('aria-label','Bruno AC sections');shell.innerHTML='<div class="phase2-groups" aria-label="Primary sections"></div><div class="phase2-subnav" aria-label="Section tools"></div>';sourceNav.parentNode.insertBefore(shell,sourceNav.nextSibling);subnav=shell.querySelector('.phase2-subnav');
   bottom=document.createElement('nav');bottom.className='phase2-bottom-nav no-print';bottom.setAttribute('aria-label','Bruno AC mobile navigation');document.body.appendChild(bottom);
   var initial=sourceActiveTab(),initialGroup=findGroupByTab(initial);currentGroup=initialGroup.id;lastByGroup[initialGroup.id]=initial;renderGroups();renderBottom();renderSubnav(initialGroup);bind();document.body.classList.add('phase2-nav-ready');document.documentElement.classList.add('phase2-nav-ready');schedulePhase2NavMeasure();
-  var after='';try{after=sessionStorage.getItem('bruno-phase3-after-apply')||'';sessionStorage.removeItem('bruno-phase3-after-apply')}catch(e){}
-  if(after)setTimeout(function(){openTab(after)},0);
+  var after='';try{after=sessionStorage.getItem('bruno-phase3-after-apply')||'';sessionStorage.removeItem('bruno-phase3-after-apply')}catch(e){}if(after)setTimeout(function(){openTab(after)},0);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
