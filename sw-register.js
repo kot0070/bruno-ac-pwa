@@ -13,7 +13,20 @@
     var script = document.createElement('script');
     script.id = 'phase2-nav-js';
     script.src = './navigation-v2.js';
+    script.async = false;
     document.body.appendChild(script);
+
+    var workCss = document.createElement('link');
+    workCss.id = 'phase5-workspace-css';
+    workCss.rel = 'stylesheet';
+    workCss.href = './workspace-v5.css';
+    document.head.appendChild(workCss);
+
+    var workJs = document.createElement('script');
+    workJs.id = 'phase5-workspace-js';
+    workJs.src = './workspace-v5.js';
+    workJs.async = false;
+    document.body.appendChild(workJs);
   }
 
   loadGroupedNavigation();
