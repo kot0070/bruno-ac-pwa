@@ -28,6 +28,12 @@ body.phase2-nav-ready main{padding-top:1rem}
   .phase2-groups,.phase2-subnav{padding-left:clamp(.75rem,2vw,1.5rem);padding-right:clamp(.75rem,2vw,1.5rem)}
   .phase3-calculator-panel{padding:0!important}
   .phase3-calculator-head{position:sticky;top:calc(var(--sticky-nav-top,0px) + var(--phase2-nav-h,0px));z-index:5;box-shadow:0 8px 18px rgba(0,0,0,.18)}
+  body.phase2-nav-ready .section-help,body.phase2-nav-ready .note-box{max-width:90ch}
+}
+@media(min-width:768px) and (max-width:899.98px){
+  body.phase2-nav-ready .grid-3,body.phase2-nav-ready .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .phase2-group-btn{padding:.48rem .72rem}
+  .phase2-sub-btn{padding:.38rem .62rem}
 }
 @media(min-width:900px) and (max-width:1199.98px){
   body.phase2-nav-ready .grid-3,body.phase2-nav-ready .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
