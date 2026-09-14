@@ -20,7 +20,7 @@ function ensureCalculatorPanel(){
   if(calculatorPanel)return calculatorPanel;
   var main=document.querySelector('main');if(!main)return null;
   calculatorPanel=document.createElement('section');calculatorPanel.id='panel-calculator';calculatorPanel.className='panel phase3-calculator-panel';calculatorPanel.setAttribute('aria-label','AC Calculator');
-  calculatorPanel.innerHTML='<div class="phase3-calculator-head"><div><h2>AC Calculator</h2><p>Code-aware scope and BOM for the current Bruno job.</p></div><button type="button" class="btn btn-sm" id="phase3-open-standalone">Open standalone</button></div><iframe class="phase3-calculator-frame" title="Bruno AC Code and BOM Calculator" src="./ac-calculator.html?embed=1"></iframe>';
+  calculatorPanel.innerHTML='<div class="phase3-calculator-head"><div><h2>AC Calculator</h2><p>Code-aware scope and BOM for the current Bruno job.</p></div><button type="button" class="btn btn-sm" id="phase3-open-standalone">Open standalone</button></div><iframe class="phase3-calculator-frame" title="Bruno AC Code and BOM Calculator" src="./ac-calculator.html"></iframe>';
   main.appendChild(calculatorPanel);calculatorFrame=calculatorPanel.querySelector('iframe');
   var standalone=calculatorPanel.querySelector('#phase3-open-standalone');if(standalone)standalone.addEventListener('click',function(){window.location.href='./ac-calculator.html'});
   calculatorFrame.addEventListener('load',function(){calculatorFrame.dataset.loaded='1';prepareEmbeddedCalculator()});
