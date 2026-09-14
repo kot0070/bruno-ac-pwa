@@ -1,0 +1,56 @@
+/* Bruno AC Phase 5 — estimating workspace productivity */
+.phase5-panel-links{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-left:auto}
+.phase5-keyhint{font-size:.72rem;color:var(--text-dim);white-space:nowrap}
+.phase5-workbar{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin:.25rem 0 .75rem;padding:.6rem .7rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-card)}
+.phase5-search{display:flex;align-items:center;gap:.45rem;flex:1 1 320px;min-width:220px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);padding:0 .65rem}
+.phase5-search:focus-within{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(61,139,253,.18)}
+.phase5-search input{width:100%;min-height:40px;border:0!important;background:transparent!important;box-shadow:none!important;outline:0!important;padding:.45rem .1rem!important}
+.phase5-toggle{display:flex;align-items:center;gap:.4rem;min-height:40px;padding:0 .65rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-elev);font-size:.8rem;color:var(--text-muted);white-space:nowrap}
+.phase5-count{font-size:.78rem;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.phase5-spacer{flex:1 1 auto}
+.phase5-zero-price td{background:rgba(240,113,120,.055)}
+.phase5-zero-price .mat-cost{border-color:rgba(240,113,120,.55)!important}
+
+@media(min-width:768px){
+  #panel-materials .table-wrap,#panel-catalog .cat-group-bd .table-wrap{border:1px solid var(--border);border-radius:10px}
+  #panel-materials table.data th,#panel-materials table.data td,#panel-catalog table.data th,#panel-catalog table.data td{padding:.42rem .48rem}
+  #panel-materials table.data input,#panel-catalog table.data input{min-height:38px;padding:.38rem .48rem}
+  #panel-materials table.data td:nth-child(2){min-width:260px}
+  #panel-materials table.data th:last-child,#panel-materials table.data td:last-child,#panel-catalog table.data th:last-child,#panel-catalog table.data td:last-child{position:sticky;right:0;z-index:2;background:var(--bg-elev);box-shadow:-8px 0 12px rgba(0,0,0,.12)}
+  #panel-materials table.data thead th:last-child,#panel-catalog table.data thead th:last-child{z-index:3}
+  #panel-catalog .phase5-catalog-search{position:sticky;top:calc(var(--sticky-nav-top,0px) + var(--phase2-nav-h,0px) + 8px);z-index:6;padding:.55rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);box-shadow:0 8px 18px rgba(0,0,0,.18)}
+  #panel-catalog .cat-group-hd{min-height:44px}
+  #panel-catalog .cat-group-bd table.data thead th{position:sticky;top:0;z-index:2;background:var(--bg-elev)}
+}
+
+.phase5-summary-layout{display:grid;gap:1rem;align-items:start;margin-top:.25rem}
+.phase5-summary-layout>.grid{margin:0;padding:1rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-elev)}
+.phase5-summary-layout>.table-wrap{margin-top:0!important}
+.phase5-summary-stats{margin-top:1rem}
+.phase5-final-stat{border-color:rgba(46,196,182,.55)!important;background:linear-gradient(135deg,rgba(46,196,182,.14),rgba(61,139,253,.08))!important}
+.phase5-final-stat .lbl{color:var(--text)!important;font-weight:700}
+.phase5-final-stat .val{font-size:1.35rem!important;color:var(--accent)!important}
+
+@media(min-width:1000px){
+  .phase5-summary-layout{grid-template-columns:minmax(320px,.72fr) minmax(540px,1.28fr)}
+  .phase5-summary-layout>.grid{grid-template-columns:1fr!important;position:sticky;top:calc(var(--sticky-nav-top,0px) + var(--phase2-nav-h,0px) + 12px)}
+  .phase5-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}
+  .phase5-summary-stats .stat{min-width:0}
+}
+
+@media(min-width:1280px){
+  #panel-materials .toolbar,#panel-catalog .toolbar{gap:.45rem}
+  #panel-materials .table-wrap{overflow-x:auto}
+  #panel-materials table.data{min-width:980px;width:100%}
+  #panel-catalog .cat-group-bd table.data{width:100%}
+}
+
+@media(max-width:767.98px){
+  .phase5-workbar{padding:.55rem;gap:.45rem}
+  .phase5-search{flex-basis:100%;min-width:0}
+  .phase5-spacer{display:none}
+  .phase5-panel-links{width:100%;margin-left:0}
+  .phase5-keyhint{display:none}
+  .phase5-summary-layout{display:block}
+  .phase5-summary-layout>.grid{margin-bottom:1rem}
+}
