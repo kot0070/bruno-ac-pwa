@@ -53,17 +53,17 @@
       </div>
     </section>
     <section class="card">
-      <h2>2 · Generated BOM</h2>
+      <h2>3 · Generated BOM</h2>
       <div class="summary"><div class="stat"><div class="k">Selected lines</div><div class="v" id="statLines">0</div></div><div class="stat"><div class="k">Catalog resolved</div><div class="v" id="statResolved">0/0</div></div><div class="stat"><div class="k">Material estimate</div><div class="v" id="statCost">$0.00</div></div><div class="stat"><div class="k">Warnings</div><div class="v" id="statWarnings">0</div></div></div>
       <div class="gate" id="applyGate"></div>
       <div class="tablewrap"><table><thead><tr><th>Add</th><th>Requirement</th><th class="col-level">Level</th><th>Qty</th><th>Unit</th><th class="col-match">Catalog result</th><th class="col-money">Unit $</th><th class="col-money">Ext $</th><th class="col-ref">Reference</th></tr></thead><tbody id="bomBody"></tbody></table></div>
       <p class="muted">Manual Job Materials are never deleted. Matching manual SKU/item rows are detected and generated duplicates are unchecked by default. Re-running Apply replaces only AC Calculator-generated rows.</p>
     </section>
-    <section class="card"><h2>3 · Code / coordination checks</h2><div id="codeChecks"></div></section>
-    <section class="card"><h2>4 · Assumptions & warnings</h2><h3>Assumptions</h3><ul class="list" id="assumptions"></ul><h3>Warnings</h3><ul class="list" id="warnings"></ul><div class="actions"><button class="btn" id="exportPlan">Export calculator plan JSON</button></div></section>
+    <section class="card"><h2>4 · Code / coordination checks</h2><div id="codeChecks"></div></section>
+    <section class="card"><h2>5 · Assumptions & warnings</h2><h3>Assumptions</h3><ul class="list" id="assumptions"></ul><h3>Warnings</h3><ul class="list" id="warnings"></ul><div class="actions"><button class="btn" id="exportPlan">Export calculator plan JSON</button></div></section>
   </div>
 </main>
 <footer class="foot">Bruno AC Services LLC · AC Code & BOM Calculator V2 · verify AHJ + OEM before field installation</footer>
 <div class="toast" id="toast"></div>
-<script src="./ac-calculator-engine.js"></script><script src="./ac-calculator.js"></script>
+<script src="./ac-calculator-engine.js"></script><script src="./ac-calculator.js"></script><script src="./ac-calculator-ux.js"></script>
 </body></html>
