@@ -1,14 +1,14 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 6
+handoff_version: 7
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR23_F01_FOCUSED_REAUDIT_PENDING
+state: PR23_F01_FOCUSED_REAUDIT_COMPLETE
 ```
 
 ## LAST ACCEPTED PRODUCTION BASELINE
@@ -33,50 +33,61 @@ blocker:
   severity: P1
 ```
 
-## CORRECTIVE IMPLEMENTATION
+## PR23 FOCUSED RE-AUDIT RESULT
 
 ```yaml
 production_branch: feature/ac-calculator-ux-clarity
-current_target_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
-implementation_report: audits/implementation/PR23_F01_OBSERVER_FIX_8c70dddc.md
+audited_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
+verdict: A_ACCEPT
+blockers: []
+resolved_finding: F01_self_triggering_review_sync_loop
+browser_runtime: NOT_PERFORMED
+ci_run: 35016786924
+full_report: audits/history/PR23_8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1_20260915-1602.md
+latest_alias: audits/LATEST_AUDIT.md
 merged: false
-draft_PR: true
-changed_files_final:
-  - ac-calculator-review-ux.js
-  - ac-calculator.html
-  - sw.js
-  - tests/ac-calculator-review-ux.test.js
-correction:
-  - observers_disconnected_during_review_owned_render
-  - observers_restored_in_finally
-  - idempotent_DOM_writes_added
-  - service_worker_cache_bumped_to_v34
-validation:
-  workflow_run: 35016786924
-  result: SUCCESS
-  temporary_workflow_removed_from_final_diff: true
+pr_mutated_by_audit: false
+production_mutated_by_audit: false
 ```
 
-## CURRENT TASK
+## ACCEPTANCE BASIS
+
+```yaml
+checks:
+  exact_PR_head_matches_task: true
+  observer_disconnect_before_review_owned_render: true
+  observer_restore_in_finally: true
+  self_triggering_status_BOM_loop_eliminated: true
+  authoritative_external_mutations_still_observed: true
+  idempotent_rendering_guards: true
+  ready_action_required_review_required_semantics_preserved: true
+  dirty_stale_ownership_preserved: true
+  selected_only_semantics_preserved: true
+  service_worker_cache: bruno-ac-v34
+  final_diff_exactly_four_expected_files: true
+  financial_core_unchanged_from_main: true
+  regression_CI_success: true
+  post_CI_change_only_removes_temporary_workflow: true
+```
+
+## NEXT STATE
 
 ```yaml
 current_task_id: PR23_F01_FOCUSED_REAUDIT_8C70DDDC
-current_task_status: ACTIVE
-mode: focused_acceptance_reaudit
-current_target_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
-expected_next_state: PR23_acceptance_decision
+current_task_status: COMPLETE
+expected_next_state: PR23_merge_decision_outside_audit_mode
+merge_performed_by_audit: false
 ```
 
 ## HANDOFF RULES
 
 ```yaml
 rules:
-  - read_WORKSPACE_CONTEXT_HANDOFF_source_audit_implementation_report_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
   - production_PR_must_remain_unmodified_during_audit
   - production_code_must_remain_unmodified_during_audit
   - merge_forbidden_during_audit
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - do_not_copy_full_report_into_HANDOFF
-  - audit_exact_target_head_8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
+  - latest_completed_audit_head_8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
 ```
