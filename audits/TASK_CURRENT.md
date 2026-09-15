@@ -1,7 +1,9 @@
 # AUDIT TASK CHANNEL
 
 ```yaml
-protocol: bruno-ac-audit-v1
+protocol: bruno-ac-audit-v2
+format: ai_native_structured
+language: en
 repository: kot0070/bruno-ac-pwa
 production_pr: 22
 production_branch: feature/financial-integrity-texas-acr-docs
@@ -9,25 +11,32 @@ audit_branch: audit/pr22-603cbca
 report_dir: audits/history
 retain_reports: 3
 current_report_alias: audits/PR22_FINAL_ACCEPTANCE_AUDIT.md
-rules:
-  - read_this_file_first
-  - audit_only_production_tree
-  - do_not_modify_production_code
-  - do_not_modify_production_branch
-  - do_not_modify_pr_22
-  - do_not_merge
-  - do_not_fix_findings
-  - full_report_goes_to_github_not_chat
-  - save_report_as: audits/history/PR22_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
-  - update_current_report_alias_with_same_full_report
-  - after_successful_save_keep_only_3_newest_history_reports
-  - delete_older_history_reports_only_from_audit_branch
-  - chat_response_only: verdict,audited_head,blockers,report_link
+
+hard_rules:
+  production_tree: read_only
+  modify_production_code: false
+  modify_production_branch: false
+  modify_pr_22: false
+  merge: false
+  fix_findings: false
+  report_write_scope: audit_branch_only
+  full_report_in_chat: false
+
+retention:
+  history_pattern: audits/history/PR22_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+  keep_newest: 3
+  delete_older_only_after_new_report_verified: true
+  stable_alias: audits/PR22_FINAL_ACCEPTANCE_AUDIT.md
+  stable_alias_must_equal_latest_report: true
+
 communication:
-  language: uk
-  tone: concise_technical_direct
-  no_long_chat_report: true
-  no_repeating_task_text: true
+  task_language: en
+  report_language: en
+  style: machine_oriented_technical
+  prose_minimize: true
+  use_structured_sections: true
+  use_exact_sha_path_function: true
+  facts_vs_inference: explicit
   no_progress_narrative_unless_blocked: true
   blockers_max: 5
   final_chat_schema:
@@ -35,12 +44,11 @@ communication:
     - "AUDITED HEAD: <full_sha>"
     - "BLOCKERS: <none|up_to_5_short_lines>"
     - "FULL REPORT: <github_url>"
-  evidence_style:
-    - distinguish_verified_fact_from_inference
-    - use_exact_sha_file_function_when_available
-    - classify_tests_as_EXECUTABLE_CORE_EXECUTABLE_INTEGRATION_SOURCE_ASSERTION_WEAK_STRING_ASSERTION
-    - never_claim_browser_execution_if_not_performed
-    - never_treat_green_ci_as_acceptance_by_itself
+
+verdict_scale:
+  A: ACCEPT
+  B: ACCEPT_AFTER_MINOR_FIXES
+  C: REJECT_REWORK_REQUIRED
 status: ACTIVE
 ```
 
@@ -54,95 +62,162 @@ expected_head_sha: 603cbca03e292ae1d3bf424514fb60da6233bfc6
 previous_rejected_head: 104c8229f2c0ee4ac377e9081fe807f58683db4e
 corrective_production_commit: 67952a6bc3504aeb2ea580dcc10fccf4318a6aa8
 authoritative_ci_run: 34995112030
-verdict_scale:
-  A: ACCEPT
-  B: ACCEPT_AFTER_MINOR_FIXES
-  C: REJECT_REWORK_REQUIRED
+
+authority_order:
+  - actual_current_production_code
+  - observable_behavior
+  - executable_tests
+  - source_assertions
+  - comments_docs_commit_messages
+
+acceptance_invariants:
+  lifecycle:
+    setup: {catalog_customer: 100, catalog_your: 70}
+    after_apply: {job_unitCost: 100, job_snapshot: 70}
+    mutate_catalog: {catalog_customer: 110, catalog_your: 55}
+    before_reapply_required: {job_unitCost: 100, job_snapshot: 70}
+    after_reapply_required: {job_unitCost: 110, job_snapshot: 55}
+    margins_customer_edit_must_obey_same_rule: true
+    implicit_catalog_or_margins_to_historical_job_write: P0_C
+
+  blank_your_cost:
+    setup: {customer: 50, your: blank}
+    persisted_your_must_remain_blank: true
+    calculator_resolved_your: 50
+    source: customer-price-fallback
+    after_customer_change_to_60: {resolved_customer: 60, resolved_your: 60, source: customer-price-fallback}
+    stale_materialized_fallback: P1
+
+  pricing_tracks:
+    customer: "catalog.unitCost -> calculator.customerUnitPrice -> job.unitCost -> MethodA -> Quote"
+    internal: "catalog.yourCost -> calculator.yourUnitCost -> job.procurementCostSnapshot -> P&L"
+    actual: "actualCost -> P&L override only"
+    your_cost_enters_quote: P0_C
+    calculator_creates_actualCost: P0_C
+
+  fixtures:
+    row_1: {qty: 2, customer: 100, your: 70, customer_ext: 200, your_ext: 140, margin: 60, margin_pct: 0.30}
+    aggregate: {rows: ["2x100/70", "3x50/40"], customer: 350, your: 260, margin: 90, margin_pct: 0.2571428571428571}
+    quote_separation: {qty: 10, customer: 100, your: 1, quote_material_basis: 1000, pnl_snapshot_cost: 10}
+
+  invalid_semantics:
+    invalid_inputs: [NaN, Infinity, -Infinity, "Infinity", "NaN", "abc", negative]
+    invalid_must_not_become_zero: true
+    zero_is_valid: true
+    invalid_higher_priority_must_not_fall_through: true
+
+  reconciliation:
+    precedence: [actualCost, procurementCostSnapshot, unitCost_estimate]
+    fixture:
+      A: {qty: 1, estimate: 100, snapshot: 80, actual: 90}
+      B: {qty: 2, estimate: 100, snapshot: 70}
+      C: {qty: 3, estimate: 50}
+    expected: {used: 380, estimate: 450, variance: -70, actual_count: 1, snapshot_count: 1, fallback_count: 1}
+
+mandatory_checks:
+  - inventory_all_writes_to_materialsUsed_unitCost
+  - inventory_all_writes_to_procurementCostSnapshot
+  - classify_each_write_explicit_vs_implicit
+  - verify_catalog110_55_and_job100_70_survive_save_reload
+  - verify_export_import_normalization_does_not_reconnect_catalog_and_job
+  - verify_manual_material_preservation
+  - verify_snapshot_refresh_is_explicit
+  - verify_calculate_nonmutation
+  - verify_Method_A
+  - verify_Quote_validity_and_print
+  - verify_Job_Profitability
+  - verify_labor
+  - verify_burden
+  - verify_Small_Tools
+  - verify_Equipment
+  - verify_Subcontractors
+  - verify_Change_Orders
+  - verify_T_and_M
+  - verify_company_ACR_validation
+  - verify_Texas_ACR_vs_TECL_separation
+  - verify_service_worker_cache
+  - inspect_CI_run_34995112030
+  - verify_post_67952a6_commits_are_production_net_noop_or_intended
+
+expected_pr_net_diff:
+  count: 9
+  files:
+    - ac-calculator-engine.js
+    - ac-calculator.css
+    - ac-calculator.html
+    - ac-calculator.js
+    - financial-integrity-core.js
+    - index.html
+    - sw.js
+    - tests/ac-calculator-pricing.test.js
+    - tests/financial-integrity.test.js
+  forbidden_net_diff:
+    - README
+    - scripts/
+    - .github/workflows/
+    - unrelated_assets
+
+evidence_classification:
+  allowed_labels:
+    - EXECUTABLE_CORE
+    - EXECUTABLE_INTEGRATION
+    - SOURCE_ASSERTION
+    - WEAK_STRING_ASSERTION
+  green_ci_is_not_sufficient_for_acceptance: true
+  source_grep_is_not_runtime_proof: true
+  browser_claim_requires_actual_execution: true
+  if_browser_unavailable_report: NOT_PERFORMED
+
+severity:
+  P0:
+    - implicit_catalog_or_margins_to_historical_job_mutation
+    - your_cost_to_quote_contamination
+    - invalid_to_zero
+    - false_gp
+    - silent_underpricing
+    - compliance_bypass
+  P1:
+    - wrong_fallback_provenance
+    - persistence_loses_catalog_job_separation
+    - significant_lifecycle_or_integration_coverage_gap
+  P2:
+    - minor_nonfinancial_noncompliance_issue
+  any_P0_forces_verdict: C
+
+report_sections_required:
+  - Executive_Verdict
+  - Repository_State
+  - Audited_SHA
+  - Changed_Files
+  - CI_Provenance
+  - Browser_DOM_Result
+  - Findings_Table
+  - Catalog_Job_Lifecycle
+  - Blank_Your_Cost_and_Fallback_Provenance
+  - Dual_Pricing
+  - Apply_Mapping
+  - Persistence
+  - Material_Reconciliation
+  - Profitability
+  - Method_A_and_Quote
+  - Regression_Sweep
+  - Service_Worker
+  - Test_Quality
+  - Unsafe_Financial_Coercion_Sweep
+  - Job_Material_Write_Inventory
+  - Merge_Blockers
+  - Non_Blocking_Follow_Ups
+  - Final_Verdict
 ```
 
-Perform a fully independent final acceptance audit of PR #22 at the actual current production HEAD. Do not trust prior audit conclusions, PR description, commit messages, green CI, comments, or tests as authority; production code and observable behavior are authority.
+## EXECUTION CONTRACT
 
-### Mandatory acceptance invariants
-
-1. **Historical Job immutability / lifecycle**
-   - Start Catalog Customer=100, Your=70.
-   - Explicit Calculator Apply => Job `unitCost=100`, `procurementCostSnapshot=70`.
-   - Change Catalog to Customer=110, Your=55.
-   - WITHOUT Calculator Apply/Re-Apply, Job MUST remain `100/70`; Method A/Quote must still use 100-side Job pricing; P&L snapshot must still use 70.
-   - Only AFTER explicit Calculator Apply/Re-Apply may Job become `110/55`.
-   - Perform the same lifecycle check for Catalog Customer Price edited from Margins UI.
-   - Any implicit Catalog/Margins -> existing Job `materialsUsed[].unitCost` mutation is P0 and verdict C.
-
-2. **Blank Your Cost provenance**
-   - Catalog Customer=50, Your Cost blank/missing.
-   - Blank must remain semantically blank upstream/persisted.
-   - Calculator may resolve Your=50, but source MUST be `customer-price-fallback`, not `catalog-your-cost`.
-   - Change Customer to 60 while Your remains blank; Calculator preview must resolve 60/60 fallback, proving fallback was not materialized stale as 50.
-
-3. **Dual-pricing separation**
-   - Customer track: Catalog `unitCost` -> Calculator `customerUnitPrice` -> Job `unitCost` -> Method A -> Quote.
-   - Internal track: Catalog `yourCost` -> Calculator `yourUnitCost` -> Job `procurementCostSnapshot` -> P&L.
-   - Actual track: `actualCost` overrides snapshot in P&L only.
-   - Your Cost must never enter Quote/Method A.
-   - Calculator must never create `actualCost`.
-
-4. **Numeric fixtures**
-   - qty2 Customer100 Your70 => Customer Ext 200, Your Ext 140, Margin 60, Margin%=30%.
-   - Aggregate rows 2x100/70 and 3x50/40 => Customer350, Your260, Margin90, Margin%=25.714285714...%.
-   - Adversarial quote fixture Customer100, Your1, qty10 => quote-side material basis 1000, P&L snapshot cost 10.
-
-5. **Strict invalid semantics**
-   - Check NaN, +/-Infinity, "Infinity", "NaN", "abc", negatives across Customer Price, Your Cost, actualCost, snapshot paths.
-   - Invalid must not silently become plausible zero.
-   - Real zero remains valid zero.
-   - Explicit invalid higher-priority cost must not fall through to lower-priority source.
-
-6. **Material reconciliation**
-   - Precedence: Actual -> Snapshot -> Estimate fallback.
-   - Fixture: A qty1 est100 snap80 actual90; B qty2 est100 snap70; C qty3 est50.
-   - Expected used=380, estimate=450, variance=-70, source counts actual1/snapshot1/fallback1.
-
-7. **Write inventory**
-   - Inventory every production write to `materialsUsed[].unitCost` and every write to `procurementCostSnapshot`.
-   - Classify each as explicit lifecycle action vs implicit/background propagation.
-   - Unexpected implicit propagation is blocking.
-
-8. **Persistence / reload**
-   - Verify Catalog110/55 can coexist with historical Job100/70 across save/reload until explicit Apply/Re-Apply.
-   - Verify export/import or normalization does not reconnect them implicitly.
-
-9. **Regression sweep**
-   - Recheck Method A, Quote validity/print, Job Profitability, labor, burden, Small Tools, Equipment, Subcontractors, Change Orders, T&M, company/ACR validation, Texas ACR/TECL separation, service worker/cache, manual material preservation, snapshot refresh, Calculate nonmutation.
-
-10. **CI provenance / final tree**
-   - Inspect authoritative lifecycle run `34995112030`.
-   - Verify production commit `67952a6bc3504aeb2ea580dcc10fccf4318a6aa8` and later commits through current HEAD did not alter intended production behavior.
-   - Expected PR net diff remains exactly 9 files: `ac-calculator-engine.js`, `ac-calculator.css`, `ac-calculator.html`, `ac-calculator.js`, `financial-integrity-core.js`, `index.html`, `sw.js`, `tests/ac-calculator-pricing.test.js`, `tests/financial-integrity.test.js`.
-   - README, scripts, workflows, unrelated assets must not be in production PR net diff.
-
-11. **Test quality**
-   - Classify evidence as EXECUTABLE CORE / EXECUTABLE INTEGRATION / SOURCE ASSERTION / WEAK STRING ASSERTION.
-   - Determine whether the lifecycle fixture genuinely proves `100/70 -> Catalog110/55 -> Job unchanged -> explicit re-Apply -> Job110/55`.
-   - Do not treat grep/source assertions as runtime proof.
-
-12. **Browser/DOM honesty**
-   - If actual browser execution is available, run the lifecycle interactively.
-   - If unavailable, report `NOT PERFORMED`; do not fabricate browser results.
-
-### Severity gate
-
-- P0: implicit Catalog/Margins -> historical Job mutation; Your Cost -> Quote contamination; invalid -> zero; false GP; silent underpricing; compliance bypass.
-- P1: wrong fallback provenance; persistence loses Catalog-vs-Job distinction; significant lifecycle/integration coverage gap.
-- P2: minor non-financial/non-compliance issue.
-
-Any P0 => verdict C.
-
-### Full report requirements
-
-The saved Markdown report must include at minimum: Executive Verdict, Repository State, Audited SHA, Changed Files, CI Provenance, Browser/DOM Result, Findings Table, Catalog/Job Lifecycle, Blank Your Cost/Fallback Provenance, Dual Pricing, Apply Mapping, Persistence, Material Reconciliation, Profitability, Method A/Quote, regression sections, Service Worker, Test Quality, Unsafe Financial Coercion Sweep, Job Material Write Inventory, Merge Blockers, Non-Blocking Follow-Ups, Final Verdict.
-
-## REPORT RETENTION
-
-Keep the 3 newest complete reports in `audits/history/`. After the newest report is successfully written and verified, delete older history reports beyond the newest 3 from the audit branch only.
-
-Also replace `audits/PR22_FINAL_ACCEPTANCE_AUDIT.md` with the same newest complete report so it remains the stable latest-report alias.
+1. Resolve and verify actual PR HEAD before auditing.
+2. If actual HEAD != `expected_head_sha`, do not silently audit another revision; report mismatch as blocker unless task context explicitly permits it.
+3. Audit independently. Prior reports are historical evidence only, never authority.
+4. Write the complete report to a new history file using the retention pattern.
+5. Verify the new report write succeeded.
+6. Replace `audits/PR22_FINAL_ACCEPTANCE_AUDIT.md` with the exact same complete report.
+7. Verify alias write succeeded.
+8. Keep only the 3 newest complete history reports; delete older history reports from audit branch only.
+9. Return only the configured final chat schema.
