@@ -1,17 +1,16 @@
 # BRUNO AC AUDIT AI WORKSPACE
 
 ```yaml
-workspace_version: 1
+workspace_version: 2
 workspace_type: persistent_ai_audit_coordination
 repository: kot0070/bruno-ac-pwa
-production_pr: 22
-production_branch: feature/financial-integrity-texas-acr-docs
 audit_branch: audit/pr22-603cbca
 primary_task_file: audits/TASK_CURRENT.md
 context_file: audits/CONTEXT.md
 handoff_file: audits/HANDOFF.md
-latest_report_alias: audits/PR22_FINAL_ACCEPTANCE_AUDIT.md
+latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
+implementation_report_dir: audits/implementation
 retain_history_reports: 3
 language: en
 format: ai_native_structured
@@ -23,19 +22,21 @@ format: ai_native_structured
 startup_sequence:
   - read: audits/WORKSPACE.md
   - read: audits/CONTEXT.md
-  - read: audits/TASK_CURRENT.md
   - read: audits/HANDOFF.md
-  - resolve_actual_production_head
-  - validate_task_target_against_actual_head
+  - read: audits/TASK_CURRENT.md
+  - resolve_active_PR_and_exact_target_HEAD_from_TASK_CURRENT
+  - validate_target_against_GitHub
   - execute_task
-  - persist_report
+  - persist_full_report
+  - update_latest_alias
   - update_handoff
   - enforce_retention
 
 production_safety:
+  task_mode: AUDIT_ONLY
   modify_production_code: false
   modify_production_branch: false
-  modify_pr_22: false
+  modify_active_PR: false
   merge: false
   fix_findings_during_audit: false
   write_scope:
@@ -48,12 +49,13 @@ source_of_truth_priority:
   - executable_tests
   - CI_artifacts_and_logs
   - static_source_inspection
-  - comments_commit_messages_PR_text_previous_reports
+  - implementation_reports_PR_text_comments_commit_messages_previous_reports
 
 trust_rules:
   green_ci_is_not_acceptance: true
+  implementation_report_is_context_not_authority: true
   previous_report_is_not_authority: true
-  task_expected_sha_must_be_verified: true
+  target_sha_must_be_verified: true
   browser_execution_claim_requires_actual_browser_execution: true
   verified_fact_must_be_distinguished_from_inference: true
 ```
@@ -62,8 +64,8 @@ trust_rules:
 
 ```yaml
 reporting:
-  full_report_destination: audits/history/PR22_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
-  latest_alias: audits/PR22_FINAL_ACCEPTANCE_AUDIT.md
+  filename_template: audits/history/PR<PR_NUMBER>_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+  latest_alias: audits/LATEST_AUDIT.md
   chat_full_report: false
   chat_schema:
     - "VERDICT: <A|B|C> — <label>"
@@ -82,13 +84,13 @@ reporting:
 
 ```yaml
 evidence_classes:
-  EXECUTABLE_INTEGRATION: highest_runtime_value
+  BROWSER_RUNTIME: highest_for_actual_UI_behavior_if_really_executed
+  EXECUTABLE_INTEGRATION: high_runtime_value
   EXECUTABLE_CORE: strong_runtime_value
   CI_LOG: supporting_runtime_evidence
   STATIC_SOURCE: code_inspection_only
-  SOURCE_ASSERTION: non_runtime_guard
+  SOURCE_ASSERTION: nonruntime_guard
   WEAK_STRING_ASSERTION: lowest_confidence
-  BROWSER_RUNTIME: interactive_runtime_if_actually_available
 ```
 
 ## VERDICT MODEL
@@ -107,6 +109,7 @@ rules:
   - unresolved_financial_integrity_defect_cannot_be_B
   - compliance_bypass_implies_C
   - historical_job_mutation_without_explicit_lifecycle_action_implies_C
+  - contradictory_UI_state_that_can_cause_wrong_apply_action_is_at_least_P1
 ```
 
 ## OPERATING STYLE
@@ -125,4 +128,4 @@ style:
 
 ## MAINTENANCE RULE
 
-`WORKSPACE.md` is persistent infrastructure. Do not rewrite it for every audit. Change it only when the coordination protocol itself changes.
+`WORKSPACE.md` is persistent infrastructure. Task-specific PR/branch/SHA/scope belongs in `TASK_CURRENT.md`, not here.
