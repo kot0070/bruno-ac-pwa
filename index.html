@@ -5604,8 +5604,7 @@ function normalizeState(s) {
     if (c.license) metaBits.push(esc(c.license));
     if (c.email) metaBits.push(esc(c.email));
     if (c.website) metaBits.push(esc(c.website));
-    function makeLetterhead(docDate, docLabel) { return
-      '<div class="letterhead">' +
+    function makeLetterhead(docDate, docLabel) { return '<div class="letterhead">' +
         '<div>' +
           '<div class="lh-name">' + esc(companyDisplayName(c)) + '</div>' +
           (c.dba ? '<div class="muted">DBA: ' + esc(c.dba) + '</div>' : '') +
