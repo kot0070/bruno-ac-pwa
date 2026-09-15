@@ -15,8 +15,8 @@ jobs:
       - name: Recover and apply reviewed one-shot patch
         run: |
           git show b23c4bbcb0540506ad3b2cceb6d0b7b697a71677:.github/workflows/apply-financial-integrity.yml \
-            | sed -n "/python3 - <<'PY'/,/^          PY$/p" \
-            | sed '1d;$d;s/^          //' > /tmp/apply-financial-phase.py
+            | awk 'found { if ($0 ~ /^[[:space:]]*PY[[:space:]]*$/) exit; sub(/^          /, ""); print } /python3 - <<.PY./ { found=1 }' \
+            > /tmp/apply-financial-phase.py
           python3 /tmp/apply-financial-phase.py
       - name: Run deterministic tests
         run: |
