@@ -61,6 +61,8 @@
     return p;
   }
 
+  function deactivate(){state.active=false;var p=$('panel-code-library');if(p)p.classList.remove('active')}
+
   function activate(){
     var p=ensurePanel();if(!p)return;
     state.active=true;
@@ -76,7 +78,7 @@
     var shell=document.querySelector('.phase2-nav-shell'),sub=document.querySelector('.phase2-subnav'),ctx=$('phase2-context');if(!shell||!sub||!ctx)return;
     var tools=/^AC Tools\b/.test(ctx.textContent||'');
     var existing=$('code-library-subtab');
-    if(!tools){if(existing)existing.remove();return}
+    if(!tools){deactivate();if(existing)existing.remove();return}
     if(!existing){
       existing=document.createElement('button');existing.type='button';existing.id='code-library-subtab';existing.className='phase2-sub-btn';existing.textContent='Code Library';existing.addEventListener('click',function(e){e.preventDefault();activate()});sub.appendChild(existing);
     }
@@ -117,7 +119,7 @@
 
   function bindShell(){
     var shell=document.querySelector('.phase2-nav-shell');if(!shell)return false;
-    shell.addEventListener('click',function(e){var b=e.target.closest('.phase2-sub-btn');if(b&&b.id!=='code-library-subtab'&&state.active){state.active=false;var p=$('panel-code-library');if(p)p.classList.remove('active')}});
+    shell.addEventListener('click',function(e){var b=e.target.closest('.phase2-sub-btn'),g=e.target.closest('[data-group]');if((g||(b&&b.id!=='code-library-subtab'))&&state.active)deactivate()});
     if('MutationObserver' in window){state.observer=new MutationObserver(function(){if(state.renderQueued)return;state.renderQueued=true;requestAnimationFrame(function(){state.renderQueued=false;ensureSubtab()})});state.observer.observe(shell,{subtree:true,childList:true,characterData:true})}
     ensureSubtab();return true;
   }
