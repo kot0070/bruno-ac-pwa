@@ -30,6 +30,8 @@ function deriveReviewState(items){
 function init(){
   function $(id){return document.getElementById(id)}
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+  function setText(node,value){value=String(value);if(node&&node.textContent!==value)node.textContent=value}
+  function setClass(node,value){if(node&&node.className!==value)node.className=value}
 
   var status=$('phase1CalcState');
   var result=$('calcExplain');
@@ -127,15 +129,15 @@ function init(){
       var issue=issueFor(m);var pill=cell.querySelector('.row-review-status');var help=cell.querySelector('.row-review-help');
       if(!pill){pill=document.createElement('div');pill.className='row-review-status';cell.appendChild(pill)}
       if(!help){help=document.createElement('div');help.className='row-review-help';cell.appendChild(help)}
-      pill.className='row-review-status '+((m.unresolved||m.invalid||m.zero)?'warn':'ready');pill.textContent=issue.type;
-      help.textContent=issue.help;m.row.dataset.reviewIndex=String(idx);
+      setClass(pill,'row-review-status '+((m.unresolved||m.invalid||m.zero)?'warn':'ready'));setText(pill,issue.type);
+      setText(help,issue.help);if(m.row.dataset.reviewIndex!==String(idx))m.row.dataset.reviewIndex=String(idx);
     });
   }
 
   function setFinancialReasons(state){
     ['statCustomer','statYour','statMargin','statMarginPct'].forEach(function(id){
       var v=$(id);if(!v||!v.parentNode)return;var r=v.parentNode.querySelector('.stat-reason');
-      if(state.hard){if(!r){r=document.createElement('div');r.className='stat-reason';v.parentNode.appendChild(r)}r.textContent='Blocked by '+state.hard+' selected item'+(state.hard===1?'':'s')+' needing correction.';}
+      if(state.hard){if(!r){r=document.createElement('div');r.className='stat-reason';v.parentNode.appendChild(r)}setText(r,'Blocked by '+state.hard+' selected item'+(state.hard===1?'':'s')+' needing correction.');}
       else if(r)r.remove();
     });
   }
@@ -143,32 +145,48 @@ function init(){
   function renderAttention(models,state){
     var panel=$('reviewAttentionPanel'),list=$('reviewAttentionList'),head=$('reviewAttentionHead');if(!panel||!list||!head)return;
     var attention=models.filter(function(m){return m.selected&&(m.unresolved||m.invalid||m.zero)});
-    if(!attention.length){panel.classList.remove('show');list.innerHTML='';return}
-    panel.classList.add('show');head.textContent='What needs attention — '+attention.length+' selected item'+(attention.length===1?'':'s');
-    list.innerHTML=attention.map(function(m){var issue=issueFor(m);var idx=m.row.dataset.reviewIndex;return '<div class="review-issue"><strong>'+esc(labelFor(m.row))+'</strong><div class="issue-type">'+esc(issue.type)+'</div><div class="issue-help">'+esc(issue.help)+'</div><div class="review-issue-actions"><button type="button" data-review-jump="'+idx+'">Jump to row</button><button type="button" data-review-deselect="'+idx+'">Deselect</button></div></div>'}).join('');
+    if(!attention.length){panel.classList.remove('show');if(list.innerHTML)list.innerHTML='';return}
+    panel.classList.add('show');setText(head,'What needs attention — '+attention.length+' selected item'+(attention.length===1?'':'s'));
+    var html=attention.map(function(m){var issue=issueFor(m);var idx=m.row.dataset.reviewIndex;return '<div class="review-issue"><strong>'+esc(labelFor(m.row))+'</strong><div class="issue-type">'+esc(issue.type)+'</div><div class="issue-help">'+esc(issue.help)+'</div><div class="review-issue-actions"><button type="button" data-review-jump="'+idx+'">Jump to row</button><button type="button" data-review-deselect="'+idx+'">Deselect</button></div></div>'}).join('');
+    if(list.innerHTML!==html)list.innerHTML=html;
+  }
+
+  var bomObserver=null,statusObserver=null,mainApplyObserver=null;
+  function observe(){
+    if(bomObserver)bomObserver.observe(bomBody,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    if(statusObserver)statusObserver.observe(status,{attributes:true,childList:true,subtree:true,attributeFilter:['class']});
+    if(mainApplyObserver&&mainApply)mainApplyObserver.observe(mainApply,{attributes:true,attributeFilter:['disabled']});
+  }
+  function disconnect(){
+    if(bomObserver)bomObserver.disconnect();
+    if(statusObserver)statusObserver.disconnect();
+    if(mainApplyObserver)mainApplyObserver.disconnect();
   }
 
   function sync(){
-    var models=rows().map(rowModel);decorateRows(models);
-    var state=deriveReviewState(models);
-    var calculated=status.classList.contains('ready')||status.classList.contains('action-required')||status.classList.contains('review-required');
-    if(!calculated){return}
-    $('reviewGenerated').textContent=models.length;$('reviewSelected').textContent=state.selected;$('reviewReady').textContent=state.ready;$('reviewAttention').textContent=state.attention;
-    var info=$('calcBomInfo'),detail=$('calcBomDetail');
-    if(info)info.textContent=state.selected+' selected / '+models.length+' generated';
-    if(detail)detail.textContent=state.hard?(state.hard+' selected item'+(state.hard===1?'':'s')+' block Apply'):(state.zero?(state.zero+' valid $0 item'+(state.zero===1?'':'s')+' require review'):'All selected items are ready');
-    renderAttention(models,state);setFinancialReasons(state);
-    var hint=$('phase1ApplyHint');
-    if(state.mode==='action-required'){
-      status.className='calc-state action-required';status.textContent='Calculation complete — review '+state.hard+' blocking item'+(state.hard===1?'':'s')+' before Apply.';
-      if(applyBtn)applyBtn.disabled=true;if(hint){hint.textContent='Blocked — correct or deselect the items shown above.';hint.className='phase1-applyhint warn'}
-    }else if(state.mode==='review-required'){
-      status.className='calc-state review-required';status.textContent='Calculation complete — review '+state.zero+' valid $0 item'+(state.zero===1?'':'s')+' before Apply.';
-      if(applyBtn)applyBtn.disabled=!!(mainApply&&mainApply.disabled);if(hint){hint.textContent='Review required — valid $0 pricing will ask for confirmation on Apply.';hint.className='phase1-applyhint warn'}
-    }else{
-      status.className='calc-state ready';status.textContent='Calculation complete — selected BOM is ready to apply.';
-      if(applyBtn)applyBtn.disabled=!!(mainApply&&mainApply.disabled);if(hint){hint.textContent='Ready — review selected rows, then add them to the current Bruno job.';hint.className='phase1-applyhint'}
-    }
+    disconnect();
+    try{
+      var models=rows().map(rowModel);decorateRows(models);
+      var state=deriveReviewState(models);
+      var calculated=status.classList.contains('ready')||status.classList.contains('action-required')||status.classList.contains('review-required');
+      if(!calculated)return;
+      setText($('reviewGenerated'),models.length);setText($('reviewSelected'),state.selected);setText($('reviewReady'),state.ready);setText($('reviewAttention'),state.attention);
+      var info=$('calcBomInfo'),detail=$('calcBomDetail');
+      setText(info,state.selected+' selected / '+models.length+' generated');
+      setText(detail,state.hard?(state.hard+' selected item'+(state.hard===1?'':'s')+' block Apply'):(state.zero?(state.zero+' valid $0 item'+(state.zero===1?'':'s')+' require review'):'All selected items are ready'));
+      renderAttention(models,state);setFinancialReasons(state);
+      var hint=$('phase1ApplyHint');
+      if(state.mode==='action-required'){
+        setClass(status,'calc-state action-required');setText(status,'Calculation complete — review '+state.hard+' blocking item'+(state.hard===1?'':'s')+' before Apply.');
+        if(applyBtn)applyBtn.disabled=true;if(hint){setText(hint,'Blocked — correct or deselect the items shown above.');setClass(hint,'phase1-applyhint warn')}
+      }else if(state.mode==='review-required'){
+        setClass(status,'calc-state review-required');setText(status,'Calculation complete — review '+state.zero+' valid $0 item'+(state.zero===1?'':'s')+' before Apply.');
+        if(applyBtn)applyBtn.disabled=!!(mainApply&&mainApply.disabled);if(hint){setText(hint,'Review required — valid $0 pricing will ask for confirmation on Apply.');setClass(hint,'phase1-applyhint warn')}
+      }else{
+        setClass(status,'calc-state ready');setText(status,'Calculation complete — selected BOM is ready to apply.');
+        if(applyBtn)applyBtn.disabled=!!(mainApply&&mainApply.disabled);if(hint){setText(hint,'Ready — review selected rows, then add them to the current Bruno job.');setClass(hint,'phase1-applyhint')}
+      }
+    }finally{observe()}
   }
 
   result.addEventListener('click',function(e){
@@ -178,10 +196,11 @@ function init(){
   });
 
   var queued=false;function queueSync(){if(queued)return;queued=true;setTimeout(function(){queued=false;sync()},0)}
-  new MutationObserver(queueSync).observe(bomBody,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-  new MutationObserver(queueSync).observe(status,{attributes:true,childList:true,subtree:true,attributeFilter:['class']});
+  bomObserver=new MutationObserver(queueSync);
+  statusObserver=new MutationObserver(queueSync);
+  mainApplyObserver=mainApply?new MutationObserver(queueSync):null;
+  observe();
   bomBody.addEventListener('change',queueSync,true);
-  if(mainApply)new MutationObserver(queueSync).observe(mainApply,{attributes:true,attributeFilter:['disabled']});
   queueSync();
 }
 
