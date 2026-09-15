@@ -1,0 +1,52 @@
+name: PR22 Catalog Price Integrity Fix
+on:
+  push:
+    branches:
+      - feature/financial-integrity-texas-acr-docs
+jobs:
+  corrective:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/financial-integrity-texas-acr-docs
+      - name: Apply catalog price integrity patch
+        run: python scripts/pr22_catalog_price_integrity.py
+      - name: Run financial integrity tests
+        run: node tests/financial-integrity.test.js
+      - name: Syntax check
+        run: node --check financial-integrity-core.js
+      - name: Verify catalog-price invalid-zero invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          forbidden=[
+            'if (!isFinite(price) || price < 0) price = 0;',
+            "row.unitCost = Math.max(0, parseFloat(e.target.value) || 0);",
+            'priceMap[String(cat[ci].id)] = Number(cat[ci].unitCost) || 0;',
+            'row.unitCost = Number(map[id]) || 0;',
+            "value=\"' + (Number(c.unitCost) || 0)",
+          ]
+          for x in forbidden:
+            assert x not in s, x
+          required=[
+            'window.BrunoFinancial.INVALID_FINANCIAL',
+            'mats[mi].unitCost = price',
+            'mats[mi].unitCost = row.unitCost',
+            'window.BrunoFinancial.normalizePersistentFinancial(map[id], 0)',
+          ]
+          for x in required:
+            assert x in s, x
+          PY
+      - name: Commit corrected production state and remove temporary runners
+        run: |
+          rm -f scripts/pr22_catalog_price_integrity.py .github/workflows/pr22-catalog-price-integrity.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix catalog customer-price invalid-to-zero paths"
+          git push origin HEAD:feature/financial-integrity-texas-acr-docs
