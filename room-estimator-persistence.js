@@ -14,6 +14,7 @@ function persist(){
   }catch(e){return false}
 }
 function init(){
+  var heading=document.querySelector('#room-estimator-card h2');if(heading&&heading.firstChild)heading.firstChild.nodeValue='Building & room estimator ';
   var apply=document.getElementById('apply');if(apply)apply.addEventListener('click',function(){setTimeout(persist,0)});
   var exportBtn=document.getElementById('exportPlan');if(exportBtn){
     var extra=document.createElement('button');extra.type='button';extra.className='btn';extra.id='exportRoomPlan';extra.textContent='Export room plan JSON';exportBtn.parentNode.appendChild(extra);
