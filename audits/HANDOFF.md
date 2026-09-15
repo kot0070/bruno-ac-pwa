@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 22
+handoff_version: 23
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,97 +10,99 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR26_REAUDIT_REJECTED_FIX_REQUIRED
+state: MAIN_SERVICE_JOURNAL_V2_AUDIT_PENDING
 ```
 
-## LAST ACCEPTED / MERGED PRODUCTION BASELINE
+## CURRENT PRODUCTION TARGET
 
 ```yaml
-merged_pr: 25
-accepted_feature_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
-main_merge_commit: e84c9e9b6c53693d087db46156975ffec93d238a
-verdict: A_ACCEPT
+production_mode: DIRECT_MAIN
+production_branch: main
+main_head: 5d5506da031e933773614a11e8e5377a478870f6
+cycle_base: 3fe244c01dcb84dcf5af60607ba2cce191e51a73
+implementation_report: audits/implementation/MAIN_SERVICE_JOURNAL_V2_5d5506da.md
+current_audit_task: MAIN_SERVICE_JOURNAL_V2_AUDIT_01
 ```
 
-## CURRENT PR26
+## SERVICE JOURNAL V2 SCOPE
 
 ```yaml
-production_pr: 26
-production_branch: feature/room-based-code-estimator
-base_branch: main
-production_head: 116404b13313af0f966695777cf55a807b27fbb5
-merged: false
-draft: true
-latest_audit_verdict: C_REJECT_REWORK_REQUIRED
-latest_audit_report: audits/history/PR26_116404b13313af0f966695777cf55a807b27fbb5_20260915-1821.md
-```
-
-## REAUDIT RESULT
-
-```yaml
-closed:
-  - F01_live_wrapper_shape
-  - F02_confirm_save_invalid_room_plan
-  - F03_reload_room_plan_restore
-  - F05_false_compliance_ready_with_required_input
-  - F06_duplicate_provenance
-open_blocker:
-  id: F04
-  severity: P1
-  issue: click_only_room_plan_mutations_can_enter_blocked_state_without_invoking_live_fail_closed_invalidator_leaving_stale_Calculator_Apply_enabled
-partially_open:
-  id: F07
-  severity: P2
-  issue: import_pricing_validation_accepts_malformed_margin_fields_and_negative_finite_totals
-```
-
-## F04 REQUIRED FIX BOUNDARY
-
-```yaml
-required:
-  - every_room_plan_mutation_path_must_trigger_same_live_validation_and_fail_closed_gate
-  - include_click_only_add_remove_preset_clear_overrides_paths
-  - stale_Calculator_scope_BOM_must_never_remain_applyable_after_current_plan_blocks
-  - add_executable_DOM_integration_regression_for_valid_to_blocked_click_transition
-forbidden:
-  - merge_before_new_exact_HEAD_audit_acceptance
-```
-
-## F07 REQUIRED MINOR HARDENING
-
-```yaml
-required:
-  - reject_or_skip_semantically_invalid_historical_pricing
-  - cover_malformed_marginDollar
-  - cover_malformed_marginPct
-  - cover_negative_financial_totals_consistently_with_existing_financial_semantics
-```
-
-## VERIFIED CI CONTEXT
-
-```yaml
-ci_run: 35034425269
-validated_commit: ae03ac71f2a73cba34569332ebadbe74d9cd0b4e
-result: SUCCESS
-post_ci_delta_to_final_head: DELETE_.github/workflows/pr26-reaudit-validation.yml_only
+primary_changes:
+  - Journal_is_home_workspace
+  - compact_calendar_first_layout
+  - day_week_month_quarter_archive
+  - modal_add_edit_service_call
+  - compact_saved_call_rows
+  - range_income_totals
+  - hourly_or_fixed_day_helpers
+  - helper_payroll_can_drive_negative_daily_net
+  - helper_take_home_tax_estimate
+  - one_time_tax_settings
+  - TX_Dripping_Springs_default_7_65_FICA_estimate
+  - floating_Aa_restored
+  - PWA_cache_v38
+storage_key: bruno-ac-service-journal-v2
 browser_runtime: NOT_PERFORMED
 ```
 
-## NEXT STATE
+## VALIDATION
 
 ```yaml
-next_action: focused_PR26_fix_then_new_exact_HEAD_reaudit
-merge_before_acceptance: forbidden
+ci_run: 35037896673
+validated_commit: 426d2938031b6bb5fd933c6751f0b78b74caac99
+result: SUCCESS
+validated_steps:
+  - service_journal_tests
+  - financial_integrity_tests
+  - calculator_review_tests
+  - syntax_checks
+final_target_head: 5d5506da031e933773614a11e8e5377a478870f6
+expected_post_ci_delta: DELETE_.github/workflows/journal-v2-validation.yml_only
 ```
+
+## IMPORTANT AUDIT FOCUS
+
+```yaml
+must_check:
+  - actual_mobile_browser_behavior
+  - aggregate_totals_update_after_saved_call_changes
+  - helper_negative_net_semantics
+  - date_archive_boundaries
+  - reload_persistence
+  - legacy_migration_non_destructive
+  - Aa_visibility
+  - navigation_home_behavior
+  - tax_claim_scope_and_primary_sources
+  - Export_App_omits_V2_journal_key
+known_limit_requiring_independent_severity_decision:
+  - current_full_app_backup_does_not_include_bruno_ac_service_journal_v2
+```
+
+## TAX SEMANTIC BOUNDARY
+
+```yaml
+default_location: Dripping Springs, TX
+default_estimate_pct: 7.65
+basis: employee_FICA_6.2_social_security_plus_1.45_medicare
+not_claimed:
+  - complete_personal_tax_liability
+  - federal_income_tax_withholding
+  - employer_payroll_tax_burden
+user_can_override_or_disable: true
+```
+
+## PR26 STATUS PRESERVED
+
+PR #26 remains separate and unmerged. Its prior re-audit state is not authority for this direct-main Service Journal audit. Do not merge or mutate PR #26 during the current task.
 
 ## HANDOFF RULES
 
 ```yaml
 rules:
-  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_TASK_and_latest_report_before_action
-  - current_rejected_head_116404b13313af0f966695777cf55a807b27fbb5_must_not_be_merged
-  - production_PR_and_code_read_only_during_audit
-  - implementation_changes_belong_on_production_PR_in_separate_implementation_cycle
-  - next_audit_must_target_new_exact_HEAD_after_fix
+  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_TASK_and_implementation_report_before_audit
+  - audit_exact_main_head_5d5506da031e933773614a11e8e5377a478870f6
+  - production_main_is_read_only_during_audit
+  - no_PR_mutation_or_merge
   - browser_runtime_must_not_be_claimed_without_execution
+  - write_full_report_and_update_LATEST_AUDIT_and_HANDOFF_on_audit_completion
 ```
