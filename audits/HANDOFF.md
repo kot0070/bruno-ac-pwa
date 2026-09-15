@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 16
+handoff_version: 17
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,134 +10,164 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR25_CODE_LIBRARY_ACCEPTED
+state: PR26_ROOM_ESTIMATOR_AUDIT_PENDING
 ```
 
-## LAST ACCEPTED PRODUCTION BASELINE
+## LAST ACCEPTED / MERGED PRODUCTION BASELINE
 
 ```yaml
-merged_pr: 24
-accepted_feature_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
-main_merge_commit: 6f48420748da960d977d036bcc1be83a12ec4872
-verdict: A_ACCEPT
-blockers: []
+merged_pr: 25
+accepted_feature_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
+acceptance_verdict: A_ACCEPT
+acceptance_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_20260915-1635.md
+main_merge_commit: e84c9e9b6c53693d087db46156975ffec93d238a
 ```
+
+PR25 prior non-blocking finding `IRC-M1401.3-EQUIPMENT-SIZING` source URL is corrected inside PR26.
 
 ## CURRENT IMPLEMENTATION
 
 ```yaml
-production_pr: 25
-production_branch: feature/code-library-rule-registry
+production_pr: 26
+production_branch: feature/room-based-code-estimator
 base_branch: main
-base_sha: 6f48420748da960d977d036bcc1be83a12ec4872
-production_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
-implementation_report: audits/implementation/PR25_CODE_LIBRARY_RULE_REGISTRY_90ebe4d2.md
+base_sha: e84c9e9b6c53693d087db46156975ffec93d238a
+production_head: a04915f472679866ff941d0fb7b4b8752519becb
+implementation_report: audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
 merged: false
 draft: true
-production_changed_during_reaudit: false
-changed_files:
-  - code-library-ux.js
+changed_files_exactly:
+  - ac-calculator.html
   - code-library/texas-hvac-2026.json
   - code-rule-registry.js
+  - room-estimator-engine.js
+  - room-estimator-persistence.js
+  - room-estimator-preload.js
+  - room-estimator-ux.js
   - sw.js
   - tests/code-rule-registry.test.js
-  - workspace-v5.js
-```
-
-## INDEPENDENT AUDIT RESULT
-
-```yaml
-task_id: PR25_CODE_LIBRARY_ACCEPTANCE_01
-audited_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
-verdict: A_ACCEPT
-blockers: []
-findings:
-  P0: 0
-  P1: 0
-  P2: 1
-browser_runtime: NOT_PERFORMED
-full_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_20260915-1635.md
-independent_ci_audit_completed: true
-ci_run: 35024484325
-validated_commit: 5035fe1a58a42635e7b1d5198fac3507526d50da
-post_ci_delta_verified:
-  - .github/workflows/pr25-code-library-validation.yml removed only
-```
-
-### Non-blocking finding
-
-```yaml
-id: F01
-severity: P2
-rule_id: IRC-M1401.3-EQUIPMENT-SIZING
-issue: registry source URL points to IRC Chapter 44 referenced standards instead of the Chapter 14 page containing M1401.3
-blocking: false
+  - tests/room-estimator-engine.test.js
 ```
 
 ## IMPLEMENTATION PURPOSE
 
 ```yaml
-phase: Code_Library_and_Rule_Registry_foundation
-future_target:
-  - building_and_room_inputs
-  - applicable_code_rules
-  - scope_and_BOM_rules
-  - Catalog_resolution
-  - Customer_Price_and_Your_Cost
-  - source_traceability
-current_PR_does_not_yet_implement_room_based_calculation: true
-calculator_engine_consumes_rule_map_in_PR25: false
-```
-
-## PLANNED NEXT PHASE
-
-```yaml
-roadmap_file: audits/ROADMAP_NEXT.md
-next_major_phase: room_based_code_driven_estimator
-quantity_provenance_model:
-  - code_minimum
-  - calculated_baseline
+phase: room_based_code_driven_estimator_large_block
+flow:
+  - building_profile
+  - room_schedule
+  - design_and_code_traceability
+  - calculated_planning_or_takeoff_baseline
   - contractor_or_customer_override
   - override_reason
   - final_quantity
-repricing_after_valid_override:
-  - Customer_Materials
-  - Your_Material_Cost
-  - Material_Margin
-  - Material_Margin_Percent
-below_hard_code_minimum_must_not_silently_pass: true
-PR25_scope_unchanged_by_this_plan: true
+  - existing_AC_Calculator_BOM
+  - existing_Catalog_Customer_Price_and_Your_Cost
+  - existing_margin_and_Apply_lifecycle
 ```
 
-## AUDIT INFRASTRUCTURE STATUS
+## CRITICAL SAFETY BOUNDARIES
 
 ```yaml
-previous_blocked_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_20260915-1621.md
-previous_verdict: C_BLOCKED_INCOMPLETE_AUDIT
-previous_root_cause: audits/PROTOCOL.md_missing_while_TASK_CURRENT_protocol_required_true
-repair_complete: true
-protocol_present: true
-reaudit_completed: true
-reaudit_same_production_head: true
+no_sqft_to_tonnage_inference: true
+no_claim_of_performing_Manual_J_S_or_D: true
+planning_supply_defaults_are_code_minimums: false
+unknown_code_minimum_is_fabricated: false
+new_or_replacement_duct_missing_takeoff_blocks: true
+new_or_replacement_return_missing_design_input_blocks: true
+existing_duct_return_not_invented: true
+override_reason_supported: true
+future_hard_minimum_below_override_can_block: true
+financial_math_reimplemented_by_room_estimator: false
 ```
 
-## SOURCE / COPYRIGHT BOUNDARY
+## QUANTITY PROVENANCE MODEL
 
 ```yaml
-local_registry: code-library/texas-hvac-2026.json
-full_copyrighted_code_books_stored: false
-summary_only: true
-local_AHJ_verification_required: true
-independent_acceptance_verified: true
+fields:
+  - codeMinimum
+  - hardMinimum
+  - calculatedBaseline
+  - baselineType
+  - ruleIds
+  - override.value
+  - override.reason
+  - override.note
+  - finalQuantity
+  - finalSource
+current_metrics:
+  - supplyRegisters
+  - ductFt
+  - returnGrilles
+```
+
+## FINANCIAL / BOM INTEGRATION
+
+```yaml
+final_room_quantities_feed_existing_calculator: true
+existing_catalog_matching_remains_authoritative: true
+customer_track: Catalog.unitCost -> Calculator.customerUnitPrice -> Job.unitCost -> Quote
+internal_track: Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCostSnapshot -> PnL
+actual_track: Job.actualCost -> PnL_override_only
+```
+
+## PERSISTENCE
+
+```yaml
+path: state.acCalculator.roomEstimator
+additive: true
+success_gate: existing_AC_Calculator_generatedAt_changes_after_successful_Apply
+blocked_or_cancelled_apply_should_not_persist_room_snapshot: true
+preload_restores:
+  - sqft
+  - ductScope
+```
+
+## CODE / DESIGN TRACEABILITY
+
+```yaml
+new_reference:
+  id: ACCA-MANUAL-D-2016
+  role: design_reference_not_numeric_code_minimum
+  source: https://www.acca.org/standards/technical-manuals/manual-d
+new_mappings:
+  - equipment-sizing
+  - duct-design
+  - duct
+  - supply-registers
+  - return-grilles
+local_AHJ_remains_explicit: true
+full_copyrighted_manual_stored: false
+```
+
+## VALIDATION
+
+```yaml
+ci_run: 35028250513
+validated_commit: b7c32f36aba4de652f5046f9986c294513424020
+ci_result: SUCCESS
+successful_steps:
+  - room-estimator
+  - code-rule-registry
+  - financial-integrity
+  - calculator-pricing
+  - pr22-lifecycle-integration
+  - calculator-review-ux
+  - service-journal-ux
+  - JS_syntax_checks
+post_ci_change: remove_temporary_workflow_only
+final_head: a04915f472679866ff941d0fb7b4b8752519becb
+temporary_workflow_in_final_diff: false
+browser_runtime: NOT_PERFORMED
 ```
 
 ## NEXT STATE
 
 ```yaml
-next_action:
-  - PR25 may proceed according to normal project merge governance because independent audit verdict is A_ACCEPT
-  - any production change after 90ebe4d2408a7b0af7e6e7671540f632585a8804 requires a new exact-HEAD audit before relying on this acceptance
-merge_performed_by_auditor: false
+next_task_id: PR26_ROOM_BASED_ESTIMATOR_ACCEPTANCE_01
+next_task_mode: independent_large_block_acceptance_audit
+expected_next_state: PR26_acceptance_or_focused_followup_fixes
+merge_before_acceptance: forbidden
 ```
 
 ## HANDOFF RULES
@@ -146,11 +176,11 @@ merge_performed_by_auditor: false
 rules:
   - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_IMPLEMENTATION_REPORT_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
-  - production_PR_and_code_remain_read_only_during_audit
+  - audit_exact_head_a04915f472679866ff941d0fb7b4b8752519becb
+  - production_PR_and_code_read_only_during_audit
   - auditor_does_not_merge
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - implementation_report_is_context_not_authority
   - browser_runtime_must_not_be_claimed_without_execution
-  - accepted_target_head_is_90ebe4d2408a7b0af7e6e7671540f632585a8804
-  - prior_C_verdict_was_audit_infrastructure_blocker_not_a_production_rejection
+  - if_findings_exist_fix_same_PR_then_reaudit_new_exact_HEAD
 ```
