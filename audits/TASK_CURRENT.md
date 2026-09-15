@@ -23,6 +23,24 @@ rules:
   - after_successful_save_keep_only_3_newest_history_reports
   - delete_older_history_reports_only_from_audit_branch
   - chat_response_only: verdict,audited_head,blockers,report_link
+communication:
+  language: uk
+  tone: concise_technical_direct
+  no_long_chat_report: true
+  no_repeating_task_text: true
+  no_progress_narrative_unless_blocked: true
+  blockers_max: 5
+  final_chat_schema:
+    - "VERDICT: <A|B|C> — <label>"
+    - "AUDITED HEAD: <full_sha>"
+    - "BLOCKERS: <none|up_to_5_short_lines>"
+    - "FULL REPORT: <github_url>"
+  evidence_style:
+    - distinguish_verified_fact_from_inference
+    - use_exact_sha_file_function_when_available
+    - classify_tests_as_EXECUTABLE_CORE_EXECUTABLE_INTEGRATION_SOURCE_ASSERTION_WEAK_STRING_ASSERTION
+    - never_claim_browser_execution_if_not_performed
+    - never_treat_green_ci_as_acceptance_by_itself
 status: ACTIVE
 ```
 
