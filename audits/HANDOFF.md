@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 17
+handoff_version: 18
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,7 +10,7 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR26_ROOM_ESTIMATOR_AUDIT_PENDING
+state: PR26_LIVE_ESTIMATOR_AUDIT_PENDING
 ```
 
 ## LAST ACCEPTED / MERGED PRODUCTION BASELINE
@@ -23,8 +23,6 @@ acceptance_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_
 main_merge_commit: e84c9e9b6c53693d087db46156975ffec93d238a
 ```
 
-PR25 prior non-blocking finding `IRC-M1401.3-EQUIPMENT-SIZING` source URL is corrected inside PR26.
-
 ## CURRENT IMPLEMENTATION
 
 ```yaml
@@ -32,131 +30,113 @@ production_pr: 26
 production_branch: feature/room-based-code-estimator
 base_branch: main
 base_sha: e84c9e9b6c53693d087db46156975ffec93d238a
-production_head: a04915f472679866ff941d0fb7b4b8752519becb
-implementation_report: audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
+production_head: 5b069931eaf98311f31d344c1acd6cc8e5553ade
+obsolete_previous_audit_target: a04915f472679866ff941d0fb7b4b8752519becb
+implementation_reports:
+  - audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
+  - audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
 merged: false
 draft: true
-changed_files_exactly:
-  - ac-calculator.html
-  - code-library/texas-hvac-2026.json
-  - code-rule-registry.js
-  - room-estimator-engine.js
-  - room-estimator-persistence.js
-  - room-estimator-preload.js
-  - room-estimator-ux.js
-  - sw.js
-  - tests/code-rule-registry.test.js
-  - tests/room-estimator-engine.test.js
 ```
 
-## IMPLEMENTATION PURPOSE
+## USER TARGET FLOW
+
+```text
+Building/system inputs
+-> square footage + room schedule
+-> code/design traceability
+-> code minimum where defensible
+-> calculated/design baseline
+-> contractor/customer override + reason
+-> live compliance state
+-> final quantity
+-> live components/material BOM
+-> existing Catalog Customer Price / Your Cost
+-> live margin preview
+-> explicit Apply to Job only
+```
+
+## LIVE ESTIMATOR EXTENSION
 
 ```yaml
-phase: room_based_code_driven_estimator_large_block
-flow:
-  - building_profile
-  - room_schedule
-  - design_and_code_traceability
-  - calculated_planning_or_takeoff_baseline
-  - contractor_or_customer_override
-  - override_reason
-  - final_quantity
-  - existing_AC_Calculator_BOM
-  - existing_Catalog_Customer_Price_and_Your_Cost
-  - existing_margin_and_Apply_lifecycle
+new_file: room-estimator-live.js
+behavior:
+  - debounced_room_input_reactivity
+  - rebuild_room_engine_result
+  - sync_valid_final_quantities_to_existing_calculator_preview
+  - trigger_existing_calculate_path_not_parallel_pricing
+  - mirror_existing_Customer_Your_Margin_outputs
+  - red_fail_state_for_known_hard_minimum_or_explicit_blocker
+  - warning_state_for_unresolved_design_input
+  - source_links_resolved_from_local_Code_Library_ruleIds
+  - no_automatic_Apply
+  - no_live_localStorage_write
 ```
 
-## CRITICAL SAFETY BOUNDARIES
+## SAFETY / TRUTHFULNESS BOUNDARIES
 
 ```yaml
 no_sqft_to_tonnage_inference: true
 no_claim_of_performing_Manual_J_S_or_D: true
-planning_supply_defaults_are_code_minimums: false
-unknown_code_minimum_is_fabricated: false
-new_or_replacement_duct_missing_takeoff_blocks: true
-new_or_replacement_return_missing_design_input_blocks: true
-existing_duct_return_not_invented: true
-override_reason_supported: true
-future_hard_minimum_below_override_can_block: true
-financial_math_reimplemented_by_room_estimator: false
-```
-
-## QUANTITY PROVENANCE MODEL
-
-```yaml
-fields:
-  - codeMinimum
-  - hardMinimum
-  - calculatedBaseline
-  - baselineType
-  - ruleIds
-  - override.value
-  - override.reason
-  - override.note
-  - finalQuantity
-  - finalSource
-current_metrics:
-  - supplyRegisters
-  - ductFt
-  - returnGrilles
+planning_defaults_are_code_minimums: false
+unknown_numeric_minimum_fabricated: false
+known_hard_minimum_below_override_should_block_and_render_red: true
+unresolved_design_input_should_not_render_compliant: true
+live_preview_writes_job: false
+explicit_Apply_required_for_job_mutation: true
 ```
 
 ## FINANCIAL / BOM INTEGRATION
 
 ```yaml
-final_room_quantities_feed_existing_calculator: true
-existing_catalog_matching_remains_authoritative: true
+room_final_quantity_to_existing_AC_Calculator: true
+existing_catalog_matching_authoritative: true
 customer_track: Catalog.unitCost -> Calculator.customerUnitPrice -> Job.unitCost -> Quote
 internal_track: Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCostSnapshot -> PnL
 actual_track: Job.actualCost -> PnL_override_only
+parallel_room_pricing_formula: false
 ```
 
-## PERSISTENCE
+## CODE / SOURCE TRACEABILITY
 
 ```yaml
-path: state.acCalculator.roomEstimator
-additive: true
-success_gate: existing_AC_Calculator_generatedAt_changes_after_successful_Apply
-blocked_or_cancelled_apply_should_not_persist_room_snapshot: true
-preload_restores:
-  - sqft
-  - ductScope
+registry: code-library/texas-hvac-2026.json
+room_live_source_links_use_ruleIds: true
+noopener_required: true
+local_AHJ_explicit: true
+Manual_D_role: design_reference_not_numeric_code_minimum
+PR25_M1401_3_source_issue_fixed_in_PR26: true
 ```
 
-## CODE / DESIGN TRACEABILITY
+## PWA
 
 ```yaml
-new_reference:
-  id: ACCA-MANUAL-D-2016
-  role: design_reference_not_numeric_code_minimum
-  source: https://www.acca.org/standards/technical-manuals/manual-d
-new_mappings:
-  - equipment-sizing
-  - duct-design
-  - duct
-  - supply-registers
-  - return-grilles
-local_AHJ_remains_explicit: true
-full_copyrighted_manual_stored: false
+cache: bruno-ac-v38
+live_asset_cached: ./room-estimator-live.js
 ```
 
 ## VALIDATION
 
 ```yaml
-ci_run: 35028250513
-validated_commit: b7c32f36aba4de652f5046f9986c294513424020
-ci_result: SUCCESS
-successful_steps:
-  - room-estimator
-  - code-rule-registry
-  - financial-integrity
-  - calculator-pricing
-  - pr22-lifecycle-integration
-  - calculator-review-ux
-  - service-journal-ux
-  - JS_syntax_checks
-post_ci_change: remove_temporary_workflow_only
-final_head: a04915f472679866ff941d0fb7b4b8752519becb
+original_room_block_ci:
+  run: 35028250513
+  validated_commit: b7c32f36aba4de652f5046f9986c294513424020
+  result: SUCCESS
+live_extension_ci:
+  run: 35029436317
+  validated_commit: cb8a14f043bc8cc6bb609beb4408dd46df39e602
+  result: SUCCESS
+  successful_steps:
+    - room-estimator
+    - code-rule-registry
+    - financial-integrity
+    - calculator-pricing
+    - lifecycle-integration
+    - calculator-review-ux
+    - service-journal-ux
+    - syntax-checks-including-live-layer
+post_live_ci_change: remove_temporary_workflow_only
+final_head: 5b069931eaf98311f31d344c1acd6cc8e5553ade
 temporary_workflow_in_final_diff: false
 browser_runtime: NOT_PERFORMED
 ```
@@ -164,9 +144,8 @@ browser_runtime: NOT_PERFORMED
 ## NEXT STATE
 
 ```yaml
-next_task_id: PR26_ROOM_BASED_ESTIMATOR_ACCEPTANCE_01
+next_task_id: PR26_LIVE_CODE_ESTIMATOR_ACCEPTANCE_02
 next_task_mode: independent_large_block_acceptance_audit
-expected_next_state: PR26_acceptance_or_focused_followup_fixes
 merge_before_acceptance: forbidden
 ```
 
@@ -174,9 +153,10 @@ merge_before_acceptance: forbidden
 
 ```yaml
 rules:
-  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_IMPLEMENTATION_REPORT_TASK_before_action
+  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_both_implementation_reports_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
-  - audit_exact_head_a04915f472679866ff941d0fb7b4b8752519becb
+  - audit_exact_head_5b069931eaf98311f31d344c1acd6cc8e5553ade
+  - obsolete_head_a04915f472679866ff941d0fb7b4b8752519becb_must_not_be_used_for_acceptance
   - production_PR_and_code_read_only_during_audit
   - auditor_does_not_merge
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
