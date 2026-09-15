@@ -35,7 +35,10 @@ jobs:
           blocks=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,flags=re.S)
           Path('/tmp/bruno-inline.js').write_text('\n'.join(b for b in blocks if b.strip()))
           PY
-          node --check /tmp/bruno-inline.js
+          if ! node --check /tmp/bruno-inline.js; then
+            nl -ba /tmp/bruno-inline.js | sed -n '3085,3135p'
+            exit 1
+          fi
       - name: Verify lifecycle invariants
         run: |
           python - <<'PY'
