@@ -67,6 +67,17 @@ function loadServiceJournalUX(){
   document.head.appendChild(s);
 }
 
+function loadCodeLibraryUX(){
+  function loadUX(){
+    if(window.BrunoCodeLibraryUX){window.BrunoCodeLibraryUX.init();return}
+    if(document.querySelector('script[data-code-library-ux]'))return;
+    var ux=document.createElement('script');ux.src='./code-library-ux.js';ux.async=false;ux.setAttribute('data-code-library-ux','1');document.head.appendChild(ux);
+  }
+  if(window.BrunoCodeRuleRegistry){loadUX();return}
+  if(document.querySelector('script[data-code-rule-registry]'))return;
+  var core=document.createElement('script');core.src='./code-rule-registry.js';core.async=false;core.setAttribute('data-code-rule-registry','1');core.addEventListener('load',loadUX);document.head.appendChild(core);
+}
+
 function bindGlobal(){
   document.addEventListener('click',function(e){var b=e.target.closest('[data-phase5-tab]');if(b){e.preventDefault();legacyTab(b.getAttribute('data-phase5-tab'))}});
   document.addEventListener('keydown',function(e){
@@ -80,6 +91,6 @@ function bindGlobal(){
     }
   });
 }
-function init(){setupMaterials();setupCatalog();setupSummary();bindGlobal();loadServiceJournalUX();document.body.classList.add('phase5-workspace-ready')}
+function init(){setupMaterials();setupCatalog();setupSummary();bindGlobal();loadServiceJournalUX();loadCodeLibraryUX();document.body.classList.add('phase5-workspace-ready')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
