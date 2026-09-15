@@ -1,0 +1,31 @@
+name: PR24 Service Journal Validation
+on:
+  push:
+    branches:
+      - feature/service-call-journal-ux
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Financial integrity
+        run: node tests/financial-integrity.test.js
+      - name: Calculator pricing
+        run: node tests/ac-calculator-pricing.test.js
+      - name: Lifecycle integration
+        run: node tests/pr22-lifecycle-integration.test.js
+      - name: Calculator review UX
+        run: node tests/ac-calculator-review-ux.test.js
+      - name: Service journal UX
+        run: node tests/service-journal-ux.test.js
+      - name: Syntax checks
+        run: |
+          node --check service-journal-ux.js
+          node --check workspace-v5.js
+          node --check sw.js
+          node --check financial-integrity-core.js
+          node --check ac-calculator-engine.js
+          node --check ac-calculator.js
