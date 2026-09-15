@@ -94,7 +94,7 @@ function setupCompactHeader(){
   var prefs=document.createElement('div');prefs.className='workspace-other-prefs';prefs.innerHTML='<div class="workspace-other-label">Display</div><button type="button" class="btn btn-sm" data-workspace-pref="theme">Theme</button><button type="button" class="btn btn-sm" data-workspace-pref="zoom-out">Zoom −</button><button type="button" class="btn btn-sm" data-workspace-pref="zoom-in">Zoom +</button>';op.appendChild(prefs);
   reset.textContent='Reset';reset.title='Reset demo';
   var frag=document.createDocumentFragment();frag.appendChild(printMenu);frag.appendChild(reset);frag.appendChild(otherMenu);host.replaceChildren(frag);host.dataset.workspaceCompact='1';
-  var floating=$('ui-prefs');if(floating)floating.classList.add('workspace-prefs-hidden');
+  /* Keep the compact floating Aa control available; Display actions also remain in Other. */
   host.addEventListener('click',function(e){var pref=e.target.closest('[data-workspace-pref]');if(pref){e.preventDefault();var id=pref.getAttribute('data-workspace-pref'),target=id==='theme'?$('ui-prefs-theme'):id==='zoom-out'?$('ui-prefs-zoom-out'):$('ui-prefs-zoom-in');if(target)target.click();return}var action=e.target.closest('.workspace-action-popover .btn,.workspace-action-popover label.btn');if(action&&!action.querySelector('input[type=file]'))setTimeout(function(){printMenu.open=false;otherMenu.open=false},0)});
   document.addEventListener('pointerdown',function(e){if(!host.contains(e.target)){printMenu.open=false;otherMenu.open=false}},true);
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){printMenu.open=false;otherMenu.open=false}});
