@@ -1,7 +1,7 @@
 # BRUNO AC AUDIT AI WORKSPACE
 
 ```yaml
-workspace_version: 2
+workspace_version: 3
 workspace_type: persistent_ai_audit_coordination
 repository: kot0070/bruno-ac-pwa
 audit_branch: audit/pr22-603cbca
@@ -58,6 +58,38 @@ trust_rules:
   target_sha_must_be_verified: true
   browser_execution_claim_requires_actual_browser_execution: true
   verified_fact_must_be_distinguished_from_inference: true
+```
+
+## MISSING FILE RECOVERY PROTOCOL
+
+```yaml
+missing_file_policy:
+  never_invent_missing_content: true
+  never_assume_missing_equals_empty: true
+  never_classify_missing_optional_file_as_production_defect: true
+  recovery_order:
+    - verify_exact_branch_ref_and_path
+    - inspect_relevant_directory_or_PR_changed_files
+    - check_for_rename_move_or_new_canonical_equivalent
+    - use_current_equivalent_only_if_identity_and_relevance_are_verified
+    - record_substitution_in_report_with_old_path_and_resolved_path
+  required_file_missing_after_recovery:
+    action: BLOCKED
+    requirement: explain_exact_missing_artifact_and_why_task_cannot_be_completed_safely
+    do_not_continue_with_guessed_content: true
+  optional_or_context_file_missing_after_recovery:
+    action: CONTINUE_WITH_LIMITATION
+    requirement: report_missing_evidence_and_reduce_claim_strength
+  referenced_historical_report_missing:
+    action: CONTINUE_IF_current_code_tests_and_task_scope_are_sufficient
+    previous_report_required_as_authority: false
+  task_file_missing:
+    action: BLOCKED
+  workspace_file_missing:
+    action: BLOCKED
+  production_file_expected_by_task_but_absent:
+    action: investigate_before_verdict
+    classify_only_after_confirming_whether_absence_is_expected_rename_removal_or_defect
 ```
 
 ## REPORT PROTOCOL
