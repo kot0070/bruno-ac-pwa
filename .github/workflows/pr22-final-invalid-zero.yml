@@ -1,0 +1,54 @@
+name: PR22 Final Invalid Zero Fix
+
+on:
+  push:
+    branches:
+      - feature/financial-integrity-texas-acr-docs
+    paths:
+      - .tmp_pr22_final_zero_fix.py
+      - .github/workflows/pr22-final-invalid-zero.yml
+
+permissions:
+  contents: write
+
+jobs:
+  corrective:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/financial-integrity-texas-acr-docs
+          fetch-depth: 0
+
+      - name: Apply targeted final patch
+        run: python3 .tmp_pr22_final_zero_fix.py
+
+      - name: Run financial integrity tests
+        run: node tests/financial-integrity.test.js
+
+      - name: Syntax check
+        run: |
+          node --check financial-integrity-core.js
+          node --check tests/financial-integrity.test.js
+
+      - name: Verify final invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('index.html').read_text()
+          assert 'n = Number(n) || 0;' not in s[s.index('function money(n)'):s.index('function pct(n)')]
+          assert 'n = Math.round(Number(n) || 0);' not in s
+          assert 'normalizeExplicitLaborValue(row.straightHours, 0)' in s
+          assert 'INVALID — correct before pricing' in s
+          assert "Base quote: ' + (calc.quoteValid ? money0(calc.quoteBase) : '—')" in s
+          print('final invalid-zero invariants passed')
+          PY
+
+      - name: Commit corrected production state and remove temporary runner
+        run: |
+          git config user.name "kot0070"
+          git config user.email "95998304+kot0070@users.noreply.github.com"
+          rm -f .tmp_pr22_final_zero_fix.py .github/workflows/pr22-final-invalid-zero.yml
+          git add financial-integrity-core.js index.html tests/financial-integrity.test.js .tmp_pr22_final_zero_fix.py .github/workflows/pr22-final-invalid-zero.yml
+          git commit -m "Fix invalid-zero rendering and explicit labor persistence"
+          git push origin HEAD:feature/financial-integrity-texas-acr-docs
