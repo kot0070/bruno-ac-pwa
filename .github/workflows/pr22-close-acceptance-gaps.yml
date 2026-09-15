@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 scripts/pr22-temp-implement.py
           sed -i '1d' tests/pr22-lifecycle-integration.test.js
+          sed -i 's|assert(src.includes("row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL"));|assert(src.includes("window.BrunoPricingLifecycle.setCatalogCustomerPrice(state, id, e.target.value)"), "Margins customer price must use strict lifecycle helper");|' tests/financial-integrity.test.js
 
       - name: Validate syntax and required tests
         shell: bash
@@ -42,7 +43,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/pr22-close-acceptance-gaps.yml scripts/pr22-temp-implement.py
-          git add index.html tests/pr22-lifecycle-integration.test.js
+          git add index.html tests/financial-integrity.test.js tests/pr22-lifecycle-integration.test.js
           git diff --cached --check
           git commit -m "Close PR22 lifecycle acceptance gaps"
           git push origin HEAD:feature/financial-integrity-texas-acr-docs
