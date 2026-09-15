@@ -249,6 +249,7 @@
     if (!req.category) return true;
     var rc = norm(row && row.category);
     var q = norm(req.category);
+    if (!rc) return false;
     return rc === q || rc.indexOf(q) >= 0 || q.indexOf(rc) >= 0;
   }
   function hay(row) { return [row&&row.item,row&&row.part,row&&row.vendor,row&&row.category].filter(Boolean).join(' ').toLowerCase(); }

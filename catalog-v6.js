@@ -6,7 +6,14 @@
  * Adds common residential/light-commercial HVAC install materials without
  * overwriting any existing catalog row or shop-edited price. Prices are
  * estimating placeholders only and should be replaced with current vendor/OEM costs.
+ *
+ * V6.1 also owns the migration path for older saved/imported jobs. The main app
+ * intentionally keeps its large legacy state normalizer unchanged; this module
+ * repairs missing V6 catalog metadata in localStorage and performs one controlled
+ * reload so the private in-app state is rebuilt from the enriched catalog.
  */
+var STORAGE_KEY='bruno-ac-v1';
+var RELOAD_FLAG='bruno-catalog-v6-reload';
 var ITEMS=[
   {id:'ac-ls-17',item:'Insulated refrigerant line-set pair allowance (diameters by OEM)',part:'LS-PAIR-FT',vendor:'-',units:'ft',unitCost:9.5,category:'Line sets & fittings',notes:'Generic per-foot estimating allowance only. Exact liquid/suction diameters and equivalent-length limits come from OEM instructions.'},
   {id:'ac-ls-11',item:'Insulated line set package, 25 ft',part:'LS-PKG-25',vendor:'-',units:'ea',unitCost:185,category:'Line sets & fittings',notes:'Example estimating placeholder; verify diameter and OEM compatibility.'},
@@ -60,38 +67,117 @@ var ITEMS=[
 
 function cloneRow(row){
   var out={};Object.keys(row).forEach(function(k){out[k]=row[k]});
-  if(out.crew==null)out.crew=1;if(out.prod==null)out.prod=0;if(out.prodUnit==null)out.prodUnit='Day';
+  if(out.crew==null)out.crew=1;
+  if(out.prod==null)out.prod=0;
+  if(out.prodUnit==null)out.prodUnit='Day';
   if(out.yourCost==null)out.yourCost=out.unitCost;
   return out;
 }
 
+function isMissing(v){return v==null||v==='';}
+
+function enrichMissing(target,source){
+  var changed=false;
+  if(!target||!source)return changed;
+  Object.keys(source).forEach(function(k){
+    if(isMissing(target[k])){target[k]=source[k];changed=true;}
+  });
+  if(isMissing(target.crew)){target.crew=1;changed=true;}
+  if(target.prod==null){target.prod=0;changed=true;}
+  if(isMissing(target.prodUnit)){target.prodUnit='Day';changed=true;}
+  if(isMissing(target.yourCost)){
+    target.yourCost=!isMissing(target.unitCost)?target.unitCost:source.unitCost;
+    changed=true;
+  }
+  return changed;
+}
+
 function mergeInto(cat){
-  if(!Array.isArray(cat))return 0;
-  var ids={},names={},added=0;
-  cat.forEach(function(r){if(!r)return;if(r.id)ids[String(r.id)]=true;if(r.item)names[String(r.item).trim().toLowerCase()]=true});
-  ITEMS.forEach(function(r){var name=String(r.item).trim().toLowerCase();if(ids[r.id]||names[name])return;cat.push(cloneRow(r));ids[r.id]=true;names[name]=true;added++});
-  return added;
-}
-
-function apply(){
-  try{if(window.BRUNO_SEED&&Array.isArray(window.BRUNO_SEED.catalog))mergeInto(window.BRUNO_SEED.catalog)}catch(e){}
-  try{
-    if(typeof state!=='undefined'&&state&&Array.isArray(state.catalog)){
-      var added=mergeInto(state.catalog);
-      if(added){
-        if(typeof save==='function')save();
-        if(typeof refresh==='function')refresh();
-      }
-      return true;
+  if(!Array.isArray(cat))return {changed:false,added:0,enriched:0};
+  var byId={},byName={},added=0,enriched=0,changed=false;
+  cat.forEach(function(r){
+    if(!r)return;
+    if(r.id)byId[String(r.id)]=r;
+    if(r.item)byName[String(r.item).trim().toLowerCase()]=r;
+  });
+  ITEMS.forEach(function(src){
+    var name=String(src.item).trim().toLowerCase();
+    var existing=byId[String(src.id)]||byName[name];
+    if(existing){
+      if(enrichMissing(existing,src)){enriched++;changed=true;}
+      return;
     }
-  }catch(e2){}
-  return false;
+    var row=cloneRow(src);
+    cat.push(row);
+    byId[String(row.id)]=row;
+    byName[name]=row;
+    added++;
+    changed=true;
+  });
+  return {changed:changed,added:added,enriched:enriched};
 }
 
-var tries=0;
-(function boot(){
-  if(apply())return;
-  tries++;
-  if(tries<20)setTimeout(boot,100);
-})();
+function repairStoredJob(){
+  try{
+    var raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return false;
+    var job=JSON.parse(raw);
+    if(!job||typeof job!=='object'||Array.isArray(job))return false;
+    if(!Array.isArray(job.catalog))job.catalog=[];
+    var result=mergeInto(job.catalog);
+    if(!result.changed)return false;
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(job));
+    return true;
+  }catch(e){return false;}
+}
+
+function controlledReload(){
+  try{
+    if(sessionStorage.getItem(RELOAD_FLAG)==='1'){
+      sessionStorage.removeItem(RELOAD_FLAG);
+      return;
+    }
+    sessionStorage.setItem(RELOAD_FLAG,'1');
+  }catch(e){}
+  window.location.reload();
+}
+
+function watchImport(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener('change',function(){
+    var before='';
+    try{before=localStorage.getItem(STORAGE_KEY)||'';}catch(e){}
+    var tries=0;
+    var timer=setInterval(function(){
+      tries++;
+      var now='';
+      try{now=localStorage.getItem(STORAGE_KEY)||'';}catch(e2){}
+      if(now!==before){
+        clearInterval(timer);
+        if(repairStoredJob())controlledReload();
+        return;
+      }
+      if(tries>=50)clearInterval(timer);
+    },100);
+  });
+}
+
+try{
+  if(window.BRUNO_SEED&&Array.isArray(window.BRUNO_SEED.catalog))mergeInto(window.BRUNO_SEED.catalog);
+}catch(e){}
+
+/*
+ * The core app state lives inside an IIFE, so an external catalog module cannot
+ * safely mutate its private `state` variable. Repair the persisted job instead,
+ * then reload once so the canonical app normalizer consumes the complete rows.
+ */
+if(repairStoredJob()){
+  controlledReload();
+  return;
+}
+
+try{sessionStorage.removeItem(RELOAD_FLAG);}catch(e3){}
+watchImport('btn-import');
+watchImport('btn-import-app');
 })();
