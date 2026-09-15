@@ -11,7 +11,6 @@ s = index.read_text()
 t = calc_test.read_text()
 f = fin_test.read_text()
 
-# 1) Executable lifecycle helper: Catalog Customer Price edits mutate Catalog only.
 anchor = "  function validateAcrCompany(company) {\n"
 helper = r'''  function setCatalogCustomerPrice(state, catalogId, rawValue) {
     state = state || {};
@@ -30,61 +29,46 @@ helper = r'''  function setCatalogCustomerPrice(state, catalogId, rawValue) {
 
 '''
 if 'function setCatalogCustomerPrice(state, catalogId, rawValue)' not in c:
-    if anchor not in c:
-        raise SystemExit('core helper anchor missing')
+    if anchor not in c: raise SystemExit('core helper anchor missing')
     c = c.replace(anchor, helper + anchor, 1)
 export_old = "    reconcileMaterialCosts: reconcileMaterialCosts,\n    validateAcrCompany: validateAcrCompany\n"
 export_new = "    reconcileMaterialCosts: reconcileMaterialCosts,\n    setCatalogCustomerPrice: setCatalogCustomerPrice,\n    validateAcrCompany: validateAcrCompany\n"
-if export_old in c:
-    c = c.replace(export_old, export_new, 1)
-elif 'setCatalogCustomerPrice: setCatalogCustomerPrice' not in c:
-    raise SystemExit('core export anchor missing')
+if export_old in c: c = c.replace(export_old, export_new, 1)
+elif 'setCatalogCustomerPrice: setCatalogCustomerPrice' not in c: raise SystemExit('core export anchor missing')
 
-# 2) Catalog Customer Price editor: strict update of Catalog only.
 old_parse = "      var parsedPrice = parseFloat(inputEl.value);\n      var price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL;\n"
 new_parse = "      var rawPrice = String(inputEl.value == null ? '' : inputEl.value).trim();\n      var result = window.BrunoFinancial.setCatalogCustomerPrice(state, cid, rawPrice === '' ? window.BrunoFinancial.INVALID_FINANCIAL : rawPrice);\n      var price = result.value;\n"
-if old_parse not in s:
-    raise SystemExit('catalog price parse anchor missing')
+if old_parse not in s: raise SystemExit('catalog price parse anchor missing')
 s = s.replace(old_parse, new_parse, 1)
 s = s.replace("          cat[ci].unitCost = price;\n          cat[ci].priceUpdated = stamp;", "          cat[ci].priceUpdated = stamp;", 1)
 
 catalog_mats = re.compile(r"\n      var mats = \(state && state\.materialsUsed\) \|\| \[\];\n      for \(var mi = 0; mi < mats\.length; mi\+\+\) \{\n        if \(String\(mats\[mi\]\.id\) === String\(cid\) \|\| String\(mats\[mi\]\.catalogId \|\| ''\) === String\(cid\)\) \{\n          mats\[mi\]\.unitCost = price;\n          mats\[mi\]\.priceUpdated = stamp;\n        \}\n      \}")
 s, n = catalog_mats.subn("\n      /* Catalog edits are template changes only. Existing Job Materials retain their stored quote basis until explicit Calculator Apply/Re-Apply. */", s, count=1)
-if n != 1:
-    raise SystemExit('catalog -> Job propagation block missing')
+if n != 1: raise SystemExit('catalog -> Job propagation block missing')
 
-# 3) Margins Customer Price editor is also a Catalog template edit; remove implicit Job mutation.
 margin_mats = re.compile(r"\n\s*var mats\s*=\s*\(state\s*&&\s*state\.materialsUsed\)\s*\|\|\s*\[\];\s*for\s*\(var mi\s*=\s*0;\s*mi\s*<\s*mats\.length;\s*mi\+\+\)\s*\{\s*if\s*\([^\n\{]*\)\s*\{?\s*mats\[mi\]\.unitCost\s*=\s*row\.unitCost;\s*\}?\s*\}", re.S)
 s, n2 = margin_mats.subn("\n        /* Margins edits update Catalog only; Job Materials change only on explicit Calculator Apply/Re-Apply. */", s, count=1)
 if n2 != 1:
-    if 'mats[mi].unitCost = row.unitCost' not in s:
-        n2 = 1
-    else:
-        raise SystemExit('margins -> Job propagation block missing')
+    if 'mats[mi].unitCost = row.unitCost' not in s: n2 = 1
+    else: raise SystemExit('margins -> Job propagation block missing')
 
-# 4) Preserve genuinely blank Your Cost. No upstream materialization from Customer Price.
 old_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);\n"
 new_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      /* No map entry means Your Cost remains genuinely blank. Effective fallback is resolved at read time so provenance remains customer-price-fallback. */\n"
-if old_cost_map not in s:
-    raise SystemExit('applyCatalogCostMap fallback anchor missing')
+if old_cost_map not in s: raise SystemExit('applyCatalogCostMap fallback anchor missing')
 s = s.replace(old_cost_map, new_cost_map, 1)
 
-# 5) Catalog renderer: blank fallback remains visibly distinguishable from explicit Your Cost.
 old_render = "          var catYour = (c.yourCost != null && c.yourCost !== '') ? nonNegativeFinancial(c.yourCost) : catPrice;\n          html += '<td class=\"col-cost\"><input type=\"number\" class=\"num cat-your' + (catYour === null ? ' invalid-financial' : '') + '\" step=\"0.01\" min=\"0\" data-id=\"' + esc(c.id) + '\" value=\"' + (catYour === null ? '' : catYour) + '\" title=\"' + (catYour === null ? 'Invalid direct cost — correct before profitability' : 'Your cost after supplier discount') + '\" aria-label=\"Your cost\"' + (catYour === null ? ' aria-invalid=\"true\"' : '') + ' /></td>';\n"
 new_render = "          var catYourSupplied = c.yourCost != null && c.yourCost !== '';\n          var catYour = catYourSupplied ? nonNegativeFinancial(c.yourCost) : null;\n          var catYourInvalid = catYourSupplied && catYour === null;\n          var catYourPlaceholder = !catYourSupplied && catPrice !== null ? ('fallback ' + catPrice) : '';\n          html += '<td class=\"col-cost\"><input type=\"number\" class=\"num cat-your' + (catYourInvalid ? ' invalid-financial' : '') + '\" step=\"0.01\" min=\"0\" data-id=\"' + esc(c.id) + '\" value=\"' + (catYourSupplied && catYour !== null ? catYour : '') + '\" placeholder=\"' + esc(catYourPlaceholder) + '\" title=\"' + (catYourInvalid ? 'Invalid direct cost — correct before profitability' : (catYourSupplied ? 'Your cost after supplier discount' : 'Blank: Customer Price fallback; enter a value to create explicit Catalog Your Cost')) + '\" aria-label=\"Your cost\"' + (catYourInvalid ? ' aria-invalid=\"true\"' : '') + ' /></td>';\n"
-if old_render not in s:
-    raise SystemExit('Catalog Your Cost renderer anchor missing')
+if old_render not in s: raise SystemExit('Catalog Your Cost renderer anchor missing')
 s = s.replace(old_render, new_render, 1)
 
-# 6) Replace stale financial source assertions that required the now-rejected implicit propagation behavior.
 f = f.replace("  assert(src.includes(\"price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL\"));", "  assert(src.includes('setCatalogCustomerPrice(state, cid'), 'catalog edit must use strict lifecycle helper');")
 f = f.replace("  assert(src.includes(\"mats[mi].unitCost = price\"), 'catalog edit must propagate the same valid/invalid state to matching job material');", "  assert(!src.includes(\"mats[mi].unitCost = price\"), 'Catalog edit must not mutate historical Job Material');")
 f = f.replace("  assert(src.includes(\"mats[mi].unitCost = row.unitCost\"), 'margins edit must propagate the same valid/invalid state to matching job material');", "  assert(!src.includes(\"mats[mi].unitCost = row.unitCost\"), 'Margins Catalog edit must not mutate historical Job Material');")
 
-# 7) Executable lifecycle regression in Calculator suite.
 append = r'''
 
-// Catalog -> historical Job lifecycle: Catalog template edits must NOT mutate existing Job Materials.
+// Catalog -> historical Job lifecycle: template edits do not mutate an accepted Job until explicit Apply.
 {
   const state = {
     catalog: [{ id: 'CAT-A', unitCost: 100, yourCost: 70 }],
@@ -104,7 +88,7 @@ append = r'''
   assert.strictEqual(generated.procurementCostSnapshot, 55, 'explicit re-Apply should update procurement snapshot');
 }
 
-// Blank Your Cost stays blank upstream; Calculator owns transparent fallback provenance.
+// Blank Your Cost remains a transparent Customer Price fallback.
 {
   const b = E.buildResolvedBom({catalog:[catalog('CAT-B','fixture-b',50,null,false)],materialsUsed:[]}, scopeFor('fixture-b',1));
   assert.strictEqual(b[0].customerUnitPrice, 50);
@@ -112,10 +96,15 @@ append = r'''
   assert.strictEqual(b[0].yourCostSource, 'customer-price-fallback');
 }
 
-assert.ok(!source.includes('mats[mi].unitCost = price'), 'Catalog Customer Price edit must not rewrite existing Job Materials');
-assert.ok(!source.includes('mats[mi].unitCost = row.unitCost'), 'Margins Customer Price edit must not rewrite existing Job Materials');
-assert.ok(!source.includes("else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0)"), 'blank Your Cost must remain blank for provenance');
-assert.ok(source.includes('setCatalogCustomerPrice(state, cid'), 'Catalog Customer Price edit should use executable lifecycle helper');
+{
+  const fs = require('fs');
+  const path = require('path');
+  const source = fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  assert.ok(!source.includes('mats[mi].unitCost = price'), 'Catalog Customer Price edit must not rewrite existing Job Materials');
+  assert.ok(!source.includes('mats[mi].unitCost = row.unitCost'), 'Margins Customer Price edit must not rewrite existing Job Materials');
+  assert.ok(!source.includes("else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0)"), 'blank Your Cost must remain blank for provenance');
+  assert.ok(source.includes('setCatalogCustomerPrice(state, cid'), 'Catalog Customer Price edit should use executable lifecycle helper');
+}
 '''
 if 'Catalog -> historical Job lifecycle' not in t:
     if "const F = require('../financial-integrity-core.js');" not in t:
