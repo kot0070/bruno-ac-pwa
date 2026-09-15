@@ -6,7 +6,7 @@ protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
 roadmap: audits/ROADMAP_NEXT.md
-implementation_report: audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
+implementation_report: audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
 read_order:
   - audits/WORKSPACE.md
   - audits/PROTOCOL.md
@@ -14,6 +14,7 @@ read_order:
   - audits/HANDOFF.md
   - audits/ROADMAP_NEXT.md
   - audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
+  - audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
   - audits/TASK_CURRENT.md
 protocol_required: true
 ```
@@ -32,201 +33,136 @@ mode_guard:
 ```
 
 ```yaml
-task_id: PR26_ROOM_BASED_ESTIMATOR_ACCEPTANCE_01
+task_id: PR26_LIVE_CODE_ESTIMATOR_ACCEPTANCE_02
 mode: independent_large_block_acceptance_audit
 repository: kot0070/bruno-ac-pwa
 production_pr: 26
 production_branch: feature/room-based-code-estimator
 base_branch: main
 base_sha: e84c9e9b6c53693d087db46156975ffec93d238a
-target_head: a04915f472679866ff941d0fb7b4b8752519becb
-last_accepted_main: e84c9e9b6c53693d087db46156975ffec93d238a
+target_head: 5b069931eaf98311f31d344c1acd6cc8e5553ade
+obsolete_target_head: a04915f472679866ff941d0fb7b4b8752519becb
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Independently determine whether PR #26 safely delivers the first large room/building-driven estimator block while preserving accepted financial/job behavior and clearly distinguishing:
+Audit the entire PR26 as a live code/design-driven room estimator, not only helper functions.
+
+Expected user flow:
 
 ```text
-code/design requirement
-vs
-planning/takeoff baseline
-vs
-user override
-vs
-final BOM quantity
-vs
-Catalog pricing
-```
-
-The implementation report is context only. Production code, observable behavior, executable tests, CI evidence, and authoritative external sources are higher authority.
-
-This audit is intentionally broad. Inspect the whole PR26 user flow and regression surface rather than only the new helper functions.
-
-## USER WORKFLOW TO VERIFY
-
-Expected high-level flow:
-
-```text
-Project / system inputs
--> Building & room estimator
--> room schedule
--> code/design checks
--> calculated planning/takeoff quantities
+Building/system inputs
+-> total square footage
+-> room schedule (type/count/area/conditioned/etc.)
+-> applicable code/design references
+-> defensible code minimum when one exists
+-> calculated/design baseline
 -> optional contractor/customer override + reason
--> final quantities
--> existing AC Calculator BOM
--> existing Catalog Customer Price / Your Cost
--> margin
--> explicit Apply to Job Materials
+-> live compliance status
+-> final quantity
+-> generated components/materials
+-> existing Catalog matching
+-> Customer Price / Your Cost / Margin
+-> explicit Apply to Job only
 ```
 
-The user expects to be able to enter building square footage and room composition (for example kitchen, bedrooms, bathrooms, garage, etc.), use that to produce useful scope/material planning, manually increase a calculated amount for customer/contractor preference, and have pricing recalculate from the Catalog.
+The estimator must be reactive in preview. Editing a room, quantity, area, or override should refresh the preview BOM/pricing/compliance without automatically mutating Job data.
 
-## FINAL DIFF / SCOPE
+## CRITICAL TRUTHFULNESS / SAFETY
 
-Expected changed files exactly:
-
-```yaml
-- ac-calculator.html
-- code-library/texas-hvac-2026.json
-- code-rule-registry.js
-- room-estimator-engine.js
-- room-estimator-persistence.js
-- room-estimator-preload.js
-- room-estimator-ux.js
-- sw.js
-- tests/code-rule-registry.test.js
-- tests/room-estimator-engine.test.js
-```
-
-Forbidden final artifacts:
-
-```yaml
-- .github/workflows/pr26-room-estimator-validation.yml
-- temporary_scripts
-- debug_artifacts
-```
-
-Must remain unchanged from base unless independently proven otherwise:
-
-```yaml
-- index.html
-- financial-integrity-core.js
-- ac-calculator-engine.js
-- ac-calculator.js
-- ac-calculator-review-ux.js
-- service-journal-ux.js
-- navigation-v2.js
-- workspace-v5.js
-```
-
-## BUILDING / ROOM MODEL
-
-Verify the room estimator can represent and safely normalize:
-
-```yaml
-building:
-  - sqft
-  - stories
-  - ceilingHeight
-  - location
-  - foundation
-  - ductScope
-  - returnGrillesDesign
-rooms:
-  - kitchen
-  - bedroom
-  - living_room
-  - bathroom
-  - garage
-  - laundry
-  - office
-  - other
-per_room:
-  - count
-  - areaEach
-  - conditioned
-  - supplyPerRoom
-  - branchFtPerRoom
-  - exteriorWalls
-  - windows
-```
-
-Check malformed/blank/zero/negative/extreme inputs and normalization behavior. Values must not silently become unsafe or misleading quantities.
-
-## SQUARE FOOTAGE / CAPACITY SAFETY
-
-This is a critical acceptance gate.
-
-Verify all of the following:
+Verify:
 
 ```yaml
 - sqft_does_not_directly_select_tonnage
 - room_count_does_not_directly_select_tonnage
-- calculator_does_not_claim_to_perform_Manual_J
-- calculator_does_not_claim_to_perform_Manual_S
-- calculator_does_not_claim_to_perform_Manual_D
-- equipment_capacity_remains_manual_or_requires_approved_load_result
-- code/design language_does_not_imply_sqft_rule_of_thumb_is_compliant_sizing
+- no_false_claim_of_performing_Manual_J_S_or_D
+- planning_defaults_are_not_presented_as_code_minimums
+- unknown_numeric_code_minimum_is_not_fabricated
+- known_hard_minimum_violation_is_red_and_blocking
+- unresolved_design_or_field_input_is_not_presented_as_compliant
+- code/design source links correspond to actual ruleIds
+- local_AHJ/OEM verification remains explicit where applicable
 ```
 
-Independently verify the cited sizing/design references to the extent necessary to determine whether production wording overstates them.
+If a metric has `hardMinimum: true` and a known `codeMinimum`, an override below it must not silently become compliant/final. The UI should show a red failure/block state and preserve the rule/source traceability.
 
-## ROOM AREA RECONCILIATION
+For current metrics where no defensible universal numeric minimum exists, `codeMinimum: null` is valid and MUST NOT be treated as a defect.
+
+## LIVE CALCULATOR BEHAVIOR
+
+Audit `room-estimator-live.js` closely.
 
 Verify:
 
 ```yaml
-- conditioned_room_area_is_sum_of_areaEach_times_count
-- garage_or_other_unconditioned_rows_do_not_enter_conditioned_area
-- missing_conditioned_room_area_is_visible_as_incomplete
-- >15_percent_room_vs_building_area_difference_produces_warning
-- warning_does_not_change_tonnage_or_fabricate_missing_area
+- listens_to_room_input_and_change_events
+- debounce_is_bounded
+- rebuilds_current_room_plan
+- no_recursive_input_click_or_calculate_loop
+- blockers_prevent_invalid_room_result_from_syncing_into_final_BOM
+- resolved_final_quantities_sync_into_existing_AC_Calculator_preview
+- existing_Calculate_path_remains_authoritative_for_BOM_and_pricing
+- Customer_Materials_Your_Cost_Margin_refresh_after_live_changes
+- live_layer_never_clicks_or_calls_Apply
+- live_layer_does_not_write_localStorage_or_Job_state
+- explicit_Apply_remains_required_for_Job_mutation
+- stale_green_ready_state_is_not_left_after_room_changes
 ```
 
-## SUPPLY-REGISTER PLANNING BASELINE
-
-PR26 intentionally contains planning defaults by room type. These are **not claimed code minimums**.
-
-Verify:
+Representative scenario:
 
 ```yaml
-- default_supply_values_are_clearly_planning_takeoff_values
-- UI_code_minimum_for_these_metrics_is_not_fabricated
-- calculated_baseline_remains_distinct_from_codeMinimum
-- per_room_explicit_supply_input_overrides_the_planning_default_for_baseline_calculation
-- room_count_multiplies_quantity_correctly
-- unconditioned_room_does_not_generate_conditioned_supply_quantity
+baseline_supply: 8
+override_supply: 10
+override_reason: customer_request
+expected:
+  final_quantity: 10
+  BOM_quantity: 10
+  Customer_extension: 10 * Catalog.unitCost
+  Your_extension: 10 * effective Catalog.yourCost or accepted fallback
+  Job_materials_before_Apply: unchanged
 ```
 
-Any UI or logic that presents the planning default as a legal/code minimum is at least P1.
+## BUILDING / ROOM MODEL
+
+Verify existing PR26 model remains correct for:
+
+- total sqft;
+- stories;
+- ceiling height;
+- location/climate context;
+- foundation/equipment context;
+- kitchen, bedroom, living room, bathroom, garage, laundry, office, other;
+- room count;
+- area per room;
+- conditioned flag;
+- supply per room;
+- branch/run ft per room;
+- exterior walls/windows.
+
+Check blank/zero/negative/extreme/malformed normalization.
+
+Room-area reconciliation >15% must remain visible without changing tonnage.
 
 ## DUCT / RETURN DESIGN GATES
 
-Verify new/replacement duct scope does not silently invent required design values.
-
-Expected:
+For new/replacement duct scope:
 
 ```yaml
-new_or_replacement:
-  missing_branch_run_takeoff:
-    ductFt: unresolved
-    blocks_final_sync: true
-  missing_return_design_input_or_documented_override:
-    returnGrilles: unresolved
-    blocks_final_sync: true
-existing_duct:
-  generated_ductFt: 0
-  returnGrilles_not_invented: true
+missing_branch_takeoff:
+  ductFt: unresolved
+  invalid_live_sync: blocked
+missing_return_design_or_valid_override:
+  returnGrilles: unresolved
+  invalid_live_sync: blocked
 ```
 
-Check that Manual D reference is used as a design reference rather than a fake numeric code minimum.
+Existing duct mode must not invent return design values.
 
-## BASELINE / OVERRIDE / FINAL PROVENANCE
+## OVERRIDE / PROVENANCE
 
-Each metric should preserve independent fields:
+Each metric must preserve:
 
 ```yaml
 - codeMinimum
@@ -241,223 +177,96 @@ Each metric should preserve independent fields:
 - finalSource
 ```
 
-Verify:
+Verify baseline survives override and reason survives snapshot/export/persistence.
 
-```yaml
-- valid_override_changes_finalQuantity_not_underlying_baseline
-- valid_override_preserves_calculatedBaseline
-- valid_override_source_is_traceable
-- blank_override_uses_baseline
-- override_without_reason_is_visibly_warned
-- override_reason_survives_snapshot/export/persistence
-- future hardMinimum guard rejects below-minimum override when hardMinimum true and codeMinimum known
-- current metrics_with_no_defensible_numeric_minimum_keep_codeMinimum_null
-```
+## SOURCE / CODE TRACEABILITY
 
-Do not treat absence of a fabricated numeric code minimum as a defect.
+Verify Code Library and rule map remain valid, including:
 
-## CATALOG / REPRICING INTEGRATION
+- `IRC-M1401.3-EQUIPMENT-SIZING` source correction;
+- `ACCA-MANUAL-D-2016` as a design reference, not a fabricated numeric code minimum;
+- `LOCAL-AHJ-VERIFY` remains explicit;
+- source buttons in live cards resolve `ruleIds` through the registry;
+- external links use HTTPS and `rel="noopener"`;
+- no full copyrighted code/manual text is stored.
 
-This is a core user requirement.
-
-Verify final room-estimator quantities flow into the existing AC Calculator inputs and then through the accepted existing pricing path.
-
-Representative scenario:
-
-```yaml
-baseline_supply_registers: 8
-override_supply_registers: 10
-override_reason: customer_request
-expected_final_quantity: 10
-expected_AC_scope_supply_register_qty: 10
-expected_BOM_qty: 10
-expected_customer_extension: 10 * Catalog.unitCost
-expected_your_extension: 10 * effective_Catalog.yourCost_or_customer_price_fallback
-```
-
-Verify repricing updates:
-
-```yaml
-- Customer_Materials
-- Your_Material_Cost
-- Material_Margin
-- Material_Margin_Percent
-```
-
-The room estimator must not introduce a parallel pricing formula that bypasses `ac-calculator-engine.js` / accepted financial architecture.
-
-## FINANCIAL REGRESSION GATES
+## FINANCIAL / CATALOG REGRESSION
 
 Must remain true:
 
 ```yaml
-customer_track:
-  Catalog.unitCost -> Calculator.customerUnitPrice -> Job.unitCost -> Quote
-internal_track:
-  Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCostSnapshot -> PnL
-actual_track:
-  Job.actualCost -> PnL_override_only
-invariants:
-  - yourCost_never_enters_customer_quote_basis
-  - calculator_does_not_create_actualCost
-  - blank_yourCost_preserves_customer_price_fallback_provenance
-  - malformed_financial_value_never_silently_becomes_zero
-  - numeric_zero_remains_valid_and_reviewable
-  - catalog_edits_do_not_mutate_existing_job_before_explicit_reapply
+customer_track: Catalog.unitCost -> Calculator.customerUnitPrice -> Job.unitCost -> Quote
+internal_track: Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCostSnapshot -> PnL
+actual_track: Job.actualCost -> PnL override only
 ```
-
-Re-run/inspect accepted financial fixtures, including adversarial customer=100 / your=1 behavior.
-
-## APPLY / PERSISTENCE LIFECYCLE
-
-`room-estimator-persistence.js` is additive, but must obey existing Apply semantics.
 
 Verify:
 
-```yaml
-storage_path: state.acCalculator.roomEstimator
-expected:
-  - room_snapshot_persists_after_successful_existing_Apply
-  - blocked_Apply_does_not_persist_room_snapshot
-  - cancelled_zero_price_confirmation_does_not_persist_room_snapshot
-  - invalid_financial_block_does_not_persist_room_snapshot
-  - existing_generatedAt_success_marker_is_not_falsely_changed_by_room_layer
-  - room_persistence_does_not_rewrite_material_prices_or_actualCost
-  - room_snapshot_does_not_break_existing_storage_import_reload
-```
+- Your Cost never leaks into customer quote basis;
+- blank Your Cost fallback provenance remains correct;
+- malformed financial values never silently become zero;
+- legitimate zero remains reviewable;
+- live preview does not create `actualCost`;
+- Catalog edits do not mutate historical Job values before explicit Apply/Re-Apply.
 
-Audit the timing/order of event listeners carefully. A click alone must not be mistaken for successful Apply.
+Re-run accepted financial/lifecycle fixtures.
 
-## PRELOAD / RELOAD
+## APPLY / PERSISTENCE
 
-Verify saved room plan restoration is coherent:
+Verify `room-estimator-persistence.js` still persists only after successful existing Calculator Apply.
 
-```yaml
-- saved_sqft_restored_before_room_UI_seed
-- saved_ductScope_restored_before_room_UI_seed
-- reload_does_not_overwrite_saved_room_plan_with_generic_defaults
-- malformed_or_absent_room_snapshot_fails_non_destructively
-```
+Blocked/cancelled Apply must not persist the room snapshot.
 
-## CODE LIBRARY / RULE TRACEABILITY
+Live preview events must not alter this lifecycle.
 
-Verify the registry remains valid and PR26 additions are coherent.
+## SCRIPT ORDER / EVENT SAFETY
 
-Expected new rule:
-
-```yaml
-id: ACCA-MANUAL-D-2016
-family: ACCA-DESIGN
-role: design_reference_not_numeric_code_minimum
-```
-
-Expected mappings:
-
-```yaml
-equipment-sizing:
-  - IRC-M1401.3-EQUIPMENT-SIZING
-duct-design:
-  - ACCA-MANUAL-D-2016
-  - LOCAL-AHJ-VERIFY
-duct:
-  - ACCA-MANUAL-D-2016
-  - LOCAL-AHJ-VERIFY
-supply-registers:
-  - ACCA-MANUAL-D-2016
-  - LOCAL-AHJ-VERIFY
-return-grilles:
-  - ACCA-MANUAL-D-2016
-  - LOCAL-AHJ-VERIFY
-```
-
-Verify every mapped rule ID resolves.
-
-Also verify PR25 non-blocking F01 is actually corrected:
-
-```yaml
-rule: IRC-M1401.3-EQUIPMENT-SIZING
-old_problem: source pointed to Chapter 44 referenced standards
-expected_PR26: source points to Chapter 14 heating/cooling equipment page containing M1401.3 context
-```
-
-No full copyrighted code/manual text should be introduced.
-
-## UI / MOBILE WORKFLOW
-
-Preferred actual mobile/browser runtime if available.
-
-Verify expected information order:
+Current relevant load order includes:
 
 ```text
-Project / system inputs
-Building & room estimator
-Calculation result
-Generated BOM
-Code / coordination checks
-Assumptions & warnings
+ac-calculator-engine.js
+ac-calculator.js
+ac-calculator-ux.js
+room-estimator-preload.js
+room-estimator-engine.js
+room-estimator-ux.js
+room-estimator-persistence.js
+code-rule-registry.js
+room-estimator-live.js
+ac-calculator-review-ux.js
 ```
 
-Verify on mobile width:
+Audit DOMContentLoaded timing, event-listener order, initialization idempotency, stale/dirty state, and any click/change feedback loops.
+
+## PWA / OFFLINE
+
+Expected:
 
 ```yaml
-- room_rows_are_usable_without_desktop_horizontal_table_dependency
-- add_room_works
-- remove_room_works
-- 3bed_2bath_example_loads_once_without_duplicate_rows
-- count_area_conditioned_supply_branch_fields_are_editable
-- quantity_metric_cards_are_readable
-- code_minimum_calculated_final_source_are_distinguishable
-- override_and_reason_work
-- blockers_are_visible
-- Recalculate_BOM_action_updates_existing_BOM_once
-- no_recursive_change_or_click_loop
-- no_observer_loop
-- existing_Calculator_review_state_remains_coherent
-- no_stale_green_ready_state_after_room_input_changes
-- no_console_errors
-```
-
-If actual browser runtime is unavailable, report exactly `NOT_PERFORMED` and do not infer a runtime pass from static source or tests.
-
-## SCRIPT ORDER / INITIALIZATION
-
-Verify `ac-calculator.html` loading order does not create lifecycle races between:
-
-```yaml
-- ac-calculator-engine.js
-- ac-calculator.js
-- ac-calculator-ux.js
-- room-estimator-preload.js
-- room-estimator-engine.js
-- room-estimator-ux.js
-- room-estimator-persistence.js
-- ac-calculator-review-ux.js
-```
-
-Specifically inspect DOMContentLoaded registration order, auto-calculation behavior, room UI insertion, dirty/stale calculation state, and persistence hook timing.
-
-## PWA / OFFLINE DELIVERY
-
-Expected service worker:
-
-```yaml
-cache: bruno-ac-v37
-new_assets:
+cache: bruno-ac-v38
+required_room_assets:
   - ./room-estimator-preload.js
   - ./room-estimator-engine.js
   - ./room-estimator-ux.js
   - ./room-estimator-persistence.js
+  - ./room-estimator-live.js
 ```
 
-Verify all previously accepted critical assets remain cached and the service worker syntax/behavior was not broken by formatting changes.
+All previously accepted critical assets must remain available.
 
-## EXECUTABLE / CI EVIDENCE
+## FINAL DIFF / SCOPE
 
-Implementation report references authoritative final-code validation before workflow cleanup:
+Expected production diff relative to main includes the original PR26 files plus `room-estimator-live.js`. No temporary workflow may remain.
+
+Must independently inspect final diff rather than trusting this description.
+
+## CI EVIDENCE
+
+Latest live validation:
 
 ```yaml
-run_id: 35028250513
-validated_commit: b7c32f36aba4de652f5046f9986c294513424020
+run_id: 35029436317
+validated_commit: cb8a14f043bc8cc6bb609beb4408dd46df39e602
 expected_result: SUCCESS
 expected_steps:
   - Room estimator
@@ -467,56 +276,70 @@ expected_steps:
   - Lifecycle integration
   - Calculator review UX
   - Service journal UX
-  - Syntax checks
+  - Syntax checks including room-estimator-live.js
 ```
 
-Independently inspect run/jobs.
-
-Then compare validated commit to exact target HEAD `a04915f472679866ff941d0fb7b4b8752519becb`.
+Then compare `cb8a14f043bc8cc6bb609beb4408dd46df39e602` to exact target HEAD `5b069931eaf98311f31d344c1acd6cc8e5553ade`.
 
 Expected only post-CI change:
 
 ```text
-DELETE .github/workflows/pr26-room-estimator-validation.yml
+DELETE .github/workflows/pr26-live-validation.yml
 ```
 
-Anything else in the post-CI delta must be independently assessed.
+Also retain prior PR26 CI evidence from implementation report for original room-estimator block.
 
-## ACCEPTED PRODUCT REGRESSION GATES
+## BROWSER / MOBILE RUNTIME
 
-Verify no regression in:
+Preferred. If available, actually test:
 
-```yaml
-- PR22_financial_integrity
-- PR23_AC_Calculator_review_UX
-- PR24_Service_Call_Journal
-- PR25_Code_Library_navigation_and_registry
-- Quote_Method_A
-- PnL_precedence
-- Catalog_snapshot_lifecycle
-- localStorage_job_compatibility
-```
+- edit total sqft;
+- add/remove rooms;
+- change room count/area/supply/branch ft;
+- apply override and reason;
+- watch live status/BOM/prices update;
+- verify red failure for any modeled hard-minimum test path if one can be constructed without altering production;
+- verify unresolved design state is visible;
+- verify source links;
+- verify Job materials remain unchanged before Apply;
+- verify explicit Apply still works when all gates pass;
+- verify mobile layout and no console errors/loops.
+
+If browser runtime is unavailable, report exactly `NOT_PERFORMED`.
+
+## ACCEPTED REGRESSION SURFACE
+
+Audit no regression in:
+
+- PR22 financial integrity / lifecycle;
+- PR23 calculator review UX;
+- PR24 Service Call Journal;
+- PR25 Code Library;
+- Quote Method A;
+- P&L precedence;
+- persistence/import compatibility;
+- navigation/PWA shell.
 
 ## SEVERITY
 
 ```yaml
 P0:
-  - customer_or_internal_financial_track_corruption
-  - job_data_loss_or_schema_break
-  - silent_below_known_hard_code_minimum_treated_as_compliant
-  - sqft_or_room_count_silently_drives_fake_compliant_tonnage
+  - financial_track_corruption
+  - job_data_loss
+  - silent_below_known_hard_minimum_treated_as_compliant
+  - sqft_or_room_count_drives_fake_compliant_tonnage
 P1:
-  - room_estimator_final_quantity_does_not_reprice_through_existing_Catalog_path
+  - live_change_does_not_update_BOM_or_Catalog_pricing
+  - live_layer_mutates_Job_before_explicit_Apply
   - planning_default_presented_as_code_minimum
-  - unresolved_new_or_replacement_design_input_silently_becomes_final_zero
-  - blocked_or_cancelled_Apply_persists_or_mutates_job_inappropriately
-  - override_loses_baseline_or_provenance
-  - room_UI_breaks_existing_Calculator_apply_or_review_state
-  - critical_registry_rule_or_source_mapping_invalid
-  - self_triggering_event_or_observer_loop
-  - required_room_assets_not_available_offline
+  - unresolved_design_value_silently_becomes_final_zero
+  - code_source_link_materially_wrong_for_displayed_rule
+  - recursive_event_or_calculate_loop
+  - stale_green_ready_state_after_live change
+  - required_live_asset_missing_offline
+  - regression_in_accepted_financial_or_product_behavior
 P2:
-  - minor_copy_spacing_or_mobile_layout_issue_without workflow/compliance/financial impact
+  - minor_copy_or_mobile_layout_issue_without workflow/compliance/financial impact
 ```
 
 ## REQUIRED REPORT
@@ -530,20 +353,15 @@ minimum_sections:
   - Exact_Audited_SHA
   - Final_Diff
   - Building_And_Room_Model
-  - Square_Footage_And_Capacity_Safety
-  - Room_Area_Reconciliation
-  - Supply_Planning_Baseline
-  - Duct_And_Return_Design_Gates
+  - Live_Calculator_Reactivity
+  - Code_And_Design_Compliance_State
   - Baseline_Override_Final_Provenance
   - Catalog_And_Repricing
   - Financial_Regression_Gates
   - Apply_And_Persistence_Lifecycle
-  - Preload_And_Reload
-  - Code_Library_And_Rule_Traceability
-  - PR25_F01_Source_Link_Fix
-  - UI_And_Mobile_Workflow
+  - Source_Traceability
   - Initialization_And_Event_Safety
-  - Service_Worker_Offline_Delivery
+  - PWA_Offline_Delivery
   - Test_CI_Evidence
   - Accepted_Product_Regression_Gates
   - Browser_Runtime_Result
@@ -552,6 +370,8 @@ minimum_sections:
   - Final_Verdict
 ```
 
-After successful report write: update `audits/LATEST_AUDIT.md`, update `audits/HANDOFF.md`, enforce history retention, and return only VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT.
+After report write update `audits/LATEST_AUDIT.md` and `audits/HANDOFF.md` per protocol.
+
+Return only VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT.
 
 Do not modify PR #26 or production code. Do not merge.
