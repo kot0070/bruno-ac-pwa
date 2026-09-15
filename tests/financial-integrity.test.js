@@ -111,7 +111,32 @@ const source = fs.readFileSync(require('path').join(__dirname, '..', 'index.html
 assert.ok(source.includes("makeLetterhead(tm.date, 'Invoice date')"), 'invoice print must use tm.date');
 assert.ok(!source.includes('if (!c.license && c.tecl) c.license = c.tecl'), 'TECL promotion must be absent');
 assert.ok(!source.includes("if (!c.acrLicense) c.acrLicense = c.license || ''"), 'generic license promotion to ACR must be absent');
-assert.ok(source.includes("row.straightHours = 'INVALID_LEGACY_LABOR'"), 'malformed legacy labor must retain invalid sentinel');
+// Execute the exact shared migration function used by production normalization.
+const validLegacy = F.migrateLegacyLaborBlock({ persons:2, days:1, hoursPerDay:10, satPersons:1, satDays:1, satHours:4, sunPersons:1, sunDays:1, sunHours:3 });
+assert.strictEqual(validLegacy.ok, true);
+assert.strictEqual(validLegacy.straightHours, 16);
+assert.strictEqual(validLegacy.ot15Hours, 8);
+assert.strictEqual(validLegacy.ot2Hours, 3);
+const migratedCost = F.laborCost({ straightRate:50, straightHours:validLegacy.straightHours, ot15Hours:validLegacy.ot15Hours, ot2Hours:validLegacy.ot2Hours, holidayHours:validLegacy.holidayHours, holidayMultiplier:validLegacy.holidayMultiplier });
+assert.strictEqual(migratedCost.ok, true);
+close(migratedCost.cost, 1700);
+
+['Infinity','NaN','abc'].forEach((bad) => {
+  const x = F.migrateLegacyLaborBlock({ persons:bad, days:1, hoursPerDay:8, satPersons:0, satDays:0, satHours:8, sunPersons:0, sunDays:0, sunHours:8 });
+  assert.strictEqual(x.ok, false, `legacy ${bad} must be invalid`);
+  assert.strictEqual(x.straightHours, 'INVALID_LEGACY_LABOR');
+});
+[Infinity, -Infinity, NaN, -1].forEach((bad) => {
+  const x = F.migrateLegacyLaborBlock({ persons:1, days:1, hoursPerDay:bad, satPersons:0, satDays:0, satHours:8, sunPersons:0, sunDays:0, sunHours:8 });
+  assert.strictEqual(x.ok, false, `legacy numeric ${bad} must be invalid`);
+  assert.strictEqual(x.straightHours, 'INVALID_LEGACY_LABOR');
+});
+
+// Ordering invariant: production must migrate raw legacy values before any permissive asNum normalization.
+const migratePos = source.indexOf('window.BrunoFinancial.migrateLegacyLaborBlock(row)');
+const asNumPos = source.indexOf('row.persons = asNum(row.persons)', migratePos);
+assert.ok(migratePos >= 0 && asNumPos > migratePos, 'strict legacy migration must run before asNum coercion');
+assert.ok(!source.includes('function legacyLaborNumber(v)'), 'duplicate late validator must be removed from production');
 assert.ok(source.includes("if(amt<0){errors.push('Negative Change Orders are not supported."), 'negative CO must be rejected');
 assert.ok(source.includes("function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }"), 'customer total formatter must reject null/nonfinite');
 assert.ok(source.includes("mr.actualCost !== null") && source.includes("mr.procurementCostSnapshot !== null") && source.includes("source='estimate'"), 'material actual cost must resolve per row');

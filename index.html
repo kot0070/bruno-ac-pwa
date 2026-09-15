@@ -2926,6 +2926,18 @@ function normalizeState(s) {
     for (i = 0; i < s.laborEquip.blocks.length; i++) {
       row = s.laborEquip.blocks[i];
       if (!row || typeof row !== 'object') continue;
+      if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {
+        var migratedLabor = window.BrunoFinancial.migrateLegacyLaborBlock(row);
+        row.straightHours = migratedLabor.straightHours;
+        row.ot15Hours = migratedLabor.ot15Hours;
+        row.ot2Hours = migratedLabor.ot2Hours;
+        row.holidayHours = migratedLabor.holidayHours;
+        row.holidayMultiplier = migratedLabor.holidayMultiplier;
+        row.laborModelVersion = migratedLabor.laborModelVersion;
+        if (migratedLabor.ok) delete row.laborMigrationError;
+        else row.laborMigrationError = migratedLabor.error;
+      }
+      /* Normalize legacy display-only fields only after strict migration has captured raw semantics. */
       row.persons = asNum(row.persons);
       row.days = asNum(row.days);
       row.hoursPerDay = asNum(row.hoursPerDay);
@@ -2935,33 +2947,6 @@ function normalizeState(s) {
       row.sunPersons = asNum(row.sunPersons);
       row.sunDays = asNum(row.sunDays);
       row.sunHours = asNum(row.sunHours);
-      if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {
-        function legacyLaborNumber(v) {
-          if (v === null || v === undefined || v === '') return 0;
-          var n = Number(v);
-          return Number.isFinite(n) && n >= 0 ? n : null;
-        }
-        var lp=legacyLaborNumber(row.persons), ld=legacyLaborNumber(row.days), lh=legacyLaborNumber(row.hoursPerDay);
-        var lsp=legacyLaborNumber(row.satPersons), lsd=legacyLaborNumber(row.satDays), lsh=legacyLaborNumber(row.satHours);
-        var lnp=legacyLaborNumber(row.sunPersons), lnd=legacyLaborNumber(row.sunDays), lnh=legacyLaborNumber(row.sunHours);
-        var legacyVals=[lp,ld,lh,lsp,lsd,lsh,lnp,lnd,lnh];
-        if (legacyVals.some(function(v){return v===null;})) {
-          row.straightHours = 'INVALID_LEGACY_LABOR';
-          row.ot15Hours = 'INVALID_LEGACY_LABOR';
-          row.ot2Hours = 'INVALID_LEGACY_LABOR';
-          row.holidayHours = 0;
-          row.holidayMultiplier = 3;
-          row.laborMigrationError = 'Malformed legacy labor values require correction before pricing.';
-        } else {
-          row.straightHours = lp * ld * Math.min(lh, 8);
-          row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + lsp*lsd*lsh;
-          row.ot2Hours = lnp*lnd*lnh;
-          row.holidayHours = 0;
-          row.holidayMultiplier = 3;
-          delete row.laborMigrationError;
-        }
-        row.laborModelVersion = 2;
-      }
       row.straightHours = normalizeFinancialValue(row.straightHours); row.ot15Hours = normalizeFinancialValue(row.ot15Hours); row.ot2Hours = normalizeFinancialValue(row.ot2Hours); row.holidayHours = normalizeFinancialValue(row.holidayHours); row.holidayMultiplier = row.holidayMultiplier == null ? 3 : normalizeFinancialValue(row.holidayMultiplier);
     }
     for (i = 0; i < s.tm.equipmentLines.length; i++) {

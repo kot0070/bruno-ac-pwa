@@ -59,6 +59,51 @@
     };
   }
 
+
+  function migrateLegacyLaborBlock(block) {
+    block = block || {};
+    function legacyNumber(value) {
+      if (value === null || value === undefined || value === '') return 0;
+      var n = Number(value);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    }
+
+    var persons = legacyNumber(block.persons);
+    var days = legacyNumber(block.days);
+    var hoursPerDay = legacyNumber(block.hoursPerDay);
+    var satPersons = legacyNumber(block.satPersons);
+    var satDays = legacyNumber(block.satDays);
+    var satHours = legacyNumber(block.satHours);
+    var sunPersons = legacyNumber(block.sunPersons);
+    var sunDays = legacyNumber(block.sunDays);
+    var sunHours = legacyNumber(block.sunHours);
+    var values = [persons, days, hoursPerDay, satPersons, satDays, satHours, sunPersons, sunDays, sunHours];
+
+    if (values.some(function (v) { return v === null; })) {
+      return {
+        ok: false,
+        straightHours: 'INVALID_LEGACY_LABOR',
+        ot15Hours: 'INVALID_LEGACY_LABOR',
+        ot2Hours: 'INVALID_LEGACY_LABOR',
+        holidayHours: 0,
+        holidayMultiplier: 3,
+        laborModelVersion: 2,
+        error: 'Malformed legacy labor values require correction before pricing.'
+      };
+    }
+
+    return {
+      ok: true,
+      straightHours: persons * days * Math.min(hoursPerDay, 8),
+      ot15Hours: persons * days * Math.max(hoursPerDay - 8, 0) + satPersons * satDays * satHours,
+      ot2Hours: sunPersons * sunDays * sunHours,
+      holidayHours: 0,
+      holidayMultiplier: 3,
+      laborModelVersion: 2,
+      error: ''
+    };
+  }
+
   function recoveryRate(input) {
     input = input || {};
     var purchase = nonNegative(input.purchaseCost);
@@ -168,6 +213,7 @@
     validProfitMargin: validProfitMargin,
     methodASales: methodASales,
     laborCost: laborCost,
+    migrateLegacyLaborBlock: migrateLegacyLaborBlock,
     recoveryRate: recoveryRate,
     toolJobCost: toolJobCost,
     approvedChangeOrders: approvedChangeOrders,
