@@ -40,6 +40,10 @@
     var isMain = /\/$/.test(path) || /\/index\.html$/i.test(path);
     if (!isMain || document.getElementById('phase2-nav-js')) return;
 
+    /* Catalog completion is independent of the presentation layer. It retries
+       until the canonical app state is available and never overwrites existing rows. */
+    loadScript('catalog-v6-js', './catalog-v6.js');
+
     /*
      * index.html intentionally allows inline styles but not external stylesheets.
      * Fetch same-origin CSS and inject it as <style>, then start the JS layer only
