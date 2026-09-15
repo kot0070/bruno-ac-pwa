@@ -1,7 +1,7 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v37';
+const CACHE = 'bruno-ac-v38';
 const SHELL = [
-  './','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./sw-register.js','./financial-integrity-core.js','./navigation-v2.js','./navigation-v2.css','./workspace-v5.js','./workspace-v5.css','./service-journal-ux.js','./code-rule-registry.js','./code-library-ux.js','./code-library/texas-hvac-2026.json','./catalog-v6.js','./ac-calculator.html','./ac-calculator.js','./ac-calculator-engine.js','./room-estimator-preload.js','./room-estimator-engine.js','./room-estimator-ux.js','./room-estimator-persistence.js','./ac-calculator-ux.js','./ac-calculator-review-ux.js','./ac-calculator.css'
+  './','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./sw-register.js','./financial-integrity-core.js','./navigation-v2.js','./navigation-v2.css','./workspace-v5.js','./workspace-v5.css','./service-journal-ux.js','./code-rule-registry.js','./code-library-ux.js','./code-library/texas-hvac-2026.json','./catalog-v6.js','./ac-calculator.html','./ac-calculator.js','./ac-calculator-engine.js','./room-estimator-preload.js','./room-estimator-engine.js','./room-estimator-ux.js','./room-estimator-persistence.js','./room-estimator-live.js','./ac-calculator-ux.js','./ac-calculator-review-ux.js','./ac-calculator.css'
 ];
 self.addEventListener('install',(event)=>{event.waitUntil(caches.open(CACHE).then((cache)=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',(event)=>{event.waitUntil(caches.keys().then((keys)=>Promise.all(keys.filter((k)=>k!==CACHE).map((k)=>caches.delete(k)))).then(()=>self.clients.claim()))});
