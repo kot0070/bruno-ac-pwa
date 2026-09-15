@@ -2836,7 +2836,7 @@ function catalogPricesKey() {
       row = s.catalog[i];
       if (!row || row.id == null) continue;
       id = String(row.id);
-      if (Object.prototype.hasOwnProperty.call(map, id)) row.unitCost = Number(map[id]) || 0;
+      if (Object.prototype.hasOwnProperty.call(map, id)) row.unitCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);
     }
     return s;
   }
@@ -3046,7 +3046,7 @@ function normalizeState(s) {
     for (i = 0; i < s.catalog.length; i++) {
       row = s.catalog[i];
       if (!row || typeof row !== 'object') continue;
-      row.unitCost = normalizeFinancialValue(row.unitCost);
+      row.unitCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);
       row.crew = asNum(row.crew) || 1;
       row.prod = asNum(row.prod);
       if (row.item == null) row.item = '';
@@ -4219,7 +4219,8 @@ function normalizeState(s) {
           html += '<td>' + esc(c.part) + '</td>';
           html += '<td>' + esc(c.vendor) + '</td>';
           html += '<td>' + esc(c.units) + '</td>';
-          html += '<td class="col-cost"><input type="number" class="num cat-cost" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (Number(c.unitCost) || 0) + '" title="Customer / shop price (used in quotes)" aria-label="Customer price" /></td>';
+          var catPrice = nonNegativeFinancial(c.unitCost);
+          html += '<td class="col-cost"><input type="number" class="num cat-cost' + (catPrice === null ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catPrice === null ? '' : catPrice) + '" title="' + (catPrice === null ? 'Invalid customer price — correct before quoting' : 'Customer / shop price (used in quotes)') + '" aria-label="Customer price"' + (catPrice === null ? ' aria-invalid="true"' : '') + ' /></td>';
           html += '<td class="col-cost"><input type="number" class="num cat-your" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (c.yourCost != null && c.yourCost !== '' ? (Number(c.yourCost) || 0) : (Number(c.unitCost) || 0)) + '" title="Your cost after supplier discount" aria-label="Your cost" /></td>';
           html += '<td class="col-actions"><button type="button" class="btn btn-sm btn-primary cat-add" data-id="' + esc(c.id) + '" title="Add to job">+</button></td>';
           html += '</tr>';
@@ -4702,9 +4703,11 @@ function normalizeState(s) {
     function applyCatalogUnitPrice(inputEl) {
       if (!inputEl || !inputEl.classList.contains('cat-cost')) return;
       var cid = inputEl.getAttribute('data-id');
-      var price = parseFloat(inputEl.value);
-      if (!isFinite(price) || price < 0) price = 0;
-      inputEl.value = price;
+      var parsedPrice = parseFloat(inputEl.value);
+      var price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL;
+      inputEl.value = price === window.BrunoFinancial.INVALID_FINANCIAL ? '' : price;
+      inputEl.classList.toggle('invalid-financial', price === window.BrunoFinancial.INVALID_FINANCIAL);
+      inputEl.setAttribute('aria-invalid', price === window.BrunoFinancial.INVALID_FINANCIAL ? 'true' : 'false');
       var stamp = new Date().toISOString().slice(0, 10);
       var cat = (state && state.catalog) || [];
       var ci;
@@ -4725,7 +4728,7 @@ function normalizeState(s) {
       try {
         var priceMap = {};
         for (ci = 0; ci < cat.length; ci++) {
-          if (cat[ci] && cat[ci].id != null) priceMap[String(cat[ci].id)] = Number(cat[ci].unitCost) || 0;
+          if (cat[ci] && cat[ci].id != null) priceMap[String(cat[ci].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[ci].unitCost, 0);
         }
         localStorage.setItem(catalogPricesKey(), JSON.stringify(priceMap));
       } catch (errPrices) {}
@@ -4737,7 +4740,7 @@ function normalizeState(s) {
       if (!inputEl || !inputEl.classList.contains('cat-your')) return;
       var cid = inputEl.getAttribute('data-id');
       var price = parseFloat(inputEl.value);
-      if (!isFinite(price) || price < 0) price = 0;
+      if (!isFinite(price) || price < 0) price = window.BrunoFinancial.INVALID_FINANCIAL;
       inputEl.value = price;
       var cat = (state && state.catalog) || [];
       for (var ci = 0; ci < cat.length; ci++) {
@@ -5257,18 +5260,19 @@ function normalizeState(s) {
       if (!c) continue;
       var hay = ((c.item || '') + ' ' + (c.part || '') + ' ' + (c.vendor || '')).toLowerCase();
       if (q && hay.indexOf(q) < 0) continue;
-      var cust = Number(c.unitCost) || 0;
-      var yours = (c.yourCost != null && c.yourCost !== '') ? (Number(c.yourCost) || 0) : cust;
-      var diff = cust - yours;
-      var pct = cust > 0 ? (diff / cust) * 100 : 0;
-      sumCust += cust; sumCost += yours; n++;
+      var cust = nonNegativeFinancial(c.unitCost);
+      var yours = (c.yourCost != null && c.yourCost !== '') ? nonNegativeFinancial(c.yourCost) : cust;
+      var marginValid = cust !== null && yours !== null;
+      var diff = marginValid ? cust - yours : NaN;
+      var pct = marginValid && cust > 0 ? (diff / cust) * 100 : (marginValid ? 0 : NaN);
+      if (marginValid) { sumCust += cust; sumCost += yours; n++; }
       html += '<tr data-id="' + esc(c.id) + '">';
       html += '<td>' + esc(c.item) + '</td><td>' + esc(c.part) + '</td>';
-      html += '<td class="col-cost"><input type="number" class="num mrg-cust" step="0.01" min="0" value="' + cust + '" /></td>';
+      html += '<td class="col-cost"><input type="number" class="num mrg-cust' + (cust === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (cust === null ? '' : cust) + '"' + (cust === null ? ' aria-invalid="true" title="Invalid customer price — correct before quoting"' : '') + ' /></td>';
       html += '<td class="col-cost"><input type="number" class="num mrg-pct" step="0.1" min="0" max="100" value="' + (Math.round(pct * 10) / 10) + '" title="% off customer → your cost" /></td>';
       html += '<td class="col-cost"><input type="number" class="num mrg-your" step="0.01" min="0" value="' + yours + '" /></td>';
-      html += '<td class="num-cell">' + money(diff) + '</td>';
-      html += '<td class="num-cell">' + (Math.round(pct * 10) / 10) + '%</td>';
+      html += '<td class="num-cell">' + safeMoney(diff) + '</td>';
+      html += '<td class="num-cell">' + (isFinite(pct) ? (Math.round(pct * 10) / 10) + '%' : '—') + '</td>';
       html += '</tr>';
     }
     body.innerHTML = html || '<tr><td colspan="7" style="color:var(--text-muted)">No catalog rows</td></tr>';
@@ -5293,10 +5297,11 @@ function normalizeState(s) {
       for (var i = 0; i < cat.length; i++) if (String(cat[i].id) === String(id)) { row = cat[i]; break; }
       if (!row) return;
       if (e.target.classList.contains('mrg-cust')) {
-        row.unitCost = Math.max(0, parseFloat(e.target.value) || 0);
+        var cp = parseFloat(e.target.value);
+        row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL;
         try {
           var priceMap = {};
-          for (var ci = 0; ci < cat.length; ci++) if (cat[ci] && cat[ci].id != null) priceMap[String(cat[ci].id)] = Number(cat[ci].unitCost) || 0;
+          for (var ci = 0; ci < cat.length; ci++) if (cat[ci] && cat[ci].id != null) priceMap[String(cat[ci].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[ci].unitCost, 0);
           localStorage.setItem(catalogPricesKey(), JSON.stringify(priceMap));
         } catch (err1) {}
       } else if (e.target.classList.contains('mrg-your')) {

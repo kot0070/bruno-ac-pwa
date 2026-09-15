@@ -200,3 +200,26 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
   assert(src.includes('normalizePersistentFinancial(s.pnl.actualLabor, 0)'));
   assert(src.includes('safeMoney(calc.le.smallToolsCost)'));
 }
+
+
+// Catalog customer-price integrity regression coverage.
+{
+  const src = source;
+  assert(!src.includes('if (!isFinite(price) || price < 0) price = 0;'), 'catalog edit must not turn invalid customer price into zero');
+  assert(!src.includes("row.unitCost = Math.max(0, parseFloat(e.target.value) || 0);"), 'margins customer price must not coerce invalid to zero');
+  assert(!src.includes('priceMap[String(cat[ci].id)] = Number(cat[ci].unitCost) || 0;'), 'catalog price map must preserve invalid sentinel');
+  assert(!src.includes('row.unitCost = Number(map[id]) || 0;'), 'catalog price reload must preserve invalid sentinel');
+  assert(!src.includes("value=\"' + (Number(c.unitCost) || 0)"), 'catalog customer-price renderer must not show invalid as zero');
+  assert(src.includes("price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes("row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes("mats[mi].unitCost = price"), 'catalog edit must propagate the same valid/invalid state to matching job material');
+  assert(src.includes("mats[mi].unitCost = row.unitCost"), 'margins edit must propagate the same valid/invalid state to matching job material');
+
+  const inv = F.INVALID_FINANCIAL;
+  const bad = F.normalizePersistentFinancial('abc', 0);
+  assert.strictEqual(bad, inv);
+  const persisted = JSON.parse(JSON.stringify({ unitCost: bad }));
+  assert.strictEqual(persisted.unitCost, inv);
+  assert.strictEqual(F.normalizePersistentFinancial(persisted.unitCost, 0), inv);
+  assert.strictEqual(F.methodASales(persisted.unitCost, 0.25, 0.15).ok, false, 'invalid persisted customer price must not become a valid Method A zero-cost input');
+}
