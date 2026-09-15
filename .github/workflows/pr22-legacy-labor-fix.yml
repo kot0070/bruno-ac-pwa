@@ -1,0 +1,50 @@
+name: PR22 Legacy Labor Corrective Fix
+
+on:
+  push:
+    branches:
+      - feature/financial-integrity-texas-acr-docs
+    paths:
+      - .github/pr22-labor-fix.py
+      - .github/workflows/pr22-legacy-labor-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  corrective:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/financial-integrity-texas-acr-docs
+          fetch-depth: 0
+      - name: Apply targeted migration patch
+        run: python .github/pr22-labor-fix.py
+      - name: Run financial integrity tests
+        run: node tests/financial-integrity.test.js
+      - name: Syntax check core/tests
+        run: |
+          node --check financial-integrity-core.js
+          node --check tests/financial-integrity.test.js
+      - name: Verify migration ordering and sentinel persistence invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          m=s.index('window.BrunoFinancial.migrateLegacyLaborBlock(row)')
+          a=s.index('row.persons = asNum(row.persons)', m)
+          assert m < a
+          assert "function legacyLaborNumber(v)" not in s
+          assert "normalizeFinancialValue(row.straightHours)" in s
+          print('ordering invariant OK')
+          PY
+      - name: Commit corrected production state and remove temporary patch runner
+        run: |
+          rm -f .github/pr22-labor-fix.py .github/workflows/pr22-legacy-labor-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add financial-integrity-core.js index.html tests/financial-integrity.test.js .github
+          git diff --cached --check
+          git commit -m "Fix legacy labor migration ordering and regression coverage"
+          git push origin HEAD:feature/financial-integrity-texas-acr-docs
