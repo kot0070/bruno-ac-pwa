@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 function $(id){return document.getElementById(id)}
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;')}
 function val(id){var e=$(id);return e?e.value:''}
 function checked(id){var e=$(id);return !!(e&&e.checked)}
 function num(id){var n=Number(val(id));return isFinite(n)?n:0}
@@ -44,7 +44,7 @@ function addStyles(){
   +'.calc-state.error{border-color:#8b3440;background:#2b171b;color:#ffb0b8}'
   +'.calc-explain{scroll-margin-top:16px;border-color:#385679;background:linear-gradient(180deg,#142235,#17202b);position:relative}'
   +'.calc-explain.stale-result{border-color:#8b6b20}'
-  +'.calc-explain.stale-result:before{content:"STALE RESULT — inputs changed. Press Calculate / Recalculate.";display:block;margin:0 0 12px;padding:9px 10px;border:1px solid #8b6b20;border-radius:8px;background:#2a2414;color:#ffe08a;font-weight:800}'
+  +'.calc-explain.stale-result:before{content:\"STALE RESULT — inputs changed. Press Calculate / Recalculate.\";display:block;margin:0 0 12px;padding:9px 10px;border:1px solid #8b6b20;border-radius:8px;background:#2a2414;color:#ffe08a;font-weight:800}'
   +'.calc-explain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}'
   +'.calc-explain-box{border:1px solid var(--line);border-radius:9px;background:#101923;padding:11px}'
   +'.calc-explain-box .title{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:800;margin-bottom:5px}'
@@ -72,7 +72,7 @@ function moveNodes(container,ids,kind){ids.forEach(function(id){var n=kind==='ch
 function makeGroup(parent,key,title,note,fieldIds,checkIds,open){
   var d=document.createElement('details');d.className='input-group';d.dataset.group=key;if(open)d.open=true;
   var s=document.createElement('summary');
-  s.innerHTML='<span class="summary-main">'+esc(title)+'<span class="group-note">'+esc(note||'')+'</span></span><span class="summary-side"><span class="group-status" id="groupStatus-'+esc(key)+'"></span><span class="group-toggle">'+(open?'−':'+')+'</span></span>';
+  s.innerHTML='<span class=\"summary-main\">'+esc(title)+'<span class=\"group-note\">'+esc(note||'')+'</span></span><span class=\"summary-side\"><span class=\"group-status\" id=\"groupStatus-'+esc(key)+'\"></span><span class=\"group-toggle\">'+(open?'−':'+')+'</span></span>';
   var body=document.createElement('div');body.className='input-group-body';
   var f=document.createElement('div');f.className='fields';body.appendChild(f);moveNodes(f,fieldIds||[],'field');
   if(checkIds&&checkIds.length){var c=document.createElement('div');c.className='checks';body.appendChild(c);moveNodes(c,checkIds,'check')}
@@ -132,16 +132,16 @@ function calculationSucceeded(expectedSignature){
 
 function makeWorkflow(){
   if(!inputCard.querySelector('.phase1-intro')){var intro=document.createElement('p');intro.className='phase1-intro';intro.textContent='Complete the relevant sections below. Active collapsed sections show their current assumptions in the section header. Calculate only after the job inputs are ready.';inputCard.insertBefore(intro,inputCard.children[1]||null)}
-  var calcbar=document.createElement('div');calcbar.className='phase1-calcbar';calcbar.innerHTML='<button type="button" class="btn primary" id="phase1Calculate">Calculate / Recalculate</button><div class="calc-state initial" id="phase1CalcState">Fill in the project inputs, then press Calculate / Recalculate.</div>';inputCard.appendChild(calcbar);statusBox=$('phase1CalcState');
+  var calcbar=document.createElement('div');calcbar.className='phase1-calcbar';calcbar.innerHTML='<button type=\"button\" class=\"btn primary\" id=\"phase1Calculate\">Calculate / Recalculate</button><div class=\"calc-state initial\" id=\"phase1CalcState\">Fill in the project inputs, then press Calculate / Recalculate.</div>';inputCard.appendChild(calcbar);statusBox=$('phase1CalcState');
 
   var explain=document.createElement('section');explain.id='calcExplain';explain.className='card calc-explain';
-  explain.innerHTML='<h2>2 · Calculation result</h2><p class="calc-flow"><b>Inputs</b> → code/OEM checks → catalog-safe BOM matching → review → Job Materials.</p><div class="calc-explain-grid"><div class="calc-explain-box"><div class="title">Current scenario</div><strong id="calcScenario">Not calculated yet</strong><div class="muted" id="calcScenarioDetail"></div></div><div class="calc-explain-box"><div class="title">BOM result</div><strong id="calcBomInfo">—</strong><div class="muted" id="calcBomDetail">Press Calculate to generate the current result.</div></div><div class="calc-explain-box"><div class="title">Code / OEM checks</div><strong id="calcCodeCount">—</strong><div class="muted">Detailed checks remain below.</div></div></div><h3>Why / references used</h3><ul class="calc-ref-list" id="calcRefList"><li>Press Calculate to build the current scope and references.</li></ul>';
+  explain.innerHTML='<h2>2 · Calculation result</h2><p class=\"calc-flow\"><b>Inputs</b> → code/OEM checks → catalog-safe BOM matching → review → Job Materials.</p><div class=\"calc-explain-grid\"><div class=\"calc-explain-box\"><div class=\"title\">Current scenario</div><strong id=\"calcScenario\">Not calculated yet</strong><div class=\"muted\" id=\"calcScenarioDetail\"></div></div><div class=\"calc-explain-box\"><div class=\"title\">BOM result</div><strong id=\"calcBomInfo\">—</strong><div class=\"muted\" id=\"calcBomDetail\">Press Calculate to generate the current result.</div></div><div class=\"calc-explain-box\"><div class=\"title\">Code / OEM checks</div><strong id=\"calcCodeCount\">—</strong><div class=\"muted\">Detailed checks remain below.</div></div></div><h3>Why / references used</h3><ul class=\"calc-ref-list\" id=\"calcRefList\"><li>Press Calculate to build the current scope and references.</li></ul>';
   inputCard.parentNode.insertBefore(explain,inputCard.nextSibling);resultCard=explain;
 
   document.querySelectorAll('.grid>.card').forEach(function(c){var h=c.querySelector('h2');if(h&&/Generated BOM/i.test(h.textContent))bomCard=c});
   if(bomCard){
     staleBanner=document.createElement('div');staleBanner.className='phase1-stale-banner';staleBanner.textContent='Inputs changed — the BOM shown below is stale until you press Calculate / Recalculate.';var gate=bomCard.querySelector('#applyGate');if(gate)bomCard.insertBefore(staleBanner,gate);else bomCard.insertBefore(staleBanner,bomCard.children[1]||null);
-    var ab=document.createElement('div');ab.className='phase1-applybar';ab.innerHTML='<button type="button" class="btn accent" id="phase1Apply">Add selected materials to Job</button><div class="phase1-applyhint" id="phase1ApplyHint">Calculate first, then review the BOM.</div>';bomCard.appendChild(ab);applyBtn=$('phase1Apply');applyBtn.disabled=true;
+    var ab=document.createElement('div');ab.className='phase1-applybar';ab.innerHTML='<button type=\"button\" class=\"btn accent\" id=\"phase1Apply\">Add selected materials to Job</button><div class=\"phase1-applyhint\" id=\"phase1ApplyHint\">Calculate first, then review the BOM.</div>';bomCard.appendChild(ab);applyBtn=$('phase1Apply');applyBtn.disabled=true;
     applyBtn.addEventListener('click',function(){if(dirty||!calculatedOnce||lastExplicitSignature!==inputSignature()){alert('Inputs changed or have not been explicitly calculated. Press Calculate / Recalculate first.');return}var b=$('apply');if(b&&!b.disabled)b.click()});
   }
 
@@ -164,7 +164,16 @@ function bindDirtyState(){
 }
 
 function decorateBomRows(){
-  document.querySelectorAll('#bomBody tr').forEach(function(row){var req=row.children[1],money=row.querySelectorAll('.col-money');if(!req||money.length<2)return;var old=req.querySelector('.phase1-mobile-price');if(old)old.remove();var d=document.createElement('div');d.className='phase1-mobile-price';var unit=money[0].textContent.trim(),ext=money[1].textContent.trim();d.textContent='Unit '+unit+' · Ext '+ext;if(/\$0(?:\.00)?\b/.test(unit)||/\$0(?:\.00)?\b/.test(ext))d.classList.add('zero');req.appendChild(d)})
+  document.querySelectorAll('#bomBody tr').forEach(function(row){
+    var req=row.children[1],money=row.querySelectorAll('.col-money');if(!req||money.length<2)return;
+    var unit=money[0].textContent.trim(),ext=money[1].textContent.trim();
+    var text='Unit '+unit+' · Ext '+ext;
+    var zero=/\$0(?:\.00)?\b/.test(unit)||/\$0(?:\.00)?\b/.test(ext);
+    var d=req.querySelector('.phase1-mobile-price');
+    if(!d){d=document.createElement('div');d.className='phase1-mobile-price';req.appendChild(d)}
+    if(d.textContent!==text)d.textContent=text;
+    d.classList.toggle('zero',zero);
+  })
 }
 
 function render(){
@@ -184,8 +193,8 @@ function render(){
 function init(){
   inputCard=document.querySelector('.grid .card');if(!inputCard)return;addStyles();groupInputs();makeWorkflow();bindDirtyState();
   var oldInline=$('calculate-inline');if(oldInline&&oldInline.parentNode)oldInline.parentNode.remove();
-  var code=$('codeChecks'),bom=$('bomBody');if(code)new MutationObserver(function(){if(calculatedOnce&&!dirty)render()}).observe(code,{childList:true,subtree:true});if(bom){new MutationObserver(function(){decorateBomRows();if(calculatedOnce&&!dirty)render()}).observe(bom,{childList:true,subtree:true});bom.addEventListener('change',function(e){if(e.target.classList.contains('bomsel')&&calculatedOnce&&!dirty)render()})}
-  updateGroupStates(true);decorateBomRows();setState('initial');
+  var code=$('codeChecks'),bom=$('bomBody');if(code)new MutationObserver(function(){if(calculatedOnce&&!dirty)render()}).observe(code,{childList:true,subtree:true});if(bom){decorateBomRows();var bomObserver=new MutationObserver(function(){bomObserver.disconnect();decorateBomRows();if(calculatedOnce&&!dirty)render();bomObserver.observe(bom,{childList:true,subtree:true})});bomObserver.observe(bom,{childList:true,subtree:true});bom.addEventListener('change',function(e){if(e.target.classList.contains('bomsel')&&calculatedOnce&&!dirty)render()})}
+  updateGroupStates(true);setState('initial');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
