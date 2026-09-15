@@ -6,189 +6,157 @@ protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
 roadmap: audits/ROADMAP_NEXT.md
-implementation_report: audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
-read_order:
-  - audits/WORKSPACE.md
-  - audits/PROTOCOL.md
-  - audits/CONTEXT.md
-  - audits/HANDOFF.md
-  - audits/ROADMAP_NEXT.md
+implementation_reports:
   - audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
   - audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
-  - audits/TASK_CURRENT.md
+  - audits/implementation/PR26_HISTORY_LEVELS_43cbc681.md
 protocol_required: true
 ```
 
 # MODE GUARD — AUDIT ONLY
 
 ```yaml
-mode_guard:
-  task_type: AUDIT
-  implementation_mode: FORBIDDEN
-  production_write_forbidden: true
-  production_commit_forbidden: true
-  active_PR_mutation_forbidden: true
-  merge_forbidden: true
-  audit_exact_head_required: true
+task_type: AUDIT
+production_write_forbidden: true
+active_PR_mutation_forbidden: true
+merge_forbidden: true
+audit_exact_head_required: true
 ```
 
 ```yaml
-task_id: PR26_LIVE_CODE_ESTIMATOR_ACCEPTANCE_02
-mode: independent_large_block_acceptance_audit
+task_id: PR26_LIVE_HISTORY_LEVELS_ACCEPTANCE_03
 repository: kot0070/bruno-ac-pwa
 production_pr: 26
 production_branch: feature/room-based-code-estimator
 base_branch: main
 base_sha: e84c9e9b6c53693d087db46156975ffec93d238a
-target_head: 5b069931eaf98311f31d344c1acd6cc8e5553ade
-obsolete_target_head: a04915f472679866ff941d0fb7b4b8752519becb
+target_head: 43cbc681f579b4009cc55674c4db7507d0910a7c
+obsolete_heads:
+  - a04915f472679866ff941d0fb7b4b8752519becb
+  - 5b069931eaf98311f31d344c1acd6cc8e5553ade
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Audit the entire PR26 as a live code/design-driven room estimator, not only helper functions.
-
-Expected user flow:
+Audit PR26 as one complete end-to-end feature:
 
 ```text
-Building/system inputs
--> total square footage
--> room schedule (type/count/area/conditioned/etc.)
--> applicable code/design references
--> defensible code minimum when one exists
--> calculated/design baseline
--> optional contractor/customer override + reason
--> live compliance status
+Building / room inputs
+-> layered live evaluation L0-L6
+-> code/design traceability
+-> calculated baseline
+-> override + reason
+-> compliance state
 -> final quantity
--> generated components/materials
--> existing Catalog matching
--> Customer Price / Your Cost / Margin
--> explicit Apply to Job only
+-> BOM/components
+-> current Catalog pricing
+-> explicit Apply to Job
+-> Confirm & Save Calculation
+-> active frozen snapshot
+-> history
+-> duplicate/import/export
 ```
 
-The estimator must be reactive in preview. Editing a room, quantity, area, or override should refresh the preview BOM/pricing/compliance without automatically mutating Job data.
+Do not scope the audit only to helper functions. Independently inspect the whole user flow and all prior regression surfaces.
 
-## CRITICAL TRUTHFULNESS / SAFETY
+## LIVE LEVEL MODEL
+
+Expected levels:
+
+```yaml
+L0: Raw inputs
+L1: Normalized building / room model
+L2: Code / design requirements
+L3: Calculated baseline
+L4: Override / compliance
+L5: BOM / components
+L6: Catalog / pricing
+L7: Confirmed snapshot / history
+```
 
 Verify:
+- room/building changes classify as upstream dirty changes;
+- override-only changes classify at L4;
+- no-change returns no dirty level;
+- UI level rail is truthful;
+- implementation does NOT falsely claim partial execution if existing calculator still performs full Calculate for BOM/pricing;
+- no event/click recursion or stale ready state.
+
+## LIVE CALCULATOR / COMPLIANCE
+
+Verify all prior PR26 requirements remain true:
+- sqft / room count never infer compliant tonnage;
+- no claim of performing Manual J/S/D;
+- planning defaults are not presented as code minimums;
+- unknown numeric minimum is not fabricated;
+- known hard minimum violation is red/blocking with rule/source traceability;
+- unresolved design input cannot silently become compliant/final zero;
+- valid final quantities update existing BOM and current Catalog pricing live;
+- live preview never calls Apply or mutates Job materials.
+
+## HISTORY / ACTIVE SNAPSHOT
+
+New files:
 
 ```yaml
-- sqft_does_not_directly_select_tonnage
-- room_count_does_not_directly_select_tonnage
-- no_false_claim_of_performing_Manual_J_S_or_D
-- planning_defaults_are_not_presented_as_code_minimums
-- unknown_numeric_code_minimum_is_not_fabricated
-- known_hard_minimum_violation_is_red_and_blocking
-- unresolved_design_or_field_input_is_not_presented_as_compliant
-- code/design source links correspond to actual ruleIds
-- local_AHJ/OEM verification remains explicit where applicable
+- calculation-history-core.js
+- calculation-history-ux.js
+- tests/calculation-history-core.test.js
 ```
 
-If a metric has `hardMinimum: true` and a known `codeMinimum`, an override below it must not silently become compliant/final. The UI should show a red failure/block state and preserve the rule/source traceability.
+Verify Confirm & Save requires a valid current calculation and creates an immutable-by-value historical snapshot containing:
+- room plan / overrides;
+- compliance/check state;
+- selected BOM rows;
+- Customer Materials;
+- Your Cost;
+- Margin / Margin %;
+- catalog captured timestamp;
+- code library identity.
 
-For current metrics where no defensible universal numeric minimum exists, `codeMinimum: null` is valid and MUST NOT be treated as a defect.
+The active snapshot should be visible near the top and clearly distinguish frozen historical pricing from the current live preview.
 
-## LIVE CALCULATOR BEHAVIOR
+## DUPLICATE / REUSE
 
-Audit `room-estimator-live.js` closely.
+Verify `Duplicate as new`:
+- does not mutate original snapshot;
+- restores room/building inputs and override provenance into an editable calculation;
+- does not automatically overwrite Job data;
+- live calculator then uses current Catalog prices rather than silently reusing old historical prices;
+- source calculation identity can be traced where implemented.
+
+## IMPORT / EXPORT
 
 Verify:
+- export one calculation produces supported JSON snapshot format;
+- export history produces supported bundle format;
+- import supports single snapshot and bundle;
+- imported records receive new IDs and do not overwrite existing snapshots;
+- malformed/unsupported import fails non-destructively;
+- partial bundle errors do not corrupt valid existing history;
+- imported historical prices remain frozen records;
+- importing does not automatically Apply to Job.
 
-```yaml
-- listens_to_room_input_and_change_events
-- debounce_is_bounded
-- rebuilds_current_room_plan
-- no_recursive_input_click_or_calculate_loop
-- blockers_prevent_invalid_room_result_from_syncing_into_final_BOM
-- resolved_final_quantities_sync_into_existing_AC_Calculator_preview
-- existing_Calculate_path_remains_authoritative_for_BOM_and_pricing
-- Customer_Materials_Your_Cost_Margin_refresh_after_live_changes
-- live_layer_never_clicks_or_calls_Apply
-- live_layer_does_not_write_localStorage_or_Job_state
-- explicit_Apply_remains_required_for_Job_mutation
-- stale_green_ready_state_is_not_left_after_room_changes
+## STORAGE / PERSISTENCE
+
+Expected additive path:
+
+```text
+state.acCalculator.calculationHistory
 ```
 
-Representative scenario:
+Audit compatibility with existing:
 
-```yaml
-baseline_supply: 8
-override_supply: 10
-override_reason: customer_request
-expected:
-  final_quantity: 10
-  BOM_quantity: 10
-  Customer_extension: 10 * Catalog.unitCost
-  Your_extension: 10 * effective Catalog.yourCost or accepted fallback
-  Job_materials_before_Apply: unchanged
+```text
+state.acCalculator.roomEstimator
+state.acCalculator.inputs
+generatedAt
+materialsUsed
+catalog
 ```
 
-## BUILDING / ROOM MODEL
-
-Verify existing PR26 model remains correct for:
-
-- total sqft;
-- stories;
-- ceiling height;
-- location/climate context;
-- foundation/equipment context;
-- kitchen, bedroom, living room, bathroom, garage, laundry, office, other;
-- room count;
-- area per room;
-- conditioned flag;
-- supply per room;
-- branch/run ft per room;
-- exterior walls/windows.
-
-Check blank/zero/negative/extreme/malformed normalization.
-
-Room-area reconciliation >15% must remain visible without changing tonnage.
-
-## DUCT / RETURN DESIGN GATES
-
-For new/replacement duct scope:
-
-```yaml
-missing_branch_takeoff:
-  ductFt: unresolved
-  invalid_live_sync: blocked
-missing_return_design_or_valid_override:
-  returnGrilles: unresolved
-  invalid_live_sync: blocked
-```
-
-Existing duct mode must not invent return design values.
-
-## OVERRIDE / PROVENANCE
-
-Each metric must preserve:
-
-```yaml
-- codeMinimum
-- hardMinimum
-- calculatedBaseline
-- baselineType
-- ruleIds
-- override.value
-- override.reason
-- override.note
-- finalQuantity
-- finalSource
-```
-
-Verify baseline survives override and reason survives snapshot/export/persistence.
-
-## SOURCE / CODE TRACEABILITY
-
-Verify Code Library and rule map remain valid, including:
-
-- `IRC-M1401.3-EQUIPMENT-SIZING` source correction;
-- `ACCA-MANUAL-D-2016` as a design reference, not a fabricated numeric code minimum;
-- `LOCAL-AHJ-VERIFY` remains explicit;
-- source buttons in live cards resolve `ruleIds` through the registry;
-- external links use HTTPS and `rel="noopener"`;
-- no full copyrighted code/manual text is stored.
+Verify history writes cannot corrupt financial/job schema and that existing successful-Apply gating for room-estimator persistence remains intact.
 
 ## FINANCIAL / CATALOG REGRESSION
 
@@ -200,146 +168,103 @@ internal_track: Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCo
 actual_track: Job.actualCost -> PnL override only
 ```
 
-Verify:
+Historical snapshot price display must not become an alternate pricing authority for a new live calculation. Re-run accepted financial/lifecycle tests including malformed values, zero price review, blank Your Cost fallback, and catalog-edit/reapply lifecycle.
 
-- Your Cost never leaks into customer quote basis;
-- blank Your Cost fallback provenance remains correct;
-- malformed financial values never silently become zero;
-- legitimate zero remains reviewable;
-- live preview does not create `actualCost`;
-- Catalog edits do not mutate historical Job values before explicit Apply/Re-Apply.
+## CODE / SOURCE TRACEABILITY
 
-Re-run accepted financial/lifecycle fixtures.
-
-## APPLY / PERSISTENCE
-
-Verify `room-estimator-persistence.js` still persists only after successful existing Calculator Apply.
-
-Blocked/cancelled Apply must not persist the room snapshot.
-
-Live preview events must not alter this lifecycle.
-
-## SCRIPT ORDER / EVENT SAFETY
-
-Current relevant load order includes:
-
-```text
-ac-calculator-engine.js
-ac-calculator.js
-ac-calculator-ux.js
-room-estimator-preload.js
-room-estimator-engine.js
-room-estimator-ux.js
-room-estimator-persistence.js
-code-rule-registry.js
-room-estimator-live.js
-ac-calculator-review-ux.js
-```
-
-Audit DOMContentLoaded timing, event-listener order, initialization idempotency, stale/dirty state, and any click/change feedback loops.
+Retest:
+- Texas 2026 registry validity;
+- IRC M1401.3 source correction;
+- ACCA Manual D is design reference, not numeric code minimum;
+- LOCAL-AHJ verification remains explicit;
+- live source buttons resolve current ruleIds and use HTTPS / noopener;
+- no full copyrighted code/manual text added.
 
 ## PWA / OFFLINE
 
-Expected:
+Expected cache:
 
 ```yaml
-cache: bruno-ac-v38
-required_room_assets:
-  - ./room-estimator-preload.js
-  - ./room-estimator-engine.js
-  - ./room-estimator-ux.js
-  - ./room-estimator-persistence.js
+cache: bruno-ac-v39
+new_required_assets:
   - ./room-estimator-live.js
+  - ./calculation-history-core.js
+  - ./calculation-history-ux.js
 ```
 
-All previously accepted critical assets must remain available.
+Verify all previously accepted critical assets remain in shell and syntax/fetch behavior is intact.
 
-## FINAL DIFF / SCOPE
+## FINAL DIFF
 
-Expected production diff relative to main includes the original PR26 files plus `room-estimator-live.js`. No temporary workflow may remain.
-
-Must independently inspect final diff rather than trusting this description.
+Independently compare `main` to target HEAD. Expected PR26 production diff currently has 14 files and no temporary workflow. No `.github/workflows/pr26-*-validation.yml` may remain.
 
 ## CI EVIDENCE
 
-Latest live validation:
+Latest authoritative validation:
 
 ```yaml
-run_id: 35029436317
-validated_commit: cb8a14f043bc8cc6bb609beb4408dd46df39e602
+run_id: 35030476333
+validated_commit: 4eaaecea6922e73a10e0bf09ecb9b6da9bc63bb4
 expected_result: SUCCESS
-expected_steps:
-  - Room estimator
-  - Code rule registry
-  - Financial integrity
-  - Calculator pricing
-  - Lifecycle integration
-  - Calculator review UX
-  - Service journal UX
-  - Syntax checks including room-estimator-live.js
 ```
 
-Then compare `cb8a14f043bc8cc6bb609beb4408dd46df39e602` to exact target HEAD `5b069931eaf98311f31d344c1acd6cc8e5553ade`.
+Expected successful tests include:
+- room estimator / level dependencies;
+- calculation history core;
+- code registry;
+- financial integrity;
+- calculator pricing;
+- PR22 lifecycle;
+- calculator review UX;
+- Service Call Journal;
+- syntax checks for live/history/SW.
 
-Expected only post-CI change:
-
-```text
-DELETE .github/workflows/pr26-live-validation.yml
-```
-
-Also retain prior PR26 CI evidence from implementation report for original room-estimator block.
+Compare validated commit to exact target HEAD `43cbc681f579b4009cc55674c4db7507d0910a7c`. Expected only post-CI change is deletion of `.github/workflows/pr26-history-levels-validation.yml`.
 
 ## BROWSER / MOBILE RUNTIME
 
-Preferred. If available, actually test:
+If available, actually test on mobile-width runtime:
+- create/edit room plan;
+- observe live L-level/status/BOM/pricing updates;
+- confirm a valid calculation;
+- verify active summary at top;
+- create at least two history records;
+- activate older snapshot;
+- duplicate older snapshot and change one input;
+- verify old snapshot price remains frozen while new live preview uses current state;
+- export single/history JSON;
+- import exported JSON;
+- verify new IDs/no overwrite;
+- attempt malformed import;
+- verify Job materials unchanged before explicit Apply;
+- no console/event loops.
 
-- edit total sqft;
-- add/remove rooms;
-- change room count/area/supply/branch ft;
-- apply override and reason;
-- watch live status/BOM/prices update;
-- verify red failure for any modeled hard-minimum test path if one can be constructed without altering production;
-- verify unresolved design state is visible;
-- verify source links;
-- verify Job materials remain unchanged before Apply;
-- verify explicit Apply still works when all gates pass;
-- verify mobile layout and no console errors/loops.
-
-If browser runtime is unavailable, report exactly `NOT_PERFORMED`.
+If runtime unavailable, report exactly `NOT_PERFORMED`.
 
 ## ACCEPTED REGRESSION SURFACE
 
-Audit no regression in:
-
-- PR22 financial integrity / lifecycle;
-- PR23 calculator review UX;
-- PR24 Service Call Journal;
-- PR25 Code Library;
-- Quote Method A;
-- P&L precedence;
-- persistence/import compatibility;
-- navigation/PWA shell.
+No regression allowed in PR22 financial integrity, PR23 calculator review UX, PR24 Service Call Journal, PR25 Code Library, Quote Method A, P&L precedence, Catalog snapshot lifecycle, localStorage compatibility, navigation, or PWA shell.
 
 ## SEVERITY
 
 ```yaml
 P0:
-  - financial_track_corruption
-  - job_data_loss
-  - silent_below_known_hard_minimum_treated_as_compliant
-  - sqft_or_room_count_drives_fake_compliant_tonnage
+  - financial corruption or job data loss
+  - history/import overwrites existing Job financial data
+  - silent hard-minimum violation treated compliant
+  - sqft/rooms drive fake compliant tonnage
 P1:
-  - live_change_does_not_update_BOM_or_Catalog_pricing
-  - live_layer_mutates_Job_before_explicit_Apply
-  - planning_default_presented_as_code_minimum
-  - unresolved_design_value_silently_becomes_final_zero
-  - code_source_link_materially_wrong_for_displayed_rule
-  - recursive_event_or_calculate_loop
-  - stale_green_ready_state_after_live change
-  - required_live_asset_missing_offline
-  - regression_in_accepted_financial_or_product_behavior
+  - live final quantity does not reprice through existing Catalog path
+  - historical price reused as current pricing authority on duplicate
+  - confirm saves invalid/unresolved calculation as valid
+  - duplicate/import mutates original snapshot
+  - malformed import corrupts storage
+  - active/history UI materially misrepresents current vs frozen state
+  - recursive event loop / stale ready state
+  - required history/live assets missing offline
+  - accepted financial/product regression
 P2:
-  - minor_copy_or_mobile_layout_issue_without workflow/compliance/financial impact
+  - minor copy/layout/history metadata issue without financial/compliance/workflow impact
 ```
 
 ## REQUIRED REPORT
@@ -352,18 +277,17 @@ minimum_sections:
   - Repository_State
   - Exact_Audited_SHA
   - Final_Diff
+  - Live_Level_Model
   - Building_And_Room_Model
-  - Live_Calculator_Reactivity
-  - Code_And_Design_Compliance_State
-  - Baseline_Override_Final_Provenance
-  - Catalog_And_Repricing
+  - Compliance_And_Source_Traceability
+  - Baseline_Override_Final
+  - BOM_And_Current_Catalog_Pricing
+  - Confirmed_Snapshot_And_Active_Summary
+  - History_Duplicate_Import_Export
+  - Storage_And_Persistence
   - Financial_Regression_Gates
-  - Apply_And_Persistence_Lifecycle
-  - Source_Traceability
-  - Initialization_And_Event_Safety
   - PWA_Offline_Delivery
   - Test_CI_Evidence
-  - Accepted_Product_Regression_Gates
   - Browser_Runtime_Result
   - Findings
   - Merge_Blockers
@@ -374,4 +298,4 @@ After report write update `audits/LATEST_AUDIT.md` and `audits/HANDOFF.md` per p
 
 Return only VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT.
 
-Do not modify PR #26 or production code. Do not merge.
+Do not modify PR26 production code. Do not merge.
