@@ -2502,6 +2502,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
   }
   function finiteFinancial(n) { var x = Number(n); return isFinite(x) ? x : null; }
   function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }
+  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return isFinite(x) ? x : n; }
   function financeError(msg) { return { ok: false, value: null, error: msg }; }
   function safeMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
   function customerTotalMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
@@ -2647,7 +2648,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
     if (oh === null || oh < 0) errors.push('Overhead must be finite and nonnegative.');
     if (profit === null || profit < 0 || profit >= 1) errors.push('Profit margin must be finite, >= 0% and < 100%.');
     var costs = [le.equipCost, le.laborCost, mats.cost, le.subCost];
-    if (costs.some(function(x){ return !isFinite(x) || x < 0; })) errors.push('Direct job costs must be finite and nonnegative; use an explicit Credit / Adjustment instead of hidden negative cost rows.');
+    if (costs.some(function(x){ return !isFinite(x) || x < 0; })) errors.push('Direct job costs must be finite and nonnegative. Negative direct-cost rows are not supported; use an explicitly documented customer credit/change adjustment where applicable.');
     var valid = errors.length === 0;
     var buckets = {
       equip: { cost: le.equipCost, sales: valid ? withOHP(le.equipCost, oh, profit) : NaN },
@@ -2665,25 +2666,22 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
   }
 
   function calcTM(s) {
-    var eq = 0;
-    var lines = s.tm.equipmentLines || [];
-    for (var i = 0; i < lines.length; i++) {
-      var q = Number(lines[i].qty) || 0;
-      var r = Number(lines[i].rate) || 0;
-      lines[i].amount = q * r;
-      eq += lines[i].amount;
+    var errors=[], eq=0, lab=0, lines=s.tm.equipmentLines||[], ll=s.tm.laborLines||[];
+    for (var i=0;i<lines.length;i++) {
+      var q=nonNegativeFinancial(lines[i].qty), r=nonNegativeFinancial(lines[i].rate);
+      if(q===null||r===null){errors.push('T&M equipment quantity/rate must be finite and nonnegative.');lines[i].amount=NaN;continue;}
+      lines[i].amount=q*r; eq+=lines[i].amount;
     }
-    var lab = 0;
-    var ll = s.tm.laborLines || [];
-    for (var j = 0; j < ll.length; j++) {
-      var h = Number(ll[j].hours) || 0;
-      var rt = Number(ll[j].rate) || 0;
-      ll[j].amount = h * rt;
-      lab += ll[j].amount;
+    for (var j=0;j<ll.length;j++) {
+      var h=nonNegativeFinancial(ll[j].hours), rt=nonNegativeFinancial(ll[j].rate);
+      if(h===null||rt===null){errors.push('T&M labor hours/rate must be finite and nonnegative.');ll[j].amount=NaN;continue;}
+      ll[j].amount=h*rt; lab+=ll[j].amount;
     }
-    var mat = Number(s.tm.materialAmount) || 0;
-    var sub = Number(s.tm.subAmount) || 0;
-    return { equip: eq, labor: lab, material: mat, sub: sub, total: eq + lab + mat + sub };
+    var mat=nonNegativeFinancial(s.tm.materialAmount), sub=nonNegativeFinancial(s.tm.subAmount);
+    if(mat===null) errors.push('T&M material amount must be finite and nonnegative.');
+    if(sub===null) errors.push('T&M subcontractor amount must be finite and nonnegative.');
+    var valid=errors.length===0, total=valid ? eq+lab+mat+sub : NaN;
+    return { valid:valid, errors:errors, equip:eq, labor:lab, material:mat===null?NaN:mat, sub:sub===null?NaN:sub, total:total };
   }
 
   function calcAll(s) {
@@ -2692,8 +2690,9 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
     var sum = calcSummary(s, mats, le);
     var tm = calcTM(s);
     var cos = calcCOs(s);
-    var quoteBase = sum.valid ? sum.quoteRounded : null;
-    return { mats:mats, le:le, sum:sum, tm:tm, cos:cos, quoteBase:quoteBase, quoteTotal:sum.valid ? quoteBase + cos.approved : null };
+    var quoteValid = sum.valid && cos.valid;
+    var quoteBase = quoteValid ? sum.quoteRounded : null;
+    return { mats:mats, le:le, sum:sum, tm:tm, cos:cos, quoteBase:quoteBase, quoteTotal:quoteValid ? quoteBase + cos.approved : null, quoteValid:quoteValid };
   }
 
   function save() {
@@ -2840,8 +2839,8 @@ function normalizeState(s) {
     if (!s.tm) s.tm = {};
     if (!Array.isArray(s.tm.equipmentLines)) s.tm.equipmentLines = [];
     if (!Array.isArray(s.tm.laborLines)) s.tm.laborLines = [];
-    s.tm.materialAmount = asNum(s.tm.materialAmount);
-    s.tm.subAmount = asNum(s.tm.subAmount);
+    s.tm.materialAmount = normalizeFinancialValue(s.tm.materialAmount);
+    s.tm.subAmount = normalizeFinancialValue(s.tm.subAmount);
     if (!s.laborEquip) s.laborEquip = {};
     if (!Array.isArray(s.laborEquip.subcontractors)) s.laborEquip.subcontractors = [];
     if (!Array.isArray(s.laborEquip.equipment)) s.laborEquip.equipment = [];
@@ -2868,8 +2867,8 @@ function normalizeState(s) {
           s.laborEquip.smallToolsLines[sti] = { qty: 0, description: '', unitCost: 0, supplier: '', part: '', group: '' };
           continue;
         }
-        row.qty = asNum(row.qty);
-        row.unitCost = asNum(row.unitCost);
+        row.qty = normalizeFinancialValue(row.qty);
+        row.unitCost = normalizeFinancialValue(row.unitCost);
         if (row.description == null) row.description = '';
         if (row.supplier == null) row.supplier = '';
         if (row.part == null) row.part = '';
@@ -2906,19 +2905,19 @@ function normalizeState(s) {
     for (i = 0; i < s.materialsUsed.length; i++) {
       row = s.materialsUsed[i];
       if (!row || typeof row !== 'object') continue;
-      row.qty = asNum(row.qty);
-      row.unitCost = asNum(row.unitCost);
+      row.qty = normalizeFinancialValue(row.qty);
+      row.unitCost = normalizeFinancialValue(row.unitCost);
       if (row.lastPriceUpdate == null || row.lastPriceUpdate === '') {
         row.lastPriceUpdate = s.meta.globalPriceUpdate;
       }
     }
     for (i = 0; i < s.laborEquip.equipment.length; i++) {
       row = s.laborEquip.equipment[i];
-      if (row && typeof row === 'object') row.cost = asNum(row.cost);
+      if (row && typeof row === 'object') row.cost = normalizeFinancialValue(row.cost);
     }
     for (i = 0; i < s.laborEquip.subcontractors.length; i++) {
       row = s.laborEquip.subcontractors[i];
-      if (row && typeof row === 'object') row.price = asNum(row.price);
+      if (row && typeof row === 'object') row.price = normalizeFinancialValue(row.price);
     }
     for (i = 0; i < s.laborEquip.blocks.length; i++) {
       row = s.laborEquip.blocks[i];
@@ -2939,28 +2938,28 @@ function normalizeState(s) {
         row.ot2Hours = asNum(row.sunPersons)*asNum(row.sunDays)*asNum(row.sunHours);
         row.holidayHours = 0; row.holidayMultiplier = 3; row.laborModelVersion = 2;
       }
-      row.straightHours = row.straightHours == null ? 0 : row.straightHours; row.ot15Hours = row.ot15Hours == null ? 0 : row.ot15Hours; row.ot2Hours = row.ot2Hours == null ? 0 : row.ot2Hours; row.holidayHours = row.holidayHours == null ? 0 : row.holidayHours; row.holidayMultiplier = row.holidayMultiplier == null ? 3 : row.holidayMultiplier;
+      row.straightHours = normalizeFinancialValue(row.straightHours); row.ot15Hours = normalizeFinancialValue(row.ot15Hours); row.ot2Hours = normalizeFinancialValue(row.ot2Hours); row.holidayHours = normalizeFinancialValue(row.holidayHours); row.holidayMultiplier = row.holidayMultiplier == null ? 3 : normalizeFinancialValue(row.holidayMultiplier);
     }
     for (i = 0; i < s.tm.equipmentLines.length; i++) {
       row = s.tm.equipmentLines[i];
       if (!row || typeof row !== 'object') continue;
-      row.qty = asNum(row.qty);
+      row.qty = normalizeFinancialValue(row.qty);
       row.rate = asNum(row.rate);
     }
     for (i = 0; i < s.tm.laborLines.length; i++) {
       row = s.tm.laborLines[i];
       if (!row || typeof row !== 'object') continue;
-      row.hours = asNum(row.hours);
-      row.rate = asNum(row.rate);
+      row.hours = normalizeFinancialValue(row.hours);
+      row.rate = normalizeFinancialValue(row.rate);
     }
     for (i = 0; i < s.changeOrders.length; i++) {
       row = s.changeOrders[i];
-      if (row && typeof row === 'object') row.amount = asNum(row.amount);
+      if (row && typeof row === 'object') row.amount = normalizeFinancialValue(row.amount);
     }
     if (s.personnel && Array.isArray(s.personnel.burden)) {
       for (i = 0; i < s.personnel.burden.length; i++) {
         row = s.personnel.burden[i];
-        if (row && typeof row === 'object') row.straight = asNum(row.straight);
+        if (row && typeof row === 'object') row.straight = normalizeFinancialValue(row.straight);
       }
     }
     if (s.personnel && Array.isArray(s.personnel.employees)) {
@@ -3028,7 +3027,7 @@ function normalizeState(s) {
     for (i = 0; i < s.catalog.length; i++) {
       row = s.catalog[i];
       if (!row || typeof row !== 'object') continue;
-      row.unitCost = asNum(row.unitCost);
+      row.unitCost = normalizeFinancialValue(row.unitCost);
       row.crew = asNum(row.crew) || 1;
       row.prod = asNum(row.prod);
       if (row.item == null) row.item = '';
@@ -3590,7 +3589,8 @@ function normalizeState(s) {
   function customerDocumentErrors(mode, calc) {
     var c = letterheadCompany(); var v = window.BrunoFinancial.validateAcrCompany(c); var out = v.missing.slice();
     if (mode === 'quote' && (!calc || !calc.sum || !calc.sum.valid)) out.push('valid Method A financial inputs');
-    if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); }
+    if (mode === 'quote' && (!calc || !calc.cos || !calc.cos.valid)) out.push('finite Change Order amounts');
+    if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); if(!calc||!calc.tm||!calc.tm.valid) out.push('valid nonnegative T&M financial inputs'); }
     return out;
   }
   function tdlrAcrBlock(c) { return '<div class="tdlr-acr-block"><strong>ACR License:</strong> ' + esc(c.acrLicense || c.license || '') + (c.acrClass ? ' · Class ' + esc(c.acrClass) : '') + (c.acrEndorsement ? ' · Endorsement ' + esc(c.acrEndorsement) : '') + '<br>' + esc(TDLR_ACR_NOTICE) + '</div>'; }
@@ -5347,16 +5347,15 @@ function normalizeState(s) {
   }
 
   function calcCOs(s) {
-    var list = s.changeOrders || [];
-    var approved = 0, pending = 0, rejected = 0, countApproved = 0;
-    for (var i = 0; i < list.length; i++) {
-      var amt = Number(list[i].amount) || 0;
-      var st = String(list[i].status || 'draft').toLowerCase();
-      if (st === 'approved') { approved += amt; countApproved++; }
-      else if (st === 'rejected' || st === 'void') { rejected += amt; }
-      else pending += amt;
+    var list=s.changeOrders||[], approved=0, pending=0, rejected=0, countApproved=0, errors=[];
+    for(var i=0;i<list.length;i++){
+      var amt=finiteFinancial(list[i].amount), st=String(list[i].status||'draft').toLowerCase();
+      if(amt===null){errors.push('Change Order amount must be finite.');continue;}
+      if(st==='approved'){approved+=amt;countApproved++;}
+      else if(st==='rejected'||st==='void') rejected+=amt;
+      else pending+=amt;
     }
-    return { approved: approved, pending: pending, rejected: rejected, countApproved: countApproved };
+    return { valid:errors.length===0, errors:errors, approved:approved, pending:pending, rejected:rejected, countApproved:countApproved };
   }
 
   function nextCoNumber(s) {
@@ -5960,7 +5959,7 @@ function normalizeState(s) {
       qsum.innerHTML =
         'Base quote ' + money0(calc.quoteBase) +
         ' + approved COs ' + money(calc.cos.approved) +
-        ' = <strong>' + money0(calc.quoteTotal) + '</strong>';
+        ' = <strong>' + customerTotalMoney(calc.quoteTotal) + '</strong>';
     }
     var trs = document.querySelectorAll('#co-body tr[data-i]');
     for (var i = 0; i < trs.length; i++) {
