@@ -46,11 +46,10 @@ catalog_mats = re.compile(r"\n      var mats = \(state && state\.materialsUsed\)
 s, n = catalog_mats.subn("\n      /* Catalog edits are template changes only. Existing Job Materials retain their stored quote basis until explicit Calculator Apply/Re-Apply. */", s, count=1)
 if n != 1: raise SystemExit('catalog -> Job propagation block missing')
 
-margin_mats = re.compile(r"\n\s*var mats\s*=\s*\(state\s*&&\s*state\.materialsUsed\)\s*\|\|\s*\[\];\s*for\s*\(var mi\s*=\s*0;\s*mi\s*<\s*mats\.length;\s*mi\+\+\)\s*\{\s*if\s*\([^\n\{]*\)\s*\{?\s*mats\[mi\]\.unitCost\s*=\s*row\.unitCost;\s*\}?\s*\}", re.S)
-s, n2 = margin_mats.subn("\n        /* Margins edits update Catalog only; Job Materials change only on explicit Calculator Apply/Re-Apply. */", s, count=1)
-if n2 != 1:
-    if 'mats[mi].unitCost = row.unitCost' not in s: n2 = 1
-    else: raise SystemExit('margins -> Job propagation block missing')
+# Keep Margins handler braces/loops intact; remove only the forbidden pricing mutation statement.
+if 'mats[mi].unitCost = row.unitCost;' not in s:
+    raise SystemExit('margins Customer Price assignment missing')
+s = s.replace('mats[mi].unitCost = row.unitCost;', '/* Catalog/Margins template edit: stored Job Material unitCost remains unchanged until explicit Calculator Apply/Re-Apply. */', 1)
 
 old_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);\n"
 new_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      /* No map entry means Your Cost remains genuinely blank. Effective fallback is resolved at read time so provenance remains customer-price-fallback. */\n"
