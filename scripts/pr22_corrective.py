@@ -1,0 +1,284 @@
+from pathlib import Path
+
+
+def replace_once(text, old, new, label):
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
+    return text.replace(old, new, 1)
+
+
+core_path = Path('financial-integrity-core.js')
+core = core_path.read_text()
+core = replace_once(core,
+"""  function finiteNumber(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+""",
+"""  function finiteNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function optionalNonNegative(value, defaultValue) {
+    if (value === null || value === undefined || value === '') return defaultValue;
+    return nonNegative(value);
+  }
+""", 'core finiteNumber')
+
+core = replace_once(core,
+"""    var residual = nonNegative(input.residualValue || 0);
+    var lifeHours = finiteNumber(input.lifeHours);
+    var maintenance = nonNegative(input.maintenancePerHour || 0);
+    var other = nonNegative(input.otherPerHour || 0);
+""",
+"""    var residual = optionalNonNegative(input.residualValue, 0);
+    var lifeHours = finiteNumber(input.lifeHours);
+    var maintenance = optionalNonNegative(input.maintenancePerHour, 0);
+    var other = optionalNonNegative(input.otherPerHour, 0);
+""", 'core recovery coercion')
+core = replace_once(core, "      var usage = nonNegative(line.usage || 0);\n", "      var usage = optionalNonNegative(line.usage, 0);\n", 'core usage coercion')
+
+core = replace_once(core,
+"""  function approvedChangeOrders(list) {
+    var total = 0;
+    (list || []).forEach(function (row) {
+      if (String((row || {}).status || '').toLowerCase() !== 'approved') return;
+      var n = finiteNumber(row.amount);
+      if (n !== null) total += n;
+    });
+    return total;
+  }
+
+  function quotedContractRevenue(baseQuote, changeOrders) {
+    var base = finiteNumber(baseQuote);
+    if (base === null) return null;
+    return base + approvedChangeOrders(changeOrders);
+  }
+""",
+"""  function approvedChangeOrders(list) {
+    var total = 0;
+    var valid = true;
+    (list || []).forEach(function (row) {
+      if (String((row || {}).status || '').toLowerCase() !== 'approved') return;
+      var n = nonNegative(row.amount);
+      if (n === null) { valid = false; return; }
+      total += n;
+    });
+    return valid ? total : null;
+  }
+
+  function quotedContractRevenue(baseQuote, changeOrders) {
+    var base = nonNegative(baseQuote);
+    var approved = approvedChangeOrders(changeOrders);
+    if (base === null || approved === null) return null;
+    return base + approved;
+  }
+""", 'core CO strictness')
+
+core = replace_once(core,
+"""  function tmTotal(tm) {
+    tm = tm || {};
+    var equip = 0, labor = 0;
+    (tm.equipmentLines || []).forEach(function (r) {
+      var q = nonNegative(r.qty), rate = nonNegative(r.rate);
+      if (q !== null && rate !== null) equip += q * rate;
+    });
+    (tm.laborLines || []).forEach(function (r) {
+      var h = nonNegative(r.hours), rate = nonNegative(r.rate);
+      if (h !== null && rate !== null) labor += h * rate;
+    });
+    var material = nonNegative(tm.materialAmount);
+    var sub = nonNegative(tm.subAmount);
+    if (material === null || sub === null) return null;
+    return { equip: equip, labor: labor, material: material, sub: sub, total: equip + labor + material + sub };
+  }
+""",
+"""  function tmTotal(tm) {
+    tm = tm || {};
+    var equip = 0, labor = 0, valid = true;
+    (tm.equipmentLines || []).forEach(function (r) {
+      var q = nonNegative(r.qty), rate = nonNegative(r.rate);
+      if (q === null || rate === null) { valid = false; return; }
+      equip += q * rate;
+    });
+    (tm.laborLines || []).forEach(function (r) {
+      var h = nonNegative(r.hours), rate = nonNegative(r.rate);
+      if (h === null || rate === null) { valid = false; return; }
+      labor += h * rate;
+    });
+    var material = nonNegative(tm.materialAmount);
+    var sub = nonNegative(tm.subAmount);
+    if (!valid || material === null || sub === null) return { ok: false, equip: null, labor: null, material: null, sub: null, total: null, error: 'All T&M rows must be finite and nonnegative.' };
+    return { ok: true, equip: equip, labor: labor, material: material, sub: sub, total: equip + labor + material + sub, error: '' };
+  }
+""", 'core T&M strictness')
+core = replace_once(core, "    var license = String(company.acrLicense || company.license || '').trim();\n", "    var license = String(company.acrLicense || '').trim();\n", 'core ACR only')
+core_path.write_text(core)
+
+p = Path('index.html')
+html = p.read_text()
+html = replace_once(html,
+"""  function finiteFinancial(n) { var x = Number(n); return isFinite(x) ? x : null; }
+  function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }
+  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return isFinite(x) ? x : n; }
+  function financeError(msg) { return { ok: false, value: null, error: msg }; }
+  function safeMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
+  function customerTotalMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
+""",
+"""  function finiteFinancial(n) { if (n === null || n === undefined || n === '') return null; var x = Number(n); return Number.isFinite(x) ? x : null; }
+  function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }
+  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return Number.isFinite(x) ? x : n; }
+  function financeError(msg) { return { ok: false, value: null, error: msg }; }
+  function validMoneyValue(n) { return finiteFinancial(n) !== null; }
+  function safeMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }
+  function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }
+  function financialInputValue(n, fallback) { return (n === null || n === undefined || n === '') ? fallback : n; }
+""", 'index strict financial helpers')
+
+html = replace_once(html,
+"""    if (!c.license && c.tecl) c.license = c.tecl; /* legacy import only */
+    if (!c.acrLicense) c.acrLicense = c.license || '';
+    if (!c.license) c.license = c.acrLicense || '';
+""",
+"""    /* Safety boundary: legacy electrical TECL/generic license data must never be promoted to ACR. */
+    if (c.tecl == null) c.tecl = '';
+    if (c.license == null) c.license = '';
+    if (c.acrLicense == null) c.acrLicense = '';
+""", 'index TECL promotion')
+html = replace_once(html, "    if (c.acrLicense == null) c.acrLicense = c.license || '';\n", "    if (c.acrLicense == null) c.acrLicense = '';\n", 'index second ACR fallback')
+html = replace_once(html, "    c.license = c.acrLicense || c.license || ''; /* generic backward-compatible export alias */\n", "    c.license = c.license || ''; /* preserve generic legacy metadata; never use it as ACR evidence */\n", 'index generic license mirror')
+
+html = html.replace("acrLicense: c.acrLicense || c.license || ''", "acrLicense: c.acrLicense || ''")
+html = html.replace("acrLicense: fields.acrLicense || fields.license || ''", "acrLicense: fields.acrLicense || ''")
+html = html.replace("acrLicense: p.acrLicense || p.license", "acrLicense: p.acrLicense || ''")
+html = html.replace("set('co-license', c.acrLicense || c.license);", "set('co-license', c.acrLicense || '');")
+html = html.replace("esc(c.acrLicense || c.license || '')", "esc(c.acrLicense || '')")
+
+html = replace_once(html,
+"""      if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {
+        var lp=asNum(row.persons), ld=asNum(row.days), lh=asNum(row.hoursPerDay);
+        row.straightHours = lp * ld * Math.min(lh, 8);
+        row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + asNum(row.satPersons)*asNum(row.satDays)*asNum(row.satHours);
+        row.ot2Hours = asNum(row.sunPersons)*asNum(row.sunDays)*asNum(row.sunHours);
+        row.holidayHours = 0; row.holidayMultiplier = 3; row.laborModelVersion = 2;
+      }
+""",
+"""      if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {
+        function legacyLaborNumber(v) {
+          if (v === null || v === undefined || v === '') return 0;
+          var n = Number(v);
+          return Number.isFinite(n) && n >= 0 ? n : null;
+        }
+        var lp=legacyLaborNumber(row.persons), ld=legacyLaborNumber(row.days), lh=legacyLaborNumber(row.hoursPerDay);
+        var lsp=legacyLaborNumber(row.satPersons), lsd=legacyLaborNumber(row.satDays), lsh=legacyLaborNumber(row.satHours);
+        var lnp=legacyLaborNumber(row.sunPersons), lnd=legacyLaborNumber(row.sunDays), lnh=legacyLaborNumber(row.sunHours);
+        var legacyVals=[lp,ld,lh,lsp,lsd,lsh,lnp,lnd,lnh];
+        if (legacyVals.some(function(v){return v===null;})) {
+          row.straightHours = 'INVALID_LEGACY_LABOR';
+          row.ot15Hours = 'INVALID_LEGACY_LABOR';
+          row.ot2Hours = 'INVALID_LEGACY_LABOR';
+          row.holidayHours = 0;
+          row.holidayMultiplier = 3;
+          row.laborMigrationError = 'Malformed legacy labor values require correction before pricing.';
+        } else {
+          row.straightHours = lp * ld * Math.min(lh, 8);
+          row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + lsp*lsd*lsh;
+          row.ot2Hours = lnp*lnd*lnh;
+          row.holidayHours = 0;
+          row.holidayMultiplier = 3;
+          delete row.laborMigrationError;
+        }
+        row.laborModelVersion = 2;
+      }
+""", 'index legacy labor migration')
+
+html = replace_once(html,
+"""      if(amt===null){errors.push('Change Order amount must be finite.');continue;}
+      if(st==='approved'){approved+=amt;countApproved++;}
+""",
+"""      if(amt===null){errors.push('Change Order amount must be finite.');continue;}
+      if(amt<0){errors.push('Negative Change Orders are not supported. Use an explicit credit workflow before reducing contract value.');continue;}
+      if(st==='approved'){approved+=amt;countApproved++;}
+""", 'index negative CO')
+
+html = replace_once(html,
+"""    else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty), pc=nonNegativeFinancial(rows[i].procurementCostSnapshot);if(q===null||pc===null){allSnap=false;break;}actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated cost fallback';}else matSource='procurement snapshot'; }
+""",
+"""    else {
+      var rows=state.materialsUsed||[], sourceCounts={actual:0,snapshot:0,estimate:0}; actMat=0;
+      for(var i=0;i<rows.length;i++){
+        var mr=rows[i]||{}, q=nonNegativeFinancial(mr.qty), pc=null, source='';
+        if(q===null){errors.push('Material row '+(i+1)+' quantity must be finite and nonnegative.');actMat=NaN;break;}
+        if(mr.actualCost !== null && mr.actualCost !== undefined && mr.actualCost !== '') { pc=nonNegativeFinancial(mr.actualCost); source='actual'; }
+        else if(mr.procurementCostSnapshot !== null && mr.procurementCostSnapshot !== undefined && mr.procurementCostSnapshot !== '') { pc=nonNegativeFinancial(mr.procurementCostSnapshot); source='snapshot'; }
+        else { pc=nonNegativeFinancial(mr.unitCost); source='estimate'; }
+        if(pc===null){errors.push('Material row '+(i+1)+' '+source+' cost must be finite and nonnegative.');actMat=NaN;break;}
+        sourceCounts[source]++; actMat += q*pc;
+      }
+      if(isFinite(actMat)) {
+        var labels=[];
+        if(sourceCounts.actual) labels.push('explicit actual');
+        if(sourceCounts.snapshot) labels.push('procurement snapshot');
+        if(sourceCounts.estimate) labels.push('estimated cost fallback');
+        matSource=labels.join(' + ') || 'no material rows';
+      }
+    }
+""", 'index per-row material hierarchy')
+
+html = html.replace("(Number(m.costClass==='CONSUMABLE'||m.costClass==='RENTAL'||m.costClass==='LEGACY_DIRECT'?m.qty:m.usage)||0)", "financialInputValue(m.costClass==='CONSUMABLE'||m.costClass==='RENTAL'||m.costClass==='LEGACY_DIRECT'?m.qty:m.usage,0)")
+html = html.replace("(Number(m.purchaseCost!=null?m.purchaseCost:m.unitCost)||0)", "financialInputValue(m.purchaseCost!=null?m.purchaseCost:m.unitCost,0)")
+html = html.replace("(Number(m.residualValue)||0)", "financialInputValue(m.residualValue,0)")
+html = html.replace("(Number(m.lifeHours)||0)", "financialInputValue(m.lifeHours,0)")
+html = html.replace("(Number(m.maintenancePerHour)||0)", "financialInputValue(m.maintenancePerHour,0)")
+html = html.replace("(Number(m.otherPerHour)||0)", "financialInputValue(m.otherPerHour,0)")
+html = html.replace("(Number(m.dailyRecoveryRate)||0)", "financialInputValue(m.dailyRecoveryRate,0)")
+html = replace_once(html, "if (extCell) extCell.textContent = money(smallToolsLineExt(line));", "if (extCell) extCell.textContent = safeMoney(smallToolsLineExt(line));", 'tool extension formatter')
+
+html = html.replace("'Base quote: ' + money0(calc.quoteBase)", "'Base quote: ' + (calc.quoteValid ? money0(calc.quoteBase) : '—')")
+html = html.replace("'Base quote ' + money0(calc.quoteBase)", "'Base quote ' + (calc.quoteValid ? money0(calc.quoteBase) : '—')")
+html = html.replace("if (qBase) qBase.textContent = money0(calc.quoteBase);", "if (qBase) qBase.textContent = calc.quoteValid ? money0(calc.quoteBase) : '—';")
+html = replace_once(html,
+"""  function moneyPlain(n) {
+    n = Number(n) || 0;
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+""",
+"""  function moneyPlain(n) {
+    var value = finiteFinancial(n);
+    if (value === null) return '—';
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+""", 'print moneyPlain strict')
+html = html.replace("'<div class=\"grand\">Quote Total: $' + moneyPlain(calc.quoteTotal) + '</div>'", "'<div class=\"grand\">Quote Total: ' + (calc.quoteValid ? '$' + moneyPlain(calc.quoteTotal) : '— INVALID —') + '</div>'")
+html = html.replace('R — Commercial Refrigeration</option>', 'R — Commercial Refrigeration &amp; Process Cooling and Heating</option>')
+p.write_text(html)
+
+tests_path = Path('tests/financial-integrity.test.js')
+tests = tests_path.read_text()
+tests += r'''
+
+// Corrective audit regression coverage.
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: 100, lifeHours: 1000, maintenancePerHour: 0.10, otherPerHour: 0, recoveryUnit: 'hour', usage: NaN }).ok, false);
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: NaN, lifeHours: 1000, maintenancePerHour: 0.10, otherPerHour: 0, recoveryUnit: 'hour', usage: 4 }).ok, false);
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: 100, lifeHours: 1000, maintenancePerHour: Infinity, otherPerHour: 0, recoveryUnit: 'hour', usage: 4 }).ok, false);
+assert.strictEqual(F.quotedContractRevenue(10000, [{ status: 'approved', amount: -500 }]), null, 'generic negative approved CO must block');
+assert.strictEqual(F.validateAcrCompany({ legalName:'Bruno AC', address1:'1 Main', city:'Austin', state:'TX', zip:'78701', phone:'5125550100', tecl:'TECL28137', license:'TECL28137', acrLicense:'' }).ok, false, 'TECL/generic license must not satisfy ACR compliance');
+const badTm = F.tmTotal({ equipmentLines:[{qty:NaN,rate:100}], laborLines:[], materialAmount:0, subAmount:0 });
+assert.strictEqual(badTm.ok, false); assert.strictEqual(badTm.total, null);
+
+const fs = require('fs');
+const source = fs.readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+assert.ok(source.includes("makeLetterhead(tm.date, 'Invoice date')"), 'invoice print must use tm.date');
+assert.ok(!source.includes('if (!c.license && c.tecl) c.license = c.tecl'), 'TECL promotion must be absent');
+assert.ok(!source.includes("if (!c.acrLicense) c.acrLicense = c.license || ''"), 'generic license promotion to ACR must be absent');
+assert.ok(source.includes("row.straightHours = 'INVALID_LEGACY_LABOR'"), 'malformed legacy labor must retain invalid sentinel');
+assert.ok(source.includes("if(amt<0){errors.push('Negative Change Orders are not supported."), 'negative CO must be rejected');
+assert.ok(source.includes("function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }"), 'customer total formatter must reject null/nonfinite');
+assert.ok(source.includes("mr.actualCost !== null") && source.includes("mr.procurementCostSnapshot !== null") && source.includes("source='estimate'"), 'material actual cost must resolve per row');
+'''
+tests_path.write_text(tests)
+
+print('PR22 corrective patch applied')
