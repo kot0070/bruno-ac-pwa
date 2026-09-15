@@ -8,8 +8,10 @@
 .phase5-toggle{display:flex;align-items:center;gap:.4rem;min-height:40px;padding:0 .65rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-elev);font-size:.8rem;color:var(--text-muted);white-space:nowrap}
 .phase5-count{font-size:.78rem;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .phase5-spacer{flex:1 1 auto}
-.phase5-zero-price td{background:rgba(240,113,120,.055)}
-.phase5-zero-price .mat-cost{border-color:rgba(240,113,120,.55)!important}
+.phase5-zero-price td{background:rgba(240,113,120,.075)}
+.phase5-zero-price .mat-cost{border-color:rgba(240,113,120,.68)!important;box-shadow:inset 0 0 0 1px rgba(240,113,120,.16)}
+html[data-theme="light"] .phase5-zero-price td{background:rgba(220,38,38,.085)}
+html[data-theme="light"] .phase5-zero-price .mat-cost{border-color:rgba(185,28,28,.6)!important}
 
 @media(min-width:768px){
   #panel-materials .table-wrap,#panel-catalog .cat-group-bd .table-wrap{border:1px solid var(--border);border-radius:10px}
@@ -17,10 +19,12 @@
   #panel-materials table.data input,#panel-catalog table.data input{min-height:38px;padding:.38rem .48rem}
   #panel-materials table.data td:nth-child(2){min-width:260px}
   #panel-materials table.data th:last-child,#panel-materials table.data td:last-child,#panel-catalog table.data th:last-child,#panel-catalog table.data td:last-child{position:sticky;right:0;z-index:2;background:var(--bg-elev);box-shadow:-8px 0 12px rgba(0,0,0,.12)}
-  #panel-materials table.data thead th:last-child,#panel-catalog table.data thead th:last-child{z-index:3}
+  #panel-materials table.data thead th:last-child,#panel-catalog table.data thead th:last-child{z-index:4}
   #panel-catalog .phase5-catalog-search{position:sticky;top:calc(var(--sticky-nav-top,0px) + var(--phase2-nav-h,0px) + 8px);z-index:6;padding:.55rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);box-shadow:0 8px 18px rgba(0,0,0,.18)}
   #panel-catalog .cat-group-hd{min-height:44px}
-  #panel-catalog .cat-group-bd table.data thead th{position:sticky;top:0;z-index:2;background:var(--bg-elev)}
+  #panel-catalog .cat-group-bd .table-wrap{max-height:min(62vh,640px);overflow:auto}
+  #panel-catalog .cat-group-bd table.data thead th{position:sticky;top:0;z-index:3;background:var(--thead-bg,var(--bg-card))}
+  #panel-catalog .cat-group-bd table.data thead th:last-child{z-index:5;background:var(--thead-bg,var(--bg-card))}
 }
 
 .phase5-summary-layout{display:grid;gap:1rem;align-items:start;margin-top:.25rem}
