@@ -5,6 +5,29 @@
 })(typeof self!=='undefined'?self:this,function(){
   'use strict';
 
+  var CALCULATOR_RULE_MAP={
+    'sqft-sizing':['IRC-M1401.3-EQUIPMENT-SIZING'],
+    'line-set':['IRC-M1307.1-OEM-INSTALLATION'],
+    'filter-drier':['IRC-M1307.1-OEM-INSTALLATION'],
+    'package-support':['IRC-M1307.1-OEM-INSTALLATION','LOCAL-AHJ-VERIFY'],
+    'outdoor-pad':['IRC-M1307.1-OEM-INSTALLATION','LOCAL-AHJ-VERIFY'],
+    'outdoor-bracket':['IRC-M1307.1-OEM-INSTALLATION','LOCAL-AHJ-VERIFY'],
+    'outdoor-roof-support':['IRC-M1307.1-OEM-INSTALLATION','LOCAL-AHJ-VERIFY'],
+    'thermostat':['IRC-M1307.1-OEM-INSTALLATION'],
+    'condensate-drain':['IRC-M1411.9-CONDENSATE'],
+    'condensate-size-slope':['IRC-M1411.9-CONDENSATE','LOCAL-AHJ-VERIFY'],
+    'overflow-protection':['IRC-M1411.9.1-OVERFLOW','LOCAL-AHJ-VERIFY'],
+    'aux-pan':['IRC-M1411.9.1-OVERFLOW','LOCAL-AHJ-VERIFY'],
+    'secondary-drain':['IRC-M1411.9.1-OVERFLOW','LOCAL-AHJ-VERIFY'],
+    'float-switch':['IRC-M1411.9.1-OVERFLOW','LOCAL-AHJ-VERIFY'],
+    'condensate-pump':['IRC-M1411.10-CONDENSATE-PUMP'],
+    'pump-interlock':['IRC-M1411.10-CONDENSATE-PUMP'],
+    'disconnect':['NEC-2026-TX-ADOPTION','LOCAL-AHJ-VERIFY'],
+    'whip':['NEC-2026-TX-ADOPTION','LOCAL-AHJ-VERIFY'],
+    'attic-light-receptacle':['NEC-2026-TX-ADOPTION','LOCAL-AHJ-VERIFY'],
+    'permit':['LOCAL-AHJ-VERIFY']
+  };
+
   function text(v){return String(v==null?'':v).trim()}
   function lower(v){return text(v).toLowerCase()}
   function arr(v){return Array.isArray(v)?v:[]}
@@ -86,11 +109,22 @@
     return {resolved:resolved,missing:missing};
   }
 
+  function calculatorRuleIds(key){return normalizeRuleIds(CALCULATOR_RULE_MAP[text(key)]||[])}
+
+  function validateCalculatorMap(lib){
+    var missing=[];
+    Object.keys(CALCULATOR_RULE_MAP).forEach(function(key){
+      var result=resolveRuleIds(lib,CALCULATOR_RULE_MAP[key]);
+      if(result.missing.length)missing.push({key:key,ids:result.missing});
+    });
+    return {ok:missing.length===0,mappedKeys:Object.keys(CALCULATOR_RULE_MAP).length,missing:missing};
+  }
+
   function coverage(lib,entities){
     var total=0,linked=0,missing=[];
     arr(entities).forEach(function(e){
       total++;
-      var ids=normalizeRuleIds(e&&e.ruleIds);
+      var ids=normalizeRuleIds((e&&e.ruleIds)||calculatorRuleIds(e&&e.key));
       if(ids.length)linked++;
       var res=resolveRuleIds(lib,ids);
       if(res.missing.length)missing.push({key:text(e&&e.key),ids:res.missing});
@@ -99,12 +133,15 @@
   }
 
   return {
+    CALCULATOR_RULE_MAP:CALCULATOR_RULE_MAP,
     validateLibrary:validateLibrary,
     indexLibrary:indexLibrary,
     findRule:findRule,
     searchRules:searchRules,
     normalizeRuleIds:normalizeRuleIds,
     resolveRuleIds:resolveRuleIds,
+    calculatorRuleIds:calculatorRuleIds,
+    validateCalculatorMap:validateCalculatorMap,
     coverage:coverage
   };
 });
