@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 21
+handoff_version: 22
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,7 +10,7 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR26_BLOCKER_FIX_REAUDIT_READY
+state: PR26_REAUDIT_REJECTED_FIX_REQUIRED
 ```
 
 ## LAST ACCEPTED / MERGED PRODUCTION BASELINE
@@ -28,109 +28,68 @@ verdict: A_ACCEPT
 production_pr: 26
 production_branch: feature/room-based-code-estimator
 base_branch: main
-previous_rejected_head: 43cbc681f579b4009cc55674c4db7507d0910a7c
-previous_verdict: C_REJECT_REWORK_REQUIRED
-previous_report: audits/history/PR26_43cbc681f579b4009cc55674c4db7507d0910a7c_20260915-1749.md
 production_head: 116404b13313af0f966695777cf55a807b27fbb5
 merged: false
 draft: true
+latest_audit_verdict: C_REJECT_REWORK_REQUIRED
+latest_audit_report: audits/history/PR26_116404b13313af0f966695777cf55a807b27fbb5_20260915-1821.md
 ```
 
-## BLOCKER FIX IMPLEMENTATION
+## REAUDIT RESULT
 
 ```yaml
-implementation_report: audits/implementation/PR26_BLOCKER_FIXES_116404b1.md
-fixed_findings:
+closed:
   - F01_live_wrapper_shape
   - F02_confirm_save_invalid_room_plan
   - F03_reload_room_plan_restore
-  - F04_stale_BOM_pricing_apply_after_blocked_edit
   - F05_false_compliance_ready_with_required_input
   - F06_duplicate_provenance
-  - F07_import_pricing_validation
+open_blocker:
+  id: F04
+  severity: P1
+  issue: click_only_room_plan_mutations_can_enter_blocked_state_without_invoking_live_fail_closed_invalidator_leaving_stale_Calculator_Apply_enabled
+partially_open:
+  id: F07
+  severity: P2
+  issue: import_pricing_validation_accepts_malformed_margin_fields_and_negative_finite_totals
 ```
 
-## CURRENT USER FLOW
-
-```text
-Building / room inputs
--> L0-L6 live evaluation
--> code/design references
--> baseline
--> override + reason
--> compliance
--> BOM/current Catalog pricing
--> explicit Apply to Job
--> Confirm & Save
--> Active frozen snapshot
--> History
--> Duplicate as new
--> Export / Import
-```
-
-## FIXED DATA SHAPE CONTRACT
+## F04 REQUIRED FIX BOUNDARY
 
 ```yaml
-UX_getSnapshot_shape: wrapper_{version_plan_result}
-canonical_room_plan: wrapper.plan
-live_engine_consumes: canonical_room_plan
-history_consumes: canonical_room_plan
-persistence_stores: canonical_room_plan
-preload_supports:
-  - canonical_room_plan
-  - legacy_wrapper_then_migrates_to_canonical
+required:
+  - every_room_plan_mutation_path_must_trigger_same_live_validation_and_fail_closed_gate
+  - include_click_only_add_remove_preset_clear_overrides_paths
+  - stale_Calculator_scope_BOM_must_never_remain_applyable_after_current_plan_blocks
+  - add_executable_DOM_integration_regression_for_valid_to_blocked_click_transition
+forbidden:
+  - merge_before_new_exact_HEAD_audit_acceptance
 ```
 
-## FAIL-CLOSED LIVE STATE
+## F07 REQUIRED MINOR HARDENING
 
 ```yaml
-blocked_live_edit:
-  apply_disabled: true
-  phase_apply_disabled_if_present: true
-  stale_BOM_marked: true
-  pricing_cleared: true
-  calculator_state_marked_stale_blocked: true
-valid_again:
-  releases_only_live_owned_disable: true
-  uses_existing_Calculate_path: true
-  auto_Apply: false
+required:
+  - reject_or_skip_semantically_invalid_historical_pricing
+  - cover_malformed_marginDollar
+  - cover_malformed_marginPct
+  - cover_negative_financial_totals_consistently_with_existing_financial_semantics
 ```
 
-## HISTORY / COMPLIANCE
-
-```yaml
-confirm_save_shape_fixed: true
-required_input_checks:
-  allowed_to_freeze_snapshot: true
-  compliance_ready: false
-  active_summary_label: review_required
-duplicate_sourceCalculationId_preserved: true
-malformed_import_pricing_rejected: true
-historical_pricing_drives_live_catalog: false
-```
-
-## PWA
-
-```yaml
-cache: bruno-ac-v40
-```
-
-## VALIDATION
+## VERIFIED CI CONTEXT
 
 ```yaml
 ci_run: 35034425269
 validated_commit: ae03ac71f2a73cba34569332ebadbe74d9cd0b4e
 result: SUCCESS
-post_ci_change: delete_temporary_workflow_only
-final_head: 116404b13313af0f966695777cf55a807b27fbb5
+post_ci_delta_to_final_head: DELETE_.github/workflows/pr26-reaudit-validation.yml_only
 browser_runtime: NOT_PERFORMED
 ```
 
 ## NEXT STATE
 
 ```yaml
-next_task_id: PR26_BLOCKER_FIX_REAUDIT_04
-next_task_mode: independent_full_reaudit
+next_action: focused_PR26_fix_then_new_exact_HEAD_reaudit
 merge_before_acceptance: forbidden
 ```
 
@@ -138,13 +97,10 @@ merge_before_acceptance: forbidden
 
 ```yaml
 rules:
-  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_all_PR26_reports_TASK_before_action
-  - task_file_defines_active_PR_branch_SHA
-  - audit_exact_head_116404b13313af0f966695777cf55a807b27fbb5
-  - previous_rejected_head_43cbc681f579b4009cc55674c4db7507d0910a7c_is_obsolete
+  - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_TASK_and_latest_report_before_action
+  - current_rejected_head_116404b13313af0f966695777cf55a807b27fbb5_must_not_be_merged
   - production_PR_and_code_read_only_during_audit
-  - auditor_does_not_merge
-  - reports_and_workspace_writes_only_on_audit_branch_under_audits
+  - implementation_changes_belong_on_production_PR_in_separate_implementation_cycle
+  - next_audit_must_target_new_exact_HEAD_after_fix
   - browser_runtime_must_not_be_claimed_without_execution
-  - if_findings_exist_fix_same_PR_then_reaudit_new_exact_HEAD
 ```
