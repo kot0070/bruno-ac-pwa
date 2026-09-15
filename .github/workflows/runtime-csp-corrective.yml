@@ -1,0 +1,52 @@
+name: Runtime CSP corrective
+
+on:
+  push:
+    branches:
+      - feature/bruno-runtime-csp-frame-fix
+
+permissions:
+  contents: write
+
+jobs:
+  patch-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/bruno-runtime-csp-frame-fix
+      - name: Patch runtime CSP and light theme
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text()
+          old = "form-action 'none'; frame-ancestors 'none'; connect-src 'self';"
+          new = "form-action 'none'; frame-ancestors 'none'; frame-src 'self'; connect-src 'self';"
+          if old not in s:
+              raise SystemExit('index CSP anchor not found')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('navigation-v2.css')
+          s = p.read_text()
+          anchor = ".phase4-result-mirror .calc-ref-list{margin:8px 0 0;padding-left:18px}.phase4-result-mirror .calc-ref-list li{margin:5px 0}\n"
+          addition = anchor + "html[data-theme=\"light\"] .phase4-result-mirror{border-color:var(--border);background:linear-gradient(180deg,var(--bg-card),var(--bg-elev));color:var(--text);box-shadow:0 10px 28px rgba(15,23,42,.14)}\nhtml[data-theme=\"light\"] .phase4-result-mirror .calc-explain-box{background:var(--bg-input);border-color:var(--border)}\nhtml[data-theme=\"light\"] .phase4-result-mirror.stale-result:before{background:#fff8df;color:#6b4f00;border-color:#c59a2f}\n"
+          if anchor not in s:
+              raise SystemExit('navigation CSS anchor not found')
+          p.write_text(s.replace(anchor, addition, 1))
+
+          p = Path('sw.js')
+          s = p.read_text()
+          if "const CACHE = 'bruno-ac-v24';" not in s:
+              raise SystemExit('SW cache anchor not found')
+          p.write_text(s.replace("const CACHE = 'bruno-ac-v24';", "const CACHE = 'bruno-ac-v25';", 1))
+          PY
+      - name: Remove temporary workflow and commit
+        run: |
+          rm .github/workflows/runtime-csp-corrective.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html navigation-v2.css sw.js .github/workflows/runtime-csp-corrective.yml
+          git commit -m "Fix calculator frame CSP and light result theme"
+          git push origin HEAD:feature/bruno-runtime-csp-frame-fix
