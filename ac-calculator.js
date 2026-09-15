@@ -5,7 +5,10 @@ var STORAGE_KEY='bruno-ac-v1';
 var state=null, scope=null, bom=[], selectedByKey={};
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function money(n){return '$'+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function finiteValue(n){if(n===null||n===undefined||n===''||n===E.INVALID_FINANCIAL)return null;var x=Number(n);return Number.isFinite(x)?x:null}
+function money(n){var x=finiteValue(n);return x===null?'—':'$'+x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function pct(n){var x=finiteValue(n);return x===null?'—':(x*100).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'}
+function priceSource(s){if(s==='catalog-customer-price')return 'Catalog Customer Price';if(s==='catalog-your-cost')return 'Catalog Your Cost';if(s==='customer-price-fallback')return 'Customer Price fallback';if(s==='invalid')return 'Invalid';return 'Manual review'}
 function toast(t){var x=$('toast');x.textContent=t;x.classList.add('show');setTimeout(function(){x.classList.remove('show')},2800)}
 function safeStateShape(s){return !!(s&&typeof s==='object'&&!Array.isArray(s)&&s.quote&&typeof s.quote==='object'&&Array.isArray(s.materialsUsed)&&Array.isArray(s.catalog))}
 function loadState(){
@@ -70,25 +73,29 @@ function calculate(){
 function renderBom(){
   var html='';
   bom.forEach(function(b,idx){
-    var flags=[];if(b.manualDuplicate)flags.push('<span class="flag warn">manual duplicate</span>');if(!b.resolved)flags.push('<span class="flag danger">needs review</span>');if(b.matchMode==='packaged-length')flags.push('<span class="flag">packaged length</span>');
-    html+='<tr class="'+(!b.resolved?'row-unresolved':'')+'"><td class="sel"><label class="tapcheck"><input type="checkbox" class="bomsel" data-i="'+idx+'" '+(b.selected?'checked':'')+'><span></span></label></td><td><strong>'+esc(b.label)+'</strong>'+flags.join('')+'<div class="muted">'+esc(b.reason)+'</div><div class="mobile-detail">'+esc(b.note||'')+'</div></td><td class="col-level"><span class="status '+esc(b.level)+'">'+esc(b.level)+'</span></td><td class="num">'+esc(b.qty)+'</td><td>'+esc(b.units)+'</td><td class="col-match"><span class="'+(b.resolved?'resolved':'unresolved')+'">'+(b.resolved?'Catalog match':'Unresolved')+'</span><div>'+esc(b.item)+'</div><div class="muted">'+esc(b.part||'')+'</div><div class="muted">'+esc(b.note||'')+'</div></td><td class="num col-money">'+money(b.unitCost)+'</td><td class="num col-money">'+money((Number(b.qty)||0)*(Number(b.unitCost)||0))+'</td><td class="col-ref">'+esc(b.code||'')+'</td></tr>';
+    var flags=[];if(b.manualDuplicate)flags.push('<span class="flag warn">manual duplicate</span>');if(!b.resolved)flags.push('<span class="flag danger">needs review</span>');if(b.financialInvalid)flags.push('<span class="flag danger">invalid price</span>');if(b.zeroPriceReview)flags.push('<span class="flag warn">$0 review</span>');if(b.matchMode==='packaged-length')flags.push('<span class="flag">packaged length</span>');
+    var rowClass=!b.resolved?'row-unresolved':(b.financialInvalid?'row-invalid-financial':(b.zeroPriceReview?'row-zero-review':''));
+    var mobilePricing='<div class="pricing-detail"><span>Customer <strong>'+money(b.customerUnitPrice)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.customerExtension)+'</strong><small>'+esc(priceSource(b.customerPriceSource))+'</small></span><span>Your Cost <strong>'+money(b.yourUnitCost)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.yourExtension)+'</strong><small>'+esc(priceSource(b.yourCostSource))+'</small></span><span>Margin <strong>'+money(b.materialMargin)+'</strong> / <strong>'+pct(b.materialMarginPct)+'</strong></span></div>';
+    html+='<tr class="'+rowClass+'"><td class="sel"><label class="tapcheck"><input type="checkbox" class="bomsel" data-i="'+idx+'" '+(b.selected?'checked':'')+'><span></span></label></td><td><strong>'+esc(b.label)+'</strong>'+flags.join('')+'<div class="muted">'+esc(b.reason)+'</div><div class="mobile-detail">'+esc(b.note||'')+'</div>'+mobilePricing+'</td><td class="col-level"><span class="status '+esc(b.level)+'">'+esc(b.level)+'</span></td><td class="num">'+esc(b.qty)+'</td><td>'+esc(b.units)+'</td><td class="col-match"><span class="'+(b.resolved?'resolved':'unresolved')+'">'+(b.resolved?'Catalog match':'Unresolved')+'</span><div>'+esc(b.item)+'</div><div class="muted">'+esc(b.part||'')+'</div><div class="muted">'+esc(b.note||'')+'</div></td><td class="num col-money">'+money(b.customerUnitPrice)+'<div class="muted">'+esc(priceSource(b.customerPriceSource))+'</div></td><td class="num col-money">'+money(b.customerExtension)+'</td><td class="num col-money">'+money(b.yourUnitCost)+'<div class="muted">'+esc(priceSource(b.yourCostSource))+'</div></td><td class="num col-money">'+money(b.yourExtension)+'</td><td class="num col-money">'+money(b.materialMargin)+'</td><td class="num col-money">'+pct(b.materialMarginPct)+'</td><td class="col-ref">'+esc(b.code||'')+'</td></tr>';
   });
-  $('bomBody').innerHTML=html||'<tr><td colspan="9">No generated items.</td></tr>';updateTotals();
+  $('bomBody').innerHTML=html||'<tr><td colspan="13">No generated items.</td></tr>';updateTotals();
 }
 function updateTotals(){
-  var selected=bom.filter(function(b){return b.selected!==false});var blocked=E.blockingRows(selected);
-  $('statLines').textContent=selected.length;$('statResolved').textContent=selected.filter(function(b){return b.resolved}).length+'/'+selected.length;$('statCost').textContent=money(E.totalBomCost(selected));$('statWarnings').textContent=((scope&&scope.warnings)||[]).length;
-  var gate=$('applyGate');if(gate){gate.textContent=blocked.length?(blocked.length+' selected item(s) need review / $0 confirmation before Apply'):'Ready to apply selected BOM';gate.className='gate '+(blocked.length?'warn':'ok')}
+  var selected=bom.filter(function(b){return b.selected!==false});var blocked=E.blockingRows(selected),hard=E.hardBlockingRows(selected),pricing=E.calculateBomPricing(selected),zeros=blocked.filter(function(b){return b.zeroPriceReview&&!b.financialInvalid&&b.resolved});
+  $('statLines').textContent=selected.length;$('statResolved').textContent=selected.filter(function(b){return b.resolved}).length+'/'+selected.length;$('statCustomer').textContent=money(pricing.customerTotal);$('statYour').textContent=money(pricing.yourTotal);$('statMargin').textContent=money(pricing.marginDollar);$('statMarginPct').textContent=pct(pricing.marginPct);$('statWarnings').textContent=((scope&&scope.warnings)||[]).length;
+  var gate=$('applyGate');if(gate){if(hard.length){gate.textContent=hard.length+' selected item(s) are unresolved or have invalid financial data — correct before Apply';gate.className='gate warn'}else if(zeros.length){gate.textContent=zeros.length+' selected item(s) have valid $0 pricing — review/confirm before Apply';gate.className='gate warn'}else{gate.textContent='Ready to apply selected BOM';gate.className='gate ok'}}
 }
 function renderChecks(){var arr=(scope&&scope.checks)||[];$('codeChecks').innerHTML=arr.map(function(c){return '<div class="codecard"><span class="status '+esc(c.level)+'">'+esc(c.status)+'</span><strong>'+esc(c.title)+'</strong><div>'+esc(c.detail)+'</div><div class="muted">'+esc(c.code)+'</div></div>'}).join('')||'<p class="muted">No checks.</p>'}
 function renderWarnings(){var a=(scope&&scope.assumptions)||[],w=(scope&&scope.warnings)||[];$('assumptions').innerHTML=a.map(function(x){return '<li>'+esc(x)+'</li>'}).join('');$('warnings').innerHTML=w.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')||'<li>No current warnings.</li>'}
 function applyToJob(){
   if(!state){alert('No valid Bruno AC job loaded.');return}if(!scope)calculate();
   bom.forEach(function(b,i){var cb=document.querySelector('.bomsel[data-i="'+i+'"]');if(cb)b.selected=cb.checked});
-  var blocked=E.blockingRows(bom);
-  if(blocked.length){var names=blocked.map(function(b){return '• '+b.label+' ('+(b.resolved?'$0':'unresolved')+')'}).join('\n');if(!confirm('These selected rows need manual review and may add $0 to the estimate:\n\n'+names+'\n\nPress OK only if you intentionally want to add them for later pricing.'))return;}
-  var res=E.applyBomToJob(state,scope,bom);state=res.state;
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));toast('Saved '+res.added.length+' generated lines to Bruno Job Materials');renderJobInfo()}catch(e){alert('Could not save Bruno job: '+e.message)}
+  var hard=E.hardBlockingRows(bom);
+  if(hard.length){var invalidNames=hard.map(function(b){return '• '+b.label+' ('+(!b.resolved?'unresolved':'invalid financial data')+')'}).join('\n');alert('Cannot Apply selected BOM until these rows are corrected:\n\n'+invalidNames);return;}
+  var zeroRows=E.blockingRows(bom).filter(function(b){return b.zeroPriceReview});
+  if(zeroRows.length){var zeroNames=zeroRows.map(function(b){return '• '+b.label}).join('\n');if(!confirm('These selected rows contain legitimate $0 pricing and require confirmation:\n\n'+zeroNames+'\n\nApply them as $0?'))return;}
+  var res=E.applyBomToJob(state,scope,bom);if(!res.ok){alert('Could not apply BOM:\n'+(res.errors||[]).join('\n'));return;}state=res.state;
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));toast('Saved '+res.added.length+' generated lines with Customer Price + Your Cost snapshots');renderJobInfo()}catch(e){alert('Could not save Bruno job: '+e.message)}
 }
 function exportPlan(){if(!scope)calculate();var blob=new Blob([JSON.stringify({product:'bruno-ac',type:'ac-calculator-plan',version:2,scope:scope,bom:bom},null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bruno-ac-calculator-plan-v2.json';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
 function applyModeDefaults(fromUser){
