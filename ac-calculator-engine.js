@@ -144,7 +144,7 @@
         key:'line-set', qty:i.lineSetFt, units:'ft', label:'Refrigerant line-set allowance', level:'scope',
         reason:'Entered outdoor-to-indoor run. Exact liquid/suction diameters and maximum equivalent length must come from the selected OEM equipment.',
         code:'OEM / 2024 IRC M1307.1', category:'Line sets & fittings', includeTokens:['line set','acr tube','refrigerant tubing'],
-        excludeTokens:['mini-split drain','drain hose'], allowPackagedLength:true, requiredLengthFt:i.lineSetFt
+        excludeTokens:['mini-split drain','drain hose'], preferredIds:['ac-ls-17'], allowPackagedLength:true, requiredLengthFt:i.lineSetFt
       }));
     }
 
@@ -228,14 +228,14 @@
     }
 
     if (installScope && i.jobKind === 'replace' && i.haulAway) req.push(requirement({key:'haul-away',qty:1,units:'ea',label:'Recover / haul-away allowance',level:'scope',reason:'Replacement job with existing equipment removal selected.',code:'EPA/OEM/shop scope',category:'Consumables / misc & freight',includeTokens:['haul-away','haul away','equipment removal','recovery']}));
-    if (installScope && i.permitAllowance) req.push(requirement({key:'permit',qty:1,units:'ea',label:'Permit allowance',level:'scope',reason:'Permit allowance selected; final fee/inspection requirements are AHJ-specific.',code:'AHJ',category:'Consumables / misc & freight',includeTokens:['permit allowance','permit fee','permit']}));
+    if (installScope && i.permitAllowance) req.push(requirement({key:'permit',qty:1,units:'allow',label:'Permit allowance',level:'scope',reason:'Permit allowance selected; final fee/inspection requirements are AHJ-specific.',code:'AHJ',category:'Consumables / misc & freight',includeTokens:['permit allowance','permit fee','permit']}));
 
     if (installScope && i.ductMode !== 'existing') {
       if (i.ductFt > 0) req.push(requirement({key:'duct',qty:i.ductFt,units:'ft',label:'Duct material allowance',level:'scope',reason:'Entered new/replacement duct takeoff length. V2 does not perform Manual D sizing.',code:'Manual D / OEM / adopted code',category:'Ductwork & distribution',includeTokens:['flex duct','duct'],excludeTokens:['transition','package','tape','mastic','board','wrap']}));
       if (i.supplyRegisters > 0) req.push(requirement({key:'supply-registers',qty:i.supplyRegisters,units:'ea',label:'Supply registers / grilles',level:'scope',reason:'Entered supply outlet count.',code:'Design scope',category:'Ductwork & distribution',includeTokens:['supply register','supply grille','register'],excludeTokens:['return']}));
       if (i.returnGrilles > 0) req.push(requirement({key:'return-grilles',qty:i.returnGrilles,units:'ea',label:'Return grilles',level:'scope',reason:'Entered return grille count.',code:'Design scope',category:'Ductwork & distribution',includeTokens:['return','grille']}));
-      req.push(requirement({key:'duct-mastic',qty:1,units:'ea',label:'Duct mastic / sealant allowance',level:'scope',reason:'Allowance only; not an exact consumption calculation.',code:'Adopted energy/mechanical code / field scope',category:'Ductwork & distribution',includeTokens:['mastic']}));
-      req.push(requirement({key:'foil-tape',qty:1,units:'ea',label:'HVAC foil tape allowance',level:'scope',reason:'Allowance only; not an exact consumption calculation.',code:'Field scope',category:'Ductwork & distribution',includeTokens:['foil tape']}));
+      req.push(requirement({key:'duct-mastic',qty:1,units:'gal',label:'Duct mastic / sealant allowance',level:'scope',reason:'Allowance only; not an exact consumption calculation.',code:'Adopted energy/mechanical code / field scope',category:'Ductwork & distribution',includeTokens:['mastic']}));
+      req.push(requirement({key:'foil-tape',qty:1,units:'roll',label:'HVAC foil tape allowance',level:'scope',reason:'Allowance only; not an exact consumption calculation.',code:'Field scope',category:'Ductwork & distribution',includeTokens:['foil tape']}));
       warnings.push('V2 does not perform Manual D duct sizing or airflow balancing. Duct quantities are takeoff inputs; mastic/tape remain allowances.');
     }
 
