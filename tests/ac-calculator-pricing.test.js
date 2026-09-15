@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('assert');
 const E = require('../ac-calculator-engine.js');
+const F = require('../financial-integrity-core.js');
 
 function close(actual, expected, epsilon = 1e-9) {
   assert.ok(Math.abs(actual - expected) <= epsilon, `expected ${expected}, got ${actual}`);
@@ -164,3 +165,42 @@ for (const bad of [E.INVALID_FINANCIAL, NaN, Infinity, -Infinity, 'Infinity', 'N
 }
 
 console.log('ac-calculator-pricing: all deterministic tests passed');
+
+
+// Catalog -> historical Job lifecycle: template edits do not mutate an accepted Job until explicit Apply.
+{
+  const state = {
+    catalog: [{ id: 'CAT-A', unitCost: 100, yourCost: 70 }],
+    materialsUsed: [{ id: 'job-1', catalogId: 'CAT-A', qty: 2, unitCost: 100, procurementCostSnapshot: 70, calcSource: 'ac-calculator' }]
+  };
+  const beforeJob = JSON.parse(JSON.stringify(state.materialsUsed[0]));
+  const edit = F.setCatalogCustomerPrice(state, 'CAT-A', 110);
+  assert.strictEqual(edit.ok, true);
+  assert.strictEqual(state.catalog[0].unitCost, 110);
+  assert.deepStrictEqual(state.materialsUsed[0], beforeJob, 'Catalog edit must not mutate historical Job Material before explicit Apply');
+
+  const scope = scopeFor('fixture-a', 2);
+  const currentBom = E.buildResolvedBom({catalog:[catalog('CAT-A','fixture-a',110,55)],materialsUsed:state.materialsUsed}, scope);
+  const reapplied = E.applyBomToJob(state, scope, currentBom).state;
+  const generated = reapplied.materialsUsed.find(r => r.calcSource === E.SOURCE_TAG);
+  assert.strictEqual(generated.unitCost, 110, 'explicit re-Apply should update Customer Price');
+  assert.strictEqual(generated.procurementCostSnapshot, 55, 'explicit re-Apply should update procurement snapshot');
+}
+
+// Blank Your Cost remains a transparent Customer Price fallback.
+{
+  const b = E.buildResolvedBom({catalog:[catalog('CAT-B','fixture-b',50,null,false)],materialsUsed:[]}, scopeFor('fixture-b',1));
+  assert.strictEqual(b[0].customerUnitPrice, 50);
+  assert.strictEqual(b[0].yourUnitCost, 50);
+  assert.strictEqual(b[0].yourCostSource, 'customer-price-fallback');
+}
+
+{
+  const fs = require('fs');
+  const path = require('path');
+  const source = fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  assert.ok(!source.includes('mats[mi].unitCost = price'), 'Catalog Customer Price edit must not rewrite existing Job Materials');
+  assert.ok(!source.includes('mats[mi].unitCost = row.unitCost'), 'Margins Customer Price edit must not rewrite existing Job Materials');
+  assert.ok(!source.includes("else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0)"), 'blank Your Cost must remain blank for provenance');
+  assert.ok(source.includes('setCatalogCustomerPrice(state, cid'), 'Catalog Customer Price edit should use executable lifecycle helper');
+}

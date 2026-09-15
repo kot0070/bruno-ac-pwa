@@ -2829,7 +2829,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       if (!row || row.id == null) continue;
       var id = String(row.id);
       if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);
-      else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);
+      /* No map entry means Your Cost remains genuinely blank. Effective fallback is resolved at read time so provenance remains customer-price-fallback. */
     }
     return s;
   }
@@ -4285,8 +4285,11 @@ function normalizeState(s) {
           html += '<td>' + esc(c.units) + '</td>';
           var catPrice = nonNegativeFinancial(c.unitCost);
           html += '<td class="col-cost"><input type="number" class="num cat-cost' + (catPrice === null ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catPrice === null ? '' : catPrice) + '" title="' + (catPrice === null ? 'Invalid customer price — correct before quoting' : 'Customer / shop price (used in quotes)') + '" aria-label="Customer price"' + (catPrice === null ? ' aria-invalid="true"' : '') + ' /></td>';
-          var catYour = (c.yourCost != null && c.yourCost !== '') ? nonNegativeFinancial(c.yourCost) : catPrice;
-          html += '<td class="col-cost"><input type="number" class="num cat-your' + (catYour === null ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catYour === null ? '' : catYour) + '" title="' + (catYour === null ? 'Invalid direct cost — correct before profitability' : 'Your cost after supplier discount') + '" aria-label="Your cost"' + (catYour === null ? ' aria-invalid="true"' : '') + ' /></td>';
+          var catYourSupplied = c.yourCost != null && c.yourCost !== '';
+          var catYour = catYourSupplied ? nonNegativeFinancial(c.yourCost) : null;
+          var catYourInvalid = catYourSupplied && catYour === null;
+          var catYourPlaceholder = !catYourSupplied && catPrice !== null ? ('fallback ' + catPrice) : '';
+          html += '<td class="col-cost"><input type="number" class="num cat-your' + (catYourInvalid ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catYourSupplied && catYour !== null ? catYour : '') + '" placeholder="' + esc(catYourPlaceholder) + '" title="' + (catYourInvalid ? 'Invalid direct cost — correct before profitability' : (catYourSupplied ? 'Your cost after supplier discount' : 'Blank: Customer Price fallback; enter a value to create explicit Catalog Your Cost')) + '" aria-label="Your cost"' + (catYourInvalid ? ' aria-invalid="true"' : '') + ' /></td>';
           html += '<td class="col-actions"><button type="button" class="btn btn-sm btn-primary cat-add" data-id="' + esc(c.id) + '" title="Add to job">+</button></td>';
           html += '</tr>';
           shown++;
@@ -4768,8 +4771,9 @@ function normalizeState(s) {
     function applyCatalogUnitPrice(inputEl) {
       if (!inputEl || !inputEl.classList.contains('cat-cost')) return;
       var cid = inputEl.getAttribute('data-id');
-      var parsedPrice = parseFloat(inputEl.value);
-      var price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL;
+      var rawPrice = String(inputEl.value == null ? '' : inputEl.value).trim();
+      var result = window.BrunoFinancial.setCatalogCustomerPrice(state, cid, rawPrice === '' ? window.BrunoFinancial.INVALID_FINANCIAL : rawPrice);
+      var price = result.value;
       inputEl.value = price === window.BrunoFinancial.INVALID_FINANCIAL ? '' : price;
       inputEl.classList.toggle('invalid-financial', price === window.BrunoFinancial.INVALID_FINANCIAL);
       inputEl.setAttribute('aria-invalid', price === window.BrunoFinancial.INVALID_FINANCIAL ? 'true' : 'false');
@@ -4778,18 +4782,11 @@ function normalizeState(s) {
       var ci;
       for (ci = 0; ci < cat.length; ci++) {
         if (String(cat[ci].id) === String(cid)) {
-          cat[ci].unitCost = price;
           cat[ci].priceUpdated = stamp;
           break;
         }
       }
-      var mats = (state && state.materialsUsed) || [];
-      for (var mi = 0; mi < mats.length; mi++) {
-        if (String(mats[mi].id) === String(cid) || String(mats[mi].catalogId || '') === String(cid)) {
-          mats[mi].unitCost = price;
-          mats[mi].priceUpdated = stamp;
-        }
-      }
+      /* Catalog edits are template changes only. Existing Job Materials retain their stored quote basis until explicit Calculator Apply/Re-Apply. */
       try {
         var priceMap = {};
         for (ci = 0; ci < cat.length; ci++) {
@@ -5415,13 +5412,8 @@ function normalizeState(s) {
         else row.yourCost = Math.round(cust * (1 - pct / 100) * 100) / 100;
         saveCatalogCostMapFromState();
       }
-      // sync job materials customer price if same id
-      if (e.target.classList.contains('mrg-cust')) {
-        var mats = (state && state.materialsUsed) || [];
-        for (var mi = 0; mi < mats.length; mi++) {
-          if (String(mats[mi].id) === String(id) || String(mats[mi].catalogId || '') === String(id)) mats[mi].unitCost = row.unitCost;
-        }
-      }
+      // Catalog/Margins edits update the pricing template only.
+      // Existing Job Materials remain immutable until explicit Calculator Apply/Re-Apply.
       save();
       renderMargins(document.getElementById('mrg-search') && document.getElementById('mrg-search').value);
       if (typeof renderCatalogFixed === 'function') {

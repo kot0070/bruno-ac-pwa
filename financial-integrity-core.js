@@ -281,6 +281,21 @@
     };
   }
 
+  function setCatalogCustomerPrice(state, catalogId, rawValue) {
+    state = state || {};
+    var catalog = Array.isArray(state.catalog) ? state.catalog : [];
+    var value = normalizePersistentFinancial(rawValue, INVALID_FINANCIAL);
+    var found = false;
+    for (var i = 0; i < catalog.length; i++) {
+      var row = catalog[i];
+      if (!row || String(row.id) !== String(catalogId)) continue;
+      row.unitCost = value;
+      found = true;
+      break;
+    }
+    return { ok: found && value !== INVALID_FINANCIAL, found: found, value: value };
+  }
+
   function validateAcrCompany(company) {
     company = company || {};
     var missing = [];
@@ -316,6 +331,7 @@
     tmTotal: tmTotal,
     resolveMaterialCost: resolveMaterialCost,
     reconcileMaterialCosts: reconcileMaterialCosts,
+    setCatalogCustomerPrice: setCatalogCustomerPrice,
     validateAcrCompany: validateAcrCompany
   };
 });

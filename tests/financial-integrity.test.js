@@ -210,10 +210,10 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
   assert(!src.includes('priceMap[String(cat[ci].id)] = Number(cat[ci].unitCost) || 0;'), 'catalog price map must preserve invalid sentinel');
   assert(!src.includes('row.unitCost = Number(map[id]) || 0;'), 'catalog price reload must preserve invalid sentinel');
   assert(!src.includes("value=\"' + (Number(c.unitCost) || 0)"), 'catalog customer-price renderer must not show invalid as zero');
-  assert(src.includes("price = (isFinite(parsedPrice) && parsedPrice >= 0) ? parsedPrice : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes('setCatalogCustomerPrice(state, cid'), 'catalog edit must use strict lifecycle helper');
   assert(src.includes("row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL"));
-  assert(src.includes("mats[mi].unitCost = price"), 'catalog edit must propagate the same valid/invalid state to matching job material');
-  assert(src.includes("mats[mi].unitCost = row.unitCost"), 'margins edit must propagate the same valid/invalid state to matching job material');
+  assert(!src.includes("mats[mi].unitCost = price"), 'Catalog edit must not mutate historical Job Material');
+  assert(!src.includes("mats[mi].unitCost = row.unitCost"), 'Margins Catalog edit must not mutate historical Job Material');
 
   const inv = F.INVALID_FINANCIAL;
   const bad = F.normalizePersistentFinancial('abc', 0);
