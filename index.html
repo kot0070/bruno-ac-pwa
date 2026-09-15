@@ -1823,6 +1823,7 @@ html[data-theme="light"] .panel {
         </div>
       </div>
       <p class="section-help"><strong>Time &amp; material:</strong> Rates on this page are <strong>customer bill rates</strong>, independent from internal burden/job cost and Method A. Invoice total comes only from T&amp;M detail. Print Invoice uses its own invoice date/number and the active compliant ACR letterhead.</p>
+      <div class="note-box warn" id="tm-validation" style="display:none" role="alert"></div>
       <div class="note-box warn">
         When detail is empty, T&amp;M total = <strong>$0</strong> — honest T&amp;M, not a margined quote.
         The Quote stays on the Quote / Summary tabs.
@@ -1875,6 +1876,7 @@ html[data-theme="light"] .panel {
         <div class="field"><label>Revenue mode</label><select id="pnl-revenue-mode"><option value="quoted_contract">Quoted Contract</option><option value="tm_billed">T&amp;M Billed</option><option value="actual_collected">Actual Collected</option></select></div>
         <div class="field"><label>Actual collected revenue $</label><input type="number" id="pnl-actual-collected" step="0.01" min="0" /></div>
       </div>
+      <div class="note-box warn" id="pnl-validation" style="display:none" role="alert"></div>
       <div class="card">
         <div class="pnl-grid">
           <div class="hdr">Category</div>
@@ -2944,7 +2946,7 @@ function normalizeState(s) {
       row = s.tm.equipmentLines[i];
       if (!row || typeof row !== 'object') continue;
       row.qty = normalizeFinancialValue(row.qty);
-      row.rate = asNum(row.rate);
+      row.rate = normalizeFinancialValue(row.rate);
     }
     for (i = 0; i < s.tm.laborLines.length; i++) {
       row = s.tm.laborLines[i];
@@ -3781,18 +3783,18 @@ function normalizeState(s) {
     document.getElementById('tm-date').value = state.tm.date || '';
     document.getElementById('tm-invoice').value = state.tm.invoice || '';
     document.getElementById('tm-customer').value = state.tm.customer || '';
-    document.getElementById('tm-mat').value = state.tm.materialAmount || 0;
-    document.getElementById('tm-sub').value = state.tm.subAmount || 0;
+    document.getElementById('tm-mat').value = state.tm.materialAmount == null ? 0 : state.tm.materialAmount;
+    document.getElementById('tm-sub').value = state.tm.subAmount == null ? 0 : state.tm.subAmount;
 
     var eqs = state.tm.equipmentLines || [];
     var html = '';
     for (var i = 0; i < eqs.length; i++) {
-      var a = (Number(eqs[i].qty) || 0) * (Number(eqs[i].rate) || 0);
+      var qv=nonNegativeFinancial(eqs[i].qty), rv=nonNegativeFinancial(eqs[i].rate); var a=(qv===null||rv===null)?NaN:qv*rv;
       html += '<tr data-i="' + i + '">' +
         '<td><input type="text" class="tme-desc" value="' + esc(eqs[i].desc) + '" /></td>' +
-        '<td><input type="number" class="num tme-qty" step="any" value="' + (Number(eqs[i].qty) || 0) + '" /></td>' +
-        '<td><input type="number" class="num tme-rate" step="0.01" value="' + (Number(eqs[i].rate) || 0) + '" /></td>' +
-        '<td class="num-cell">' + money(a) + '</td>' +
+        '<td><input type="number" min="0" class="num tme-qty" step="any" value="' + esc(eqs[i].qty == null ? 0 : eqs[i].qty) + '" /></td>' +
+        '<td><input type="number" min="0" class="num tme-rate" step="0.01" value="' + esc(eqs[i].rate == null ? 0 : eqs[i].rate) + '" /></td>' +
+        '<td class="num-cell">' + safeMoney(a) + '</td>' +
         '<td><button type="button" class="btn btn-sm btn-danger tme-del">×</button></td></tr>';
     }
     document.getElementById('tm-equip-body').innerHTML = html || '<tr><td colspan="5" style="color:var(--text-muted)">Empty — T&M equip = $0</td></tr>';
@@ -3800,12 +3802,12 @@ function normalizeState(s) {
     var labs = state.tm.laborLines || [];
     html = '';
     for (var j = 0; j < labs.length; j++) {
-      var am = (Number(labs[j].hours) || 0) * (Number(labs[j].rate) || 0);
+      var hv=nonNegativeFinancial(labs[j].hours), lrv=nonNegativeFinancial(labs[j].rate); var am=(hv===null||lrv===null)?NaN:hv*lrv;
       html += '<tr data-i="' + j + '">' +
         '<td><input type="text" class="tml-desc" value="' + esc(labs[j].desc) + '" /></td>' +
-        '<td><input type="number" class="num tml-hrs" step="any" value="' + (Number(labs[j].hours) || 0) + '" /></td>' +
-        '<td><input type="number" class="num tml-rate" step="0.01" value="' + (Number(labs[j].rate) || 0) + '" /></td>' +
-        '<td class="num-cell">' + money(am) + '</td>' +
+        '<td><input type="number" min="0" class="num tml-hrs" step="any" value="' + esc(labs[j].hours == null ? 0 : labs[j].hours) + '" /></td>' +
+        '<td><input type="number" min="0" class="num tml-rate" step="0.01" value="' + esc(labs[j].rate == null ? 0 : labs[j].rate) + '" /></td>' +
+        '<td class="num-cell">' + safeMoney(am) + '</td>' +
         '<td><button type="button" class="btn btn-sm btn-danger tml-del">×</button></td></tr>';
     }
     document.getElementById('tm-labor-body').innerHTML = html || '<tr><td colspan="5" style="color:var(--text-muted)">Empty — T&M labor = $0</td></tr>';
@@ -3813,19 +3815,23 @@ function normalizeState(s) {
 
   function renderPnL(calc) {
     var pnl=state.pnl||(state.pnl={}); if(!pnl.revenueMode)pnl.revenueMode='quoted_contract';
-    var mode=pnl.revenueMode, actLabor=nonNegativeFinancial(pnl.actualLabor)||0, actEquip=nonNegativeFinancial(pnl.actualEquip)||0, actSub=nonNegativeFinancial(pnl.actualSub)||0;
+    var mode=pnl.revenueMode, errors=[];
+    function actualValue(v,label){var n=nonNegativeFinancial(v);if(n===null){errors.push(label+' must be finite and nonnegative.');return NaN;}return n;}
+    var actLabor=actualValue(pnl.actualLabor,'Actual labor'), actEquip=actualValue(pnl.actualEquip,'Actual equipment'), actSub=actualValue(pnl.actualSub,'Actual subcontractor');
     var link=pnl.linkMaterial!==false, actMat=0, matSource='explicit actual';
-    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=nonNegativeFinancial(pnl.actualMaterial)||0;} else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty); var pc=nonNegativeFinancial(rows[i].procurementCostSnapshot); if(q===null||pc===null){allSnap=false;break;} actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated customer-price fallback';} else matSource='procurement snapshot'; }
-    document.getElementById('pnl-mat-link').checked=link; document.getElementById('pnl-act-labor').value=actLabor; document.getElementById('pnl-act-equip').value=actEquip; document.getElementById('pnl-act-sub').value=actSub; document.getElementById('pnl-act-mat').value=actMat.toFixed(2);
-    var src=document.getElementById('pnl-mat-source'); if(src)src.textContent=matSource; var rm=document.getElementById('pnl-revenue-mode'); if(rm)rm.value=mode; var ac=document.getElementById('pnl-actual-collected'); if(ac)ac.value=pnl.actualCollected||0;
+    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=actualValue(pnl.actualMaterial,'Actual material');}
+    else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty), pc=nonNegativeFinancial(rows[i].procurementCostSnapshot);if(q===null||pc===null){allSnap=false;break;}actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated cost fallback';}else matSource='procurement snapshot'; }
+    document.getElementById('pnl-mat-link').checked=link; document.getElementById('pnl-act-labor').value=pnl.actualLabor==null?0:pnl.actualLabor; document.getElementById('pnl-act-equip').value=pnl.actualEquip==null?0:pnl.actualEquip; document.getElementById('pnl-act-sub').value=pnl.actualSub==null?0:pnl.actualSub; document.getElementById('pnl-act-mat').value=isFinite(actMat)?actMat.toFixed(2):(pnl.actualMaterial||'');
+    var src=document.getElementById('pnl-mat-source');if(src)src.textContent=matSource;var rm=document.getElementById('pnl-revenue-mode');if(rm)rm.value=mode;var ac=document.getElementById('pnl-actual-collected');if(ac)ac.value=pnl.actualCollected==null?0:pnl.actualCollected;
     var revenue={labor:0,equip:0,material:0,sub:0,adjustment:0,total:0}, reference='';
-    if(mode==='tm_billed'){revenue={labor:calc.tm.labor,equip:calc.tm.equip,material:calc.tm.material,sub:calc.tm.sub,adjustment:0,total:calc.tm.total};reference='T&M billed';}
-    else if(mode==='actual_collected'){revenue.adjustment=nonNegativeFinancial(pnl.actualCollected)||0; revenue.total=revenue.adjustment;reference='actual collected';}
-    else { var baseExact=calc.sum.valid?calc.sum.totalSales:0, roundAdj=calc.sum.valid?calc.quoteBase-baseExact:0; revenue={labor:calc.sum.valid?calc.sum.buckets.labor.sales:0,equip:calc.sum.valid?calc.sum.buckets.equip.sales:0,material:calc.sum.valid?calc.sum.buckets.material.sales:0,sub:calc.sum.valid?calc.sum.buckets.sub.sales:0,adjustment:roundAdj+calc.cos.approved,total:calc.sum.valid?calc.quoteTotal:0};reference='base quote + approved CO'; }
-    var actual={labor:actLabor,equip:actEquip,material:actMat,sub:actSub,total:actLabor+actEquip+actMat+actSub};
-    function row(label,rev,ref,a){return '<div class="pnl-grid"><div>'+label+'</div><div class="num-cell">'+money(rev)+'</div><div class="num-cell">'+esc(ref)+'</div><div class="num-cell">'+money(a)+'</div><div class="num-cell">'+money(rev-a)+'</div></div>';}
-    var html=row('Labor',revenue.labor,reference,actual.labor)+row('Equip',revenue.equip,reference,actual.equip)+row('Material',revenue.material,reference,actual.material)+row('Sub',revenue.sub,reference,actual.sub)+row(mode==='quoted_contract'?'CO + base rounding':(mode==='actual_collected'?'Collected':'Other'),revenue.adjustment,reference,0)+row('Total',revenue.total,reference,actual.total);
-    document.getElementById('pnl-rows').innerHTML=html; var gp=revenue.total-actual.total; document.getElementById('pnl-gp').textContent=money(gp); document.getElementById('pnl-gp').style.color=gp>=0?'var(--success)':'var(--danger)'; var m=revenue.total>0?gp/revenue.total:0; document.getElementById('pnl-qgp').textContent=pct(m)+' · '+reference;
+    if(mode==='tm_billed'){revenue={labor:calc.tm.labor,equip:calc.tm.equip,material:calc.tm.material,sub:calc.tm.sub,adjustment:0,total:calc.tm.total};reference='T&M billed';if(!calc.tm.valid)errors=errors.concat(calc.tm.errors||[]);}
+    else if(mode==='actual_collected'){var collected=nonNegativeFinancial(pnl.actualCollected);if(collected===null){errors.push('Actual collected revenue must be finite and nonnegative.');collected=NaN;}revenue.adjustment=collected;revenue.total=collected;reference='actual collected';}
+    else {if(!calc.quoteValid){errors.push('Quoted Contract revenue is invalid until Method A and Change Orders are valid.');revenue={labor:NaN,equip:NaN,material:NaN,sub:NaN,adjustment:NaN,total:NaN};}else{var baseExact=calc.sum.totalSales,roundAdj=calc.quoteBase-baseExact;revenue={labor:calc.sum.buckets.labor.sales,equip:calc.sum.buckets.equip.sales,material:calc.sum.buckets.material.sales,sub:calc.sum.buckets.sub.sales,adjustment:roundAdj+calc.cos.approved,total:calc.quoteTotal};}reference='base quote + approved CO';}
+    var actualTotal=[actLabor,actEquip,actMat,actSub].every(isFinite)?actLabor+actEquip+actMat+actSub:NaN;
+    function row(label,rev,ref,a){var d=(isFinite(rev)&&isFinite(a))?rev-a:NaN;return '<div class="pnl-grid"><div>'+label+'</div><div class="num-cell">'+safeMoney(rev)+'</div><div class="num-cell">'+esc(ref)+'</div><div class="num-cell">'+safeMoney(a)+'</div><div class="num-cell">'+safeMoney(d)+'</div></div>';}
+    var html=row('Labor',revenue.labor,reference,actLabor)+row('Equip',revenue.equip,reference,actEquip)+row('Material',revenue.material,reference,actMat)+row('Sub',revenue.sub,reference,actSub)+row(mode==='quoted_contract'?'CO + base rounding':(mode==='actual_collected'?'Collected':'Other'),revenue.adjustment,reference,0)+row('Total',revenue.total,reference,actualTotal);
+    document.getElementById('pnl-rows').innerHTML=html;var gp=(isFinite(revenue.total)&&isFinite(actualTotal))?revenue.total-actualTotal:NaN;document.getElementById('pnl-gp').textContent=safeMoney(gp);document.getElementById('pnl-gp').style.color=isFinite(gp)&&gp>=0?'var(--success)':'var(--danger)';var margin=isFinite(gp)&&revenue.total>0?gp/revenue.total:NaN;document.getElementById('pnl-qgp').textContent=(isFinite(margin)?pct(margin):'—')+' · '+reference;
+    var pv=document.getElementById('pnl-validation');if(pv){pv.style.display=errors.length?'block':'none';pv.textContent=errors.join(' ');}
   }
 
   function updateChips(calc) {
@@ -3876,9 +3882,9 @@ function normalizeState(s) {
     document.getElementById('sum-profit-amt').textContent = money(calc.sum.profitAmt);
     document.getElementById('sum-final').textContent = safeMoney(calc.sum.totalSales); var fv=document.getElementById('financial-validation'); if(fv){fv.style.display=calc.sum.valid?'none':'block';fv.textContent=calc.sum.valid?'':calc.sum.errors.join(' ');}
 
-    document.getElementById('tm-equip-sum').textContent = money(calc.tm.equip);
-    document.getElementById('tm-labor-sum').textContent = money(calc.tm.labor);
-    document.getElementById('tm-total').textContent = money(calc.tm.total);
+    document.getElementById('tm-equip-sum').textContent = safeMoney(calc.tm.equip);
+    document.getElementById('tm-labor-sum').textContent = safeMoney(calc.tm.labor);
+    document.getElementById('tm-total').textContent = safeMoney(calc.tm.total); var tv=document.getElementById('tm-validation'); if(tv){tv.style.display=calc.tm.valid?'none':'block';tv.textContent=calc.tm.valid?'':calc.tm.errors.join(' ');}
   }
 
   var _rendering = false;
@@ -4909,8 +4915,8 @@ function normalizeState(s) {
     on('tm-date', 'input', function () { state.tm.date = this.value; save(); });
     on('tm-invoice', 'input', function () { state.tm.invoice = this.value; save(); });
     on('tm-customer', 'input', function () { state.tm.customer = this.value; save(); });
-    on('tm-mat', 'input', function () { state.tm.materialAmount = parseFloat(this.value) || 0; softRefresh(); });
-    on('tm-sub', 'input', function () { state.tm.subAmount = parseFloat(this.value) || 0; softRefresh(); });
+    on('tm-mat', 'input', function () { var v=parseFloat(this.value); state.tm.materialAmount=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });
+    on('tm-sub', 'input', function () { var v=parseFloat(this.value); state.tm.subAmount=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });
 
     on('tm-equip-body', 'input', function (e) {
       var tr = e.target.closest('tr[data-i]');
@@ -4918,10 +4924,10 @@ function normalizeState(s) {
       var i = +tr.getAttribute('data-i');
       var line = state.tm.equipmentLines[i];
       if (e.target.classList.contains('tme-desc')) line.desc = e.target.value;
-      if (e.target.classList.contains('tme-qty')) line.qty = parseFloat(e.target.value) || 0;
-      if (e.target.classList.contains('tme-rate')) line.rate = parseFloat(e.target.value) || 0;
+      if (e.target.classList.contains('tme-qty')) { var v=parseFloat(e.target.value); line.qty=(isFinite(v)&&v>=0)?v:e.target.value; }
+      if (e.target.classList.contains('tme-rate')) { var v=parseFloat(e.target.value); line.rate=(isFinite(v)&&v>=0)?v:e.target.value; }
       softRefresh();
-      tr.querySelector('.num-cell').textContent = money((line.qty || 0) * (line.rate || 0));
+      var q=nonNegativeFinancial(line.qty), r=nonNegativeFinancial(line.rate); tr.querySelector('.num-cell').textContent = safeMoney(q===null||r===null?NaN:q*r);
     });
     on('tm-equip-body', 'click', function (e) {
       if (!e.target.classList.contains('tme-del')) return;
@@ -4940,10 +4946,10 @@ function normalizeState(s) {
       var i = +tr.getAttribute('data-i');
       var line = state.tm.laborLines[i];
       if (e.target.classList.contains('tml-desc')) line.desc = e.target.value;
-      if (e.target.classList.contains('tml-hrs')) line.hours = parseFloat(e.target.value) || 0;
-      if (e.target.classList.contains('tml-rate')) line.rate = parseFloat(e.target.value) || 0;
+      if (e.target.classList.contains('tml-hrs')) { var v=parseFloat(e.target.value); line.hours=(isFinite(v)&&v>=0)?v:e.target.value; }
+      if (e.target.classList.contains('tml-rate')) { var v=parseFloat(e.target.value); line.rate=(isFinite(v)&&v>=0)?v:e.target.value; }
       softRefresh();
-      tr.querySelector('.num-cell').textContent = money((line.hours || 0) * (line.rate || 0));
+      var h=nonNegativeFinancial(line.hours), r=nonNegativeFinancial(line.rate); tr.querySelector('.num-cell').textContent = safeMoney(h===null||r===null?NaN:h*r);
     });
     on('tm-labor-body', 'click', function (e) {
       if (!e.target.classList.contains('tml-del')) return;
@@ -4952,19 +4958,18 @@ function normalizeState(s) {
       refresh();
     });
     on('tm-labor-add', 'click', function () {
-      var bill = withOHP((state.personnel.burden[0] || {}).straight || 0, state.summary.ohRate, state.summary.profitMargin);
-      state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: bill, amount: 0 });
+      state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: 0, amount: 0 });
       refresh();
     });
 
     // P&L
-    on('pnl-act-labor', 'input', function () { state.pnl.actualLabor = parseFloat(this.value) || 0; softRefresh(); });
-    on('pnl-act-equip', 'input', function () { state.pnl.actualEquip = parseFloat(this.value) || 0; softRefresh(); });
-    on('pnl-act-sub', 'input', function () { state.pnl.actualSub = parseFloat(this.value) || 0; softRefresh(); });
+    on('pnl-act-labor', 'input', function () { var v=parseFloat(this.value); state.pnl.actualLabor=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });
+    on('pnl-act-equip', 'input', function () { var v=parseFloat(this.value); state.pnl.actualEquip=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });
+    on('pnl-act-sub', 'input', function () { var v=parseFloat(this.value); state.pnl.actualSub=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });
     on('pnl-act-mat', 'input', function () {
       state.pnl.linkMaterial = false;
       document.getElementById('pnl-mat-link').checked = false;
-      state.pnl.actualMaterial = parseFloat(this.value) || 0;
+      var v=parseFloat(this.value); state.pnl.actualMaterial=(isFinite(v)&&v>=0)?v:this.value;
       softRefresh();
     });
     on('pnl-revenue-mode','change',function(){state.pnl.revenueMode=this.value;renderPnL(calcAll(state));save();});
