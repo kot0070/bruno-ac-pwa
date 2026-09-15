@@ -6,8 +6,14 @@
   'use strict';
 
   function finiteNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
     var n = Number(value);
     return Number.isFinite(n) ? n : null;
+  }
+
+  function optionalNonNegative(value, defaultValue) {
+    if (value === null || value === undefined || value === '') return defaultValue;
+    return nonNegative(value);
   }
 
   function nonNegative(value) {
@@ -56,10 +62,10 @@
   function recoveryRate(input) {
     input = input || {};
     var purchase = nonNegative(input.purchaseCost);
-    var residual = nonNegative(input.residualValue || 0);
+    var residual = optionalNonNegative(input.residualValue, 0);
     var lifeHours = finiteNumber(input.lifeHours);
-    var maintenance = nonNegative(input.maintenancePerHour || 0);
-    var other = nonNegative(input.otherPerHour || 0);
+    var maintenance = optionalNonNegative(input.maintenancePerHour, 0);
+    var other = optionalNonNegative(input.otherPerHour, 0);
     if (purchase === null || residual === null || lifeHours === null || lifeHours <= 0 || maintenance === null || other === null) {
       return { ok: false, rate: null, ownershipRate: null, error: 'Recovery inputs must be finite; productive life must be greater than zero.' };
     }
@@ -81,7 +87,7 @@
     }
     if (cls === 'REUSABLE_TOOL' || cls === 'MAJOR_EQUIPMENT') {
       var unitName = String(line.recoveryUnit || 'hour').toLowerCase();
-      var usage = nonNegative(line.usage || 0);
+      var usage = optionalNonNegative(line.usage, 0);
       if (usage === null) return { ok: false, cost: null, rate: null, formula: '', error: 'Usage must be finite and nonnegative.' };
       if (unitName === 'day') {
         var daily = nonNegative(line.dailyRecoveryRate);
@@ -103,35 +109,40 @@
 
   function approvedChangeOrders(list) {
     var total = 0;
+    var valid = true;
     (list || []).forEach(function (row) {
       if (String((row || {}).status || '').toLowerCase() !== 'approved') return;
-      var n = finiteNumber(row.amount);
-      if (n !== null) total += n;
+      var n = nonNegative(row.amount);
+      if (n === null) { valid = false; return; }
+      total += n;
     });
-    return total;
+    return valid ? total : null;
   }
 
   function quotedContractRevenue(baseQuote, changeOrders) {
-    var base = finiteNumber(baseQuote);
-    if (base === null) return null;
-    return base + approvedChangeOrders(changeOrders);
+    var base = nonNegative(baseQuote);
+    var approved = approvedChangeOrders(changeOrders);
+    if (base === null || approved === null) return null;
+    return base + approved;
   }
 
   function tmTotal(tm) {
     tm = tm || {};
-    var equip = 0, labor = 0;
+    var equip = 0, labor = 0, valid = true;
     (tm.equipmentLines || []).forEach(function (r) {
       var q = nonNegative(r.qty), rate = nonNegative(r.rate);
-      if (q !== null && rate !== null) equip += q * rate;
+      if (q === null || rate === null) { valid = false; return; }
+      equip += q * rate;
     });
     (tm.laborLines || []).forEach(function (r) {
       var h = nonNegative(r.hours), rate = nonNegative(r.rate);
-      if (h !== null && rate !== null) labor += h * rate;
+      if (h === null || rate === null) { valid = false; return; }
+      labor += h * rate;
     });
     var material = nonNegative(tm.materialAmount);
     var sub = nonNegative(tm.subAmount);
-    if (material === null || sub === null) return null;
-    return { equip: equip, labor: labor, material: material, sub: sub, total: equip + labor + material + sub };
+    if (!valid || material === null || sub === null) return { ok: false, equip: null, labor: null, material: null, sub: null, total: null, error: 'All T&M rows must be finite and nonnegative.' };
+    return { ok: true, equip: equip, labor: labor, material: material, sub: sub, total: equip + labor + material + sub, error: '' };
   }
 
   function validateAcrCompany(company) {
@@ -143,7 +154,7 @@
     var state = String(company.state || '').trim();
     var zip = String(company.zip || '').trim();
     var phone = String(company.phone || '').trim();
-    var license = String(company.acrLicense || company.license || '').trim();
+    var license = String(company.acrLicense || '').trim();
     if (!legalName) missing.push('company legal/business name');
     if (!address1 || !city || !state || !zip) missing.push('company address');
     if (!phone) missing.push('company phone');

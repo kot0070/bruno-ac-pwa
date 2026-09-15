@@ -1380,7 +1380,7 @@ html[data-theme="light"] .panel {
           <div class="field"><label>Email</label><input type="email" id="co-email" /></div>
           <div class="field"><label>ACR Contractor License #</label><input type="text" id="co-license" placeholder="TACLA / TACLB #####" /></div>
           <div class="field"><label>License Class</label><select id="co-acr-class"><option value="">—</option><option value="A">A</option><option value="B">B</option></select></div>
-          <div class="field"><label>Endorsement</label><select id="co-acr-endorsement"><option value="">—</option><option value="E">E — Environmental Air</option><option value="R">R — Commercial Refrigeration</option><option value="C">C — Combined</option></select></div>
+          <div class="field"><label>Endorsement</label><select id="co-acr-endorsement"><option value="">—</option><option value="E">E — Environmental Air</option><option value="R">R — Commercial Refrigeration &amp; Process Cooling and Heating</option><option value="C">C — Combined</option></select></div>
           <div class="field"><label>License Holder Name (optional)</label><input type="text" id="co-license-holder" /></div>
           <div class="field"><label>Business Affiliation Reference (optional)</label><input type="text" id="co-affiliation" /></div>
           <div class="field"><label>Website</label><input type="text" id="co-website" placeholder="https://" /></div>
@@ -2502,12 +2502,14 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
     var x = Number(n);
     return isFinite(x) ? x : 0;
   }
-  function finiteFinancial(n) { var x = Number(n); return isFinite(x) ? x : null; }
+  function finiteFinancial(n) { if (n === null || n === undefined || n === '') return null; var x = Number(n); return Number.isFinite(x) ? x : null; }
   function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }
-  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return isFinite(x) ? x : n; }
+  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return Number.isFinite(x) ? x : n; }
   function financeError(msg) { return { ok: false, value: null, error: msg }; }
-  function safeMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
-  function customerTotalMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }
+  function validMoneyValue(n) { return finiteFinancial(n) !== null; }
+  function safeMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }
+  function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }
+  function financialInputValue(n, fallback) { return (n === null || n === undefined || n === '') ? fallback : n; }
 
   function pct(n) {
     return ((Number(n) || 0) * 100).toFixed(1) + '%';
@@ -2934,11 +2936,31 @@ function normalizeState(s) {
       row.sunDays = asNum(row.sunDays);
       row.sunHours = asNum(row.sunHours);
       if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {
-        var lp=asNum(row.persons), ld=asNum(row.days), lh=asNum(row.hoursPerDay);
-        row.straightHours = lp * ld * Math.min(lh, 8);
-        row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + asNum(row.satPersons)*asNum(row.satDays)*asNum(row.satHours);
-        row.ot2Hours = asNum(row.sunPersons)*asNum(row.sunDays)*asNum(row.sunHours);
-        row.holidayHours = 0; row.holidayMultiplier = 3; row.laborModelVersion = 2;
+        function legacyLaborNumber(v) {
+          if (v === null || v === undefined || v === '') return 0;
+          var n = Number(v);
+          return Number.isFinite(n) && n >= 0 ? n : null;
+        }
+        var lp=legacyLaborNumber(row.persons), ld=legacyLaborNumber(row.days), lh=legacyLaborNumber(row.hoursPerDay);
+        var lsp=legacyLaborNumber(row.satPersons), lsd=legacyLaborNumber(row.satDays), lsh=legacyLaborNumber(row.satHours);
+        var lnp=legacyLaborNumber(row.sunPersons), lnd=legacyLaborNumber(row.sunDays), lnh=legacyLaborNumber(row.sunHours);
+        var legacyVals=[lp,ld,lh,lsp,lsd,lsh,lnp,lnd,lnh];
+        if (legacyVals.some(function(v){return v===null;})) {
+          row.straightHours = 'INVALID_LEGACY_LABOR';
+          row.ot15Hours = 'INVALID_LEGACY_LABOR';
+          row.ot2Hours = 'INVALID_LEGACY_LABOR';
+          row.holidayHours = 0;
+          row.holidayMultiplier = 3;
+          row.laborMigrationError = 'Malformed legacy labor values require correction before pricing.';
+        } else {
+          row.straightHours = lp * ld * Math.min(lh, 8);
+          row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + lsp*lsd*lsh;
+          row.ot2Hours = lnp*lnd*lnh;
+          row.holidayHours = 0;
+          row.holidayMultiplier = 3;
+          delete row.laborMigrationError;
+        }
+        row.laborModelVersion = 2;
       }
       row.straightHours = normalizeFinancialValue(row.straightHours); row.ot15Hours = normalizeFinancialValue(row.ot15Hours); row.ot2Hours = normalizeFinancialValue(row.ot2Hours); row.holidayHours = normalizeFinancialValue(row.holidayHours); row.holidayMultiplier = row.holidayMultiplier == null ? 3 : normalizeFinancialValue(row.holidayMultiplier);
     }
@@ -3110,9 +3132,10 @@ function normalizeState(s) {
     c = c || {};
     if (!c.legalName && c.name) c.legalName = c.name;
     if (!c.address1 && c.address) c.address1 = c.address;
-    if (!c.license && c.tecl) c.license = c.tecl; /* legacy import only */
-    if (!c.acrLicense) c.acrLicense = c.license || '';
-    if (!c.license) c.license = c.acrLicense || '';
+    /* Safety boundary: legacy electrical TECL/generic license data must never be promoted to ACR. */
+    if (c.tecl == null) c.tecl = '';
+    if (c.license == null) c.license = '';
+    if (c.acrLicense == null) c.acrLicense = '';
     if (c.legalName == null) c.legalName = '';
     if (c.dba == null) c.dba = '';
     if (c.address1 == null) c.address1 = '';
@@ -3133,7 +3156,7 @@ function normalizeState(s) {
     if (c.email == null) c.email = '';
     if (c.license == null) c.license = '';
     if (c.website == null) c.website = '';
-    if (c.acrLicense == null) c.acrLicense = c.license || '';
+    if (c.acrLicense == null) c.acrLicense = '';
     if (c.acrClass == null) c.acrClass = '';
     if (c.acrEndorsement == null) c.acrEndorsement = '';
     if (c.licenseHolderName == null) c.licenseHolderName = '';
@@ -3142,7 +3165,7 @@ function normalizeState(s) {
     /* Keep legacy mirrors for older exports */
     c.name = c.legalName;
     c.address = c.address1;
-    c.license = c.acrLicense || c.license || ''; /* generic backward-compatible export alias */
+    c.license = c.license || ''; /* preserve generic legacy metadata; never use it as ACR evidence */
     return c;
   }
 
@@ -3179,7 +3202,7 @@ function normalizeState(s) {
       phone: c.phone || '',
       email: c.email || '',
       license: c.acrLicense || c.license || '',
-      acrLicense: c.acrLicense || c.license || '',
+      acrLicense: c.acrLicense || '',
       acrClass: c.acrClass || '',
       acrEndorsement: c.acrEndorsement || '',
       licenseHolderName: c.licenseHolderName || '',
@@ -3204,7 +3227,7 @@ function normalizeState(s) {
       phone: fields.phone || '',
       email: fields.email || '',
       license: fields.acrLicense || fields.license || '',
-      acrLicense: fields.acrLicense || fields.license || '',
+      acrLicense: fields.acrLicense || '',
       acrClass: fields.acrClass || '',
       acrEndorsement: fields.acrEndorsement || '',
       licenseHolderName: fields.licenseHolderName || '',
@@ -3277,7 +3300,7 @@ function normalizeState(s) {
       phone: p.phone,
       email: p.email,
       license: p.acrLicense || p.license,
-      acrLicense: p.acrLicense || p.license,
+      acrLicense: p.acrLicense || '',
       acrClass: p.acrClass || '', acrEndorsement: p.acrEndorsement || '', licenseHolderName: p.licenseHolderName || '', businessAffiliation: p.businessAffiliation || '',
       website: p.website,
       invoiceFooter: p.invoiceFooter
@@ -3401,7 +3424,7 @@ function normalizeState(s) {
       phone: p.phone,
       email: p.email,
       license: p.acrLicense || p.license,
-      acrLicense: p.acrLicense || p.license, acrClass:p.acrClass||'', acrEndorsement:p.acrEndorsement||'', licenseHolderName:p.licenseHolderName||'', businessAffiliation:p.businessAffiliation||'',
+      acrLicense: p.acrLicense || '', acrClass:p.acrClass||'', acrEndorsement:p.acrEndorsement||'', licenseHolderName:p.licenseHolderName||'', businessAffiliation:p.businessAffiliation||'',
       website: p.website,
       invoiceFooter: p.invoiceFooter
     });
@@ -3419,7 +3442,7 @@ function normalizeState(s) {
     set('co-zip', c.zip);
     set('co-phone', c.phone);
     set('co-email', c.email);
-    set('co-license', c.acrLicense || c.license);
+    set('co-license', c.acrLicense || '');
     set('co-acr-class', c.acrClass); set('co-acr-endorsement', c.acrEndorsement); set('co-license-holder', c.licenseHolderName); set('co-affiliation', c.businessAffiliation);
     set('co-website', c.website);
     set('co-footer', c.invoiceFooter);
@@ -3595,7 +3618,7 @@ function normalizeState(s) {
     if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); if(!calc||!calc.tm||!calc.tm.valid) out.push('valid nonnegative T&M financial inputs'); }
     return out;
   }
-  function tdlrAcrBlock(c) { return '<div class="tdlr-acr-block"><strong>ACR License:</strong> ' + esc(c.acrLicense || c.license || '') + (c.acrClass ? ' · Class ' + esc(c.acrClass) : '') + (c.acrEndorsement ? ' · Endorsement ' + esc(c.acrEndorsement) : '') + '<br>' + esc(TDLR_ACR_NOTICE) + '</div>'; }
+  function tdlrAcrBlock(c) { return '<div class="tdlr-acr-block"><strong>ACR License:</strong> ' + esc(c.acrLicense || '') + (c.acrClass ? ' · Class ' + esc(c.acrClass) : '') + (c.acrEndorsement ? ' · Endorsement ' + esc(c.acrEndorsement) : '') + '<br>' + esc(TDLR_ACR_NOTICE) + '</div>'; }
 
   function renderQuotePreview(calc) {
     var q = state.quote;
@@ -3702,7 +3725,7 @@ function normalizeState(s) {
     var tbody=document.getElementById('st-body'); if(!tbody)return; var rows=(state.laborEquip&&state.laborEquip.smallToolsLines)||[], html='';
     var classes=['LEGACY_DIRECT','CONSUMABLE','REUSABLE_TOOL','MAJOR_EQUIPMENT','RENTAL','SHOP_OVERHEAD_TOOL'];
     for(var i=0;i<rows.length;i++){var m=rows[i], ext=smallToolsLineExt(m), opts=''; classes.forEach(function(c){opts+='<option value="'+c+'"'+(String(m.costClass||'LEGACY_DIRECT')===c?' selected':'')+'>'+c.replace(/_/g,' ')+'</option>';});
-      html+='<tr data-i="'+i+'"><td><select class="st-class">'+opts+'</select>'+(m.needsCostClassReview?'<div class="hint">review</div>':'')+'</td><td><input type="text" class="st-desc" value="'+esc(m.description)+'" /></td><td><input type="number" min="0" class="num st-usage" step="any" value="'+(Number(m.costClass==='CONSUMABLE'||m.costClass==='RENTAL'||m.costClass==='LEGACY_DIRECT'?m.qty:m.usage)||0)+'" /></td><td><input type="number" min="0" class="num st-cost" step="0.01" value="'+(Number(m.purchaseCost!=null?m.purchaseCost:m.unitCost)||0)+'" /></td><td><input type="number" min="0" class="num st-residual" step="0.01" value="'+(Number(m.residualValue)||0)+'" /></td><td><input type="number" min="0" class="num st-life" step="1" value="'+(Number(m.lifeHours)||0)+'" /></td><td><input type="number" min="0" class="num st-maint" step="0.01" value="'+(Number(m.maintenancePerHour)||0)+'" /></td><td><input type="number" min="0" class="num st-other" step="0.01" value="'+(Number(m.otherPerHour)||0)+'" /></td><td><select class="st-unit"><option value="hour"'+(m.recoveryUnit!=='day'?' selected':'')+'>hour</option><option value="day"'+(m.recoveryUnit==='day'?' selected':'')+'>day</option></select><input type="number" min="0" class="num st-daily" step="0.01" title="Daily recovery rate" value="'+(Number(m.dailyRecoveryRate)||0)+'" /></td><td class="num-cell st-ext">'+safeMoney(ext)+'<div class="hint">'+esc(m.recoveryFormula||'')+'</div></td><td><button type="button" class="btn btn-sm btn-danger st-del">×</button></td></tr>';
+      html+='<tr data-i="'+i+'"><td><select class="st-class">'+opts+'</select>'+(m.needsCostClassReview?'<div class="hint">review</div>':'')+'</td><td><input type="text" class="st-desc" value="'+esc(m.description)+'" /></td><td><input type="number" min="0" class="num st-usage" step="any" value="'+financialInputValue(m.costClass==='CONSUMABLE'||m.costClass==='RENTAL'||m.costClass==='LEGACY_DIRECT'?m.qty:m.usage,0)+'" /></td><td><input type="number" min="0" class="num st-cost" step="0.01" value="'+financialInputValue(m.purchaseCost!=null?m.purchaseCost:m.unitCost,0)+'" /></td><td><input type="number" min="0" class="num st-residual" step="0.01" value="'+financialInputValue(m.residualValue,0)+'" /></td><td><input type="number" min="0" class="num st-life" step="1" value="'+financialInputValue(m.lifeHours,0)+'" /></td><td><input type="number" min="0" class="num st-maint" step="0.01" value="'+financialInputValue(m.maintenancePerHour,0)+'" /></td><td><input type="number" min="0" class="num st-other" step="0.01" value="'+financialInputValue(m.otherPerHour,0)+'" /></td><td><select class="st-unit"><option value="hour"'+(m.recoveryUnit!=='day'?' selected':'')+'>hour</option><option value="day"'+(m.recoveryUnit==='day'?' selected':'')+'>day</option></select><input type="number" min="0" class="num st-daily" step="0.01" title="Daily recovery rate" value="'+financialInputValue(m.dailyRecoveryRate,0)+'" /></td><td class="num-cell st-ext">'+safeMoney(ext)+'<div class="hint">'+esc(m.recoveryFormula||'')+'</div></td><td><button type="button" class="btn btn-sm btn-danger st-del">×</button></td></tr>';
     }
     tbody.innerHTML=html||'<tr><td colspan="11" style="color:var(--text-muted);padding:1rem">No tool lines</td></tr>';
   }
@@ -3820,7 +3843,25 @@ function normalizeState(s) {
     var actLabor=actualValue(pnl.actualLabor,'Actual labor'), actEquip=actualValue(pnl.actualEquip,'Actual equipment'), actSub=actualValue(pnl.actualSub,'Actual subcontractor');
     var link=pnl.linkMaterial!==false, actMat=0, matSource='explicit actual';
     if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=actualValue(pnl.actualMaterial,'Actual material');}
-    else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty), pc=nonNegativeFinancial(rows[i].procurementCostSnapshot);if(q===null||pc===null){allSnap=false;break;}actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated cost fallback';}else matSource='procurement snapshot'; }
+    else {
+      var rows=state.materialsUsed||[], sourceCounts={actual:0,snapshot:0,estimate:0}; actMat=0;
+      for(var i=0;i<rows.length;i++){
+        var mr=rows[i]||{}, q=nonNegativeFinancial(mr.qty), pc=null, source='';
+        if(q===null){errors.push('Material row '+(i+1)+' quantity must be finite and nonnegative.');actMat=NaN;break;}
+        if(mr.actualCost !== null && mr.actualCost !== undefined && mr.actualCost !== '') { pc=nonNegativeFinancial(mr.actualCost); source='actual'; }
+        else if(mr.procurementCostSnapshot !== null && mr.procurementCostSnapshot !== undefined && mr.procurementCostSnapshot !== '') { pc=nonNegativeFinancial(mr.procurementCostSnapshot); source='snapshot'; }
+        else { pc=nonNegativeFinancial(mr.unitCost); source='estimate'; }
+        if(pc===null){errors.push('Material row '+(i+1)+' '+source+' cost must be finite and nonnegative.');actMat=NaN;break;}
+        sourceCounts[source]++; actMat += q*pc;
+      }
+      if(isFinite(actMat)) {
+        var labels=[];
+        if(sourceCounts.actual) labels.push('explicit actual');
+        if(sourceCounts.snapshot) labels.push('procurement snapshot');
+        if(sourceCounts.estimate) labels.push('estimated cost fallback');
+        matSource=labels.join(' + ') || 'no material rows';
+      }
+    }
     document.getElementById('pnl-mat-link').checked=link; document.getElementById('pnl-act-labor').value=pnl.actualLabor==null?0:pnl.actualLabor; document.getElementById('pnl-act-equip').value=pnl.actualEquip==null?0:pnl.actualEquip; document.getElementById('pnl-act-sub').value=pnl.actualSub==null?0:pnl.actualSub; document.getElementById('pnl-act-mat').value=isFinite(actMat)?actMat.toFixed(2):(pnl.actualMaterial||'');
     var src=document.getElementById('pnl-mat-source');if(src)src.textContent=matSource;var rm=document.getElementById('pnl-revenue-mode');if(rm)rm.value=mode;var ac=document.getElementById('pnl-actual-collected');if(ac)ac.value=pnl.actualCollected==null?0:pnl.actualCollected;
     var revenue={labor:0,equip:0,material:0,sub:0,adjustment:0,total:0}, reference='';
@@ -3843,7 +3884,7 @@ function normalizeState(s) {
     var chipCos = document.getElementById('chip-cos');
     if (chipCos) chipCos.textContent = money(calc.cos.approved);
     var qBase = document.getElementById('q-base');
-    if (qBase) qBase.textContent = money0(calc.quoteBase);
+    if (qBase) qBase.textContent = calc.quoteValid ? money0(calc.quoteBase) : '—';
     var qCos = document.getElementById('q-cos');
     if (qCos) qCos.textContent = money(calc.cos.approved);
     document.getElementById('chip-sales').textContent = safeMoney(calc.sum.totalSales);
@@ -4778,7 +4819,7 @@ function normalizeState(s) {
       if (e.target.classList.contains('st-cost')) { var pc=parseFloat(e.target.value); if(isFinite(pc)&&pc>=0){line.unitCost=pc;line.purchaseCost=pc;} else {line.unitCost=e.target.value;line.purchaseCost=e.target.value;} }
       if (e.target.classList.contains('st-residual')) line.residualValue=e.target.value; if(e.target.classList.contains('st-life')) line.lifeHours=e.target.value; if(e.target.classList.contains('st-maint')) line.maintenancePerHour=e.target.value; if(e.target.classList.contains('st-other')) line.otherPerHour=e.target.value; if(e.target.classList.contains('st-unit')) line.recoveryUnit=e.target.value; if(e.target.classList.contains('st-daily')) line.dailyRecoveryRate=e.target.value;
       var extCell = tr.querySelector('.st-ext');
-      if (extCell) extCell.textContent = money(smallToolsLineExt(line));
+      if (extCell) extCell.textContent = safeMoney(smallToolsLineExt(line));
       softRefresh();
     });
     on('st-body', 'click', function (e) {
@@ -5179,7 +5220,7 @@ function normalizeState(s) {
     var qsum = document.getElementById('co-quote-summary');
     if (qsum) {
       qsum.innerHTML =
-        'Base quote ' + money0(calc.quoteBase) +
+        'Base quote ' + (calc.quoteValid ? money0(calc.quoteBase) : '—') +
         ' + approved COs ' + money(calc.cos.approved) +
         ' = <strong>' + customerTotalMoney(calc.quoteTotal) + '</strong>';
     }
@@ -5356,6 +5397,7 @@ function normalizeState(s) {
     for(var i=0;i<list.length;i++){
       var amt=finiteFinancial(list[i].amount), st=String(list[i].status||'draft').toLowerCase();
       if(amt===null){errors.push('Change Order amount must be finite.');continue;}
+      if(amt<0){errors.push('Negative Change Orders are not supported. Use an explicit credit workflow before reducing contract value.');continue;}
       if(st==='approved'){approved+=amt;countApproved++;}
       else if(st==='rejected'||st==='void') rejected+=amt;
       else pending+=amt;
@@ -5444,7 +5486,7 @@ function normalizeState(s) {
     if (qsum) {
       var calc = calcAll(state);
       qsum.innerHTML =
-        'Base quote ' + money0(calc.quoteBase) +
+        'Base quote ' + (calc.quoteValid ? money0(calc.quoteBase) : '—') +
         ' + approved COs ' + money(calc.cos.approved) +
         ' = <strong>' + customerTotalMoney(calc.quoteTotal) + '</strong>';
     }
@@ -5593,8 +5635,9 @@ function normalizeState(s) {
 
   /* ---------- Print documents ---------- */
   function moneyPlain(n) {
-    n = Number(n) || 0;
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var value = finiteFinancial(n);
+    if (value === null) return '—';
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function buildPrintDocs(calc) {
@@ -5668,7 +5711,7 @@ function normalizeState(s) {
       ? '<p>' + footerNote.split(/\r?\n/).map(esc).join('<br>') + '</p>'
       : '<p>' + termsHtml + '</p>';
     quoteHtml +=
-      '<div class="grand">Quote Total: $' + moneyPlain(calc.quoteTotal) + '</div>' +
+      '<div class="grand">Quote Total: ' + (calc.quoteValid ? '$' + moneyPlain(calc.quoteTotal) : '— INVALID —') + '</div>' +
       '<div class="quote-close">' +
         '<p class="quote-valid">' + QUOTE_VALID_TXT + '</p>' +
         '<div class="sign-block">' +
@@ -5962,7 +6005,7 @@ function normalizeState(s) {
     var qsum = document.getElementById('co-quote-summary');
     if (qsum) {
       qsum.innerHTML =
-        'Base quote ' + money0(calc.quoteBase) +
+        'Base quote ' + (calc.quoteValid ? money0(calc.quoteBase) : '—') +
         ' + approved COs ' + money(calc.cos.approved) +
         ' = <strong>' + customerTotalMoney(calc.quoteTotal) + '</strong>';
     }

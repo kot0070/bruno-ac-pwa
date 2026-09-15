@@ -95,3 +95,23 @@ assert.strictEqual(F.toolJobCost({ costClass: 'CONSUMABLE', qty: 1, unitCost: In
 assert.strictEqual(F.methodASales(Infinity, 0.25, 0.15).ok, false);
 
 console.log('financial-integrity: all deterministic tests passed');
+
+
+// Corrective audit regression coverage.
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: 100, lifeHours: 1000, maintenancePerHour: 0.10, otherPerHour: 0, recoveryUnit: 'hour', usage: NaN }).ok, false);
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: NaN, lifeHours: 1000, maintenancePerHour: 0.10, otherPerHour: 0, recoveryUnit: 'hour', usage: 4 }).ok, false);
+assert.strictEqual(F.toolJobCost({ costClass: 'REUSABLE_TOOL', purchaseCost: 600, residualValue: 100, lifeHours: 1000, maintenancePerHour: Infinity, otherPerHour: 0, recoveryUnit: 'hour', usage: 4 }).ok, false);
+assert.strictEqual(F.quotedContractRevenue(10000, [{ status: 'approved', amount: -500 }]), null, 'generic negative approved CO must block');
+assert.strictEqual(F.validateAcrCompany({ legalName:'Bruno AC', address1:'1 Main', city:'Austin', state:'TX', zip:'78701', phone:'5125550100', tecl:'TECL28137', license:'TECL28137', acrLicense:'' }).ok, false, 'TECL/generic license must not satisfy ACR compliance');
+const badTm = F.tmTotal({ equipmentLines:[{qty:NaN,rate:100}], laborLines:[], materialAmount:0, subAmount:0 });
+assert.strictEqual(badTm.ok, false); assert.strictEqual(badTm.total, null);
+
+const fs = require('fs');
+const source = fs.readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+assert.ok(source.includes("makeLetterhead(tm.date, 'Invoice date')"), 'invoice print must use tm.date');
+assert.ok(!source.includes('if (!c.license && c.tecl) c.license = c.tecl'), 'TECL promotion must be absent');
+assert.ok(!source.includes("if (!c.acrLicense) c.acrLicense = c.license || ''"), 'generic license promotion to ACR must be absent');
+assert.ok(source.includes("row.straightHours = 'INVALID_LEGACY_LABOR'"), 'malformed legacy labor must retain invalid sentinel');
+assert.ok(source.includes("if(amt<0){errors.push('Negative Change Orders are not supported."), 'negative CO must be rejected');
+assert.ok(source.includes("function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }"), 'customer total formatter must reject null/nonfinite');
+assert.ok(source.includes("mr.actualCost !== null") && source.includes("mr.procurementCostSnapshot !== null") && source.includes("source='estimate'"), 'material actual cost must resolve per row');
