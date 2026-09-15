@@ -44,6 +44,7 @@ jobs:
           c=Path('financial-integrity-core.js').read_text()
           t=Path('tests/ac-calculator-pricing.test.js').read_text()
           assert 'mats[mi].unitCost = price' not in s
+          assert 'mats[mi].unitCost = row.unitCost' not in s
           assert "else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0)" not in s
           assert 'setCatalogCustomerPrice(state, cid' in s
           assert 'function setCatalogCustomerPrice(state, catalogId, rawValue)' in c
@@ -55,6 +56,6 @@ jobs:
           rm -f scripts/pr22_catalog_job_lifecycle.py .github/workflows/pr22-catalog-job-lifecycle.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add financial-integrity-core.js index.html tests/ac-calculator-pricing.test.js scripts/pr22_catalog_job_lifecycle.py .github/workflows/pr22-catalog-job-lifecycle.yml
+          git add financial-integrity-core.js index.html tests/ac-calculator-pricing.test.js tests/financial-integrity.test.js scripts/pr22_catalog_job_lifecycle.py .github/workflows/pr22-catalog-job-lifecycle.yml
           git commit -m "Enforce catalog-job pricing lifecycle boundary"
           git push origin HEAD:feature/financial-integrity-texas-acr-docs
