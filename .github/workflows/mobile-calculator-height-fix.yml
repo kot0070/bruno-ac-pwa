@@ -1,0 +1,37 @@
+name: Mobile calculator height corrective
+on:
+  push:
+    branches: [feature/bruno-mobile-calculator-height-fix]
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/bruno-mobile-calculator-height-fix
+      - name: Apply corrective
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('navigation-v2.js')
+          s=p.read_text()
+          old="""    var doc=calculatorFrame.contentDocument;if(!doc)return;var wrap=doc.querySelector('.wrap');if(!wrap)return;\n    var rect=wrap.getBoundingClientRect();var next=Math.max(760,Math.ceil(rect.height+wrap.offsetTop+16));var current=Math.round(calculatorFrame.getBoundingClientRect().height);\n    if(Math.abs(current-next)>1)calculatorFrame.style.height=next+'px';"""
+          new="""    var doc=calculatorFrame.contentDocument;if(!doc)return;var wrap=doc.querySelector('.wrap');if(!wrap)return;\n    var rect=wrap.getBoundingClientRect();\n    var contentHeight=Math.max(wrap.scrollHeight||0,wrap.offsetHeight||0,Math.ceil(rect.height));\n    var next=Math.max(760,Math.ceil(contentHeight+wrap.offsetTop+16));var current=Math.round(calculatorFrame.getBoundingClientRect().height);\n    if(Math.abs(current-next)>1)calculatorFrame.style.height=next+'px';"""
+          if old not in s:
+              raise SystemExit('fitCalculatorFrame target not found')
+          p.write_text(s.replace(old,new,1))
+          sw=Path('sw.js')
+          t=sw.read_text()
+          if "bruno-ac-v25" not in t:
+              raise SystemExit('cache v25 not found')
+          sw.write_text(t.replace("bruno-ac-v25","bruno-ac-v26",1))
+          Path('.github/workflows/mobile-calculator-height-fix.yml').unlink()
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add navigation-v2.js sw.js .github/workflows/mobile-calculator-height-fix.yml
+          git commit -m "fix: measure full embedded calculator content height"
+          git push
