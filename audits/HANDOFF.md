@@ -1,60 +1,65 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 3
+handoff_version: 4
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
-latest_report: audits/PR22_FINAL_ACCEPTANCE_AUDIT.md
+latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
-production_pr: 22
-production_branch: feature/financial-integrity-texas-acr-docs
-known_current_head: 118166d91df18c025956e63c17727362805e1165
-state: FOCUSED_ACCEPTANCE_REAUDIT_COMPLETE
+implementation_report_dir: audits/implementation
+state: PR23_UX_ACCEPTANCE_AUDIT_PENDING
 ```
 
-## LAST COMPLETED AUDIT
+## LAST ACCEPTED PRODUCTION BASELINE
 
 ```yaml
-last_completed_task_id: PR22_FOCUSED_ACCEPTANCE_REAUDIT_118166D
-last_audited_head: 118166d91df18c025956e63c17727362805e1165
-last_verdict: A_ACCEPT
-last_report_path: audits/history/PR22_118166d91df18c025956e63c17727362805e1165_20260915-1505.md
-blockers_summary: []
+merged_pr: 22
+accepted_feature_head: 118166d91df18c025956e63c17727362805e1165
+main_merge_commit: e54d642171ed0b342aba0fe2230f3fdeaa82ad06
+verdict: A_ACCEPT
+report: audits/history/PR22_118166d91df18c025956e63c17727362805e1165_20260915-1505.md
+blockers: []
 ```
 
-## LAST COMPLETED IMPLEMENTATION
+## CURRENT IMPLEMENTATION
 
 ```yaml
-last_completed_implementation_task_id: PR22_CLOSE_ACCEPTANCE_GAPS_01
-implementation_start_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
-implementation_end_head: 118166d91df18c025956e63c17727362805e1165
-implementation_status: DONE
-production_commit: 118166d91df18c025956e63c17727362805e1165
-production_files_changed:
-  - index.html
-  - tests/financial-integrity.test.js
-  - tests/pr22-lifecycle-integration.test.js
+production_pr: 23
+production_branch: feature/ac-calculator-ux-clarity
+base_branch: main
+base_sha: e54d642171ed0b342aba0fe2230f3fdeaa82ad06
+implementation_head: 2a6a74637a1aecc1b82144508c9733c9b0d4abfa
+implementation_report: audits/implementation/PR23_AC_CALCULATOR_UX_2a6a7463.md
+implementation_status: READY_FOR_INDEPENDENT_AUDIT
+merged: false
+draft: true
+changed_files:
+  - ac-calculator-review-ux.js
+  - ac-calculator.html
+  - sw.js
+  - tests/ac-calculator-review-ux.test.js
 ```
 
 ## CURRENT TASK
 
 ```yaml
-current_task_id: PR22_FOCUSED_ACCEPTANCE_REAUDIT_118166D
-current_task_status: COMPLETE
-current_target_head: 118166d91df18c025956e63c17727362805e1165
-mode: focused_acceptance_reaudit
-result: A_ACCEPT
+current_task_id: PR23_AC_CALCULATOR_UX_ACCEPTANCE_01
+current_task_status: ACTIVE
+current_target_head: 2a6a74637a1aecc1b82144508c9733c9b0d4abfa
+mode: independent_ux_acceptance_audit
+expected_next_state: PR23_acceptance_decision
 ```
 
 ## HANDOFF RULES
 
 ```yaml
 rules:
-  - read_WORKSPACE_CONTEXT_HANDOFF_TASK_before_action
-  - production_PR_remains_open_unmerged
-  - audit_reports_and_workspace_files_live_only_on_audit_branch
-  - audit_the_exact_target_HEAD_from_TASK_CURRENT
-  - do_not_modify_production_during_audit
-  - do_not_copy_full_report_here
+  - read_WORKSPACE_CONTEXT_HANDOFF_IMPLEMENTATION_REPORT_TASK_before_action
+  - task_file_defines_active_PR_branch_SHA
+  - production_PR_must_remain_unmodified_during_audit
+  - production_code_must_remain_unmodified_during_audit
+  - merge_forbidden_during_audit
+  - reports_and_workspace_writes_only_on_audit_branch_under_audits
+  - do_not_copy_full_report_into_HANDOFF
 ```
