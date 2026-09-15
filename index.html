@@ -2491,12 +2491,15 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
   var demoSeed = null;
 
   function money(n) {
-    n = Number(n) || 0;
-    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var value = finiteFinancial(n);
+    if (value === null) return '—';
+    return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function money0(n) {
-    n = Math.round(Number(n) || 0);
-    return '$' + n.toLocaleString('en-US');
+    var value = finiteFinancial(n);
+    if (value === null) return '—';
+    value = Math.round(value);
+    return '$' + value.toLocaleString('en-US');
   }
   function asNum(n) {
     var x = Number(n);
@@ -2947,7 +2950,14 @@ function normalizeState(s) {
       row.sunPersons = asNum(row.sunPersons);
       row.sunDays = asNum(row.sunDays);
       row.sunHours = asNum(row.sunHours);
-      row.straightHours = normalizeFinancialValue(row.straightHours); row.ot15Hours = normalizeFinancialValue(row.ot15Hours); row.ot2Hours = normalizeFinancialValue(row.ot2Hours); row.holidayHours = normalizeFinancialValue(row.holidayHours); row.holidayMultiplier = row.holidayMultiplier == null ? 3 : normalizeFinancialValue(row.holidayMultiplier);
+      row.straightHours = window.BrunoFinancial.normalizeExplicitLaborValue(row.straightHours, 0);
+      row.ot15Hours = window.BrunoFinancial.normalizeExplicitLaborValue(row.ot15Hours, 0);
+      row.ot2Hours = window.BrunoFinancial.normalizeExplicitLaborValue(row.ot2Hours, 0);
+      row.holidayHours = window.BrunoFinancial.normalizeExplicitLaborValue(row.holidayHours, 0);
+      row.holidayMultiplier = window.BrunoFinancial.normalizeExplicitLaborValue(row.holidayMultiplier, 3);
+      if ([row.straightHours,row.ot15Hours,row.ot2Hours,row.holidayHours,row.holidayMultiplier].some(function(v){ return v === window.BrunoFinancial.INVALID_EXPLICIT_LABOR || v === 'INVALID_LEGACY_LABOR'; })) {
+        row.laborMigrationError = row.laborMigrationError || 'Invalid explicit labor values require correction before pricing.';
+      }
     }
     for (i = 0; i < s.tm.equipmentLines.length; i++) {
       row = s.tm.equipmentLines[i];
@@ -3633,7 +3643,7 @@ function normalizeState(s) {
       esc(q.jobAddress1) + '<br>' + esc(q.jobAddress2) + '<br>Contact: ' + esc(q.contact) + '</p>' +
       '<p class="muted"><em>Ref: ' + esc(q.reference) + '</em></p>' +
       '<p>' + (q.description || []).map(esc).join('<br>') + '</p>' +
-      '<div class="total-line">Base quote: ' + money0(calc.quoteBase) +
+      '<div class="total-line">Base quote: ' + (calc.quoteValid ? money0(calc.quoteBase) : '—') +
         (calc.cos.approved ? ' + approved COs ' + money(calc.cos.approved) : '') +
         '</div>' +
       '<div class="total-line">Quote Total: ' + customerTotalMoney(calc.quoteTotal) + '</div>' +
@@ -3738,7 +3748,10 @@ function normalizeState(s) {
   }
 
   function fieldNum(label, cls, val) {
-    return '<div class="field"><label>' + label + '</label><input type="number" class="' + cls + '" step="any" min="0" value="' + (Number(val) || 0) + '" /></div>';
+    var n = nonNegativeFinancial(val);
+    var supplied = !(val === null || val === undefined || val === '');
+    var invalid = supplied && n === null;
+    return '<div class="field"><label>' + label + '</label><input type="number" class="' + cls + (invalid ? ' invalid-financial' : '') + '" step="any" min="0" value="' + (n === null ? '' : n) + '"' + (invalid ? ' aria-invalid="true" title="Invalid financial value — correct before pricing"' : '') + ' />' + (invalid ? '<span class="hint" style="color:var(--danger)">INVALID — correct before pricing</span>' : '') + '</div>';
   }
 
   function renderPersonnel() {

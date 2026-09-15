@@ -140,3 +140,34 @@ assert.ok(!source.includes('function legacyLaborNumber(v)'), 'duplicate late val
 assert.ok(source.includes("if(amt<0){errors.push('Negative Change Orders are not supported."), 'negative CO must be rejected');
 assert.ok(source.includes("function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }"), 'customer total formatter must reject null/nonfinite');
 assert.ok(source.includes("mr.actualCost !== null") && source.includes("mr.procurementCostSnapshot !== null") && source.includes("source='estimate'"), 'material actual cost must resolve per row');
+
+
+// Final invalid-zero regression coverage.
+// Explicit v2 labor must survive JSON persistence as an invalid string sentinel, never NaN -> null -> 0.
+function normalizeExplicitBlock(block) {
+  const out = Object.assign({}, block);
+  out.straightHours = F.normalizeExplicitLaborValue(out.straightHours, 0);
+  out.ot15Hours = F.normalizeExplicitLaborValue(out.ot15Hours, 0);
+  out.ot2Hours = F.normalizeExplicitLaborValue(out.ot2Hours, 0);
+  out.holidayHours = F.normalizeExplicitLaborValue(out.holidayHours, 0);
+  out.holidayMultiplier = F.normalizeExplicitLaborValue(out.holidayMultiplier, 3);
+  return out;
+}
+
+[NaN, Infinity, -Infinity, 'abc', -1].forEach((bad) => {
+  let b = normalizeExplicitBlock({ straightHours: bad, ot15Hours: 0, ot2Hours: 0, holidayHours: 0, holidayMultiplier: 3 });
+  assert.strictEqual(b.straightHours, F.INVALID_EXPLICIT_LABOR, `explicit ${String(bad)} must become persistent invalid sentinel`);
+  b = JSON.parse(JSON.stringify(b));
+  assert.strictEqual(b.straightHours, F.INVALID_EXPLICIT_LABOR, 'invalid sentinel must survive JSON persistence');
+  b = normalizeExplicitBlock(b);
+  assert.strictEqual(b.straightHours, F.INVALID_EXPLICIT_LABOR, 'invalid sentinel must survive second normalization');
+  const lc = F.laborCost({ straightRate: 50, straightHours: b.straightHours, ot15Hours: b.ot15Hours, ot2Hours: b.ot2Hours, holidayHours: b.holidayHours, holidayMultiplier: b.holidayMultiplier });
+  assert.strictEqual(lc.ok, false, 'persisted invalid explicit labor must block labor cost');
+});
+
+assert.ok(!source.includes("n = Number(n) || 0;\n    return '$' + n.toLocaleString"), 'money() must not coerce invalid values to zero');
+assert.ok(!source.includes('n = Math.round(Number(n) || 0);'), 'money0() must not coerce invalid values to zero');
+assert.ok(source.includes("if (value === null) return '—';"), 'money formatters must expose invalid state');
+assert.ok(!source.includes("value=\"' + (Number(val) || 0) + '\""), 'labor field renderer must not display invalid sentinel as 0');
+assert.ok(source.includes('INVALID — correct before pricing'), 'labor field renderer must visibly mark invalid values');
+assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteBase) : '—')"), 'invalid quote preview base must render dash');

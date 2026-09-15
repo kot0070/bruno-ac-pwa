@@ -38,6 +38,15 @@
     return { ok: true, value: value, error: '' };
   }
 
+  var INVALID_EXPLICIT_LABOR = 'INVALID_EXPLICIT_LABOR';
+
+  function normalizeExplicitLaborValue(value, defaultValue) {
+    if (value === 'INVALID_LEGACY_LABOR' || value === INVALID_EXPLICIT_LABOR) return value;
+    if (value === null || value === undefined || value === '') return defaultValue === undefined ? 0 : defaultValue;
+    var n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : INVALID_EXPLICIT_LABOR;
+  }
+
   function laborCost(input) {
     input = input || {};
     var straightRate = nonNegative(input.straightRate);
@@ -213,6 +222,8 @@
     validProfitMargin: validProfitMargin,
     methodASales: methodASales,
     laborCost: laborCost,
+    normalizeExplicitLaborValue: normalizeExplicitLaborValue,
+    INVALID_EXPLICIT_LABOR: INVALID_EXPLICIT_LABOR,
     migrateLegacyLaborBlock: migrateLegacyLaborBlock,
     recoveryRate: recoveryRate,
     toolJobCost: toolJobCost,
