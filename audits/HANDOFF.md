@@ -1,14 +1,14 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 5
+handoff_version: 6
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR23_UX_ACCEPTANCE_BLOCKED_P1
+state: PR23_F01_FOCUSED_REAUDIT_PENDING
 ```
 
 ## LAST ACCEPTED PRODUCTION BASELINE
@@ -18,64 +18,65 @@ merged_pr: 22
 accepted_feature_head: 118166d91df18c025956e63c17727362805e1165
 main_merge_commit: e54d642171ed0b342aba0fe2230f3fdeaa82ad06
 verdict: A_ACCEPT
-report: audits/history/PR22_118166d91df18c025956e63c17727362805e1165_20260915-1505.md
 blockers: []
 ```
 
-## CURRENT IMPLEMENTATION
+## PR23 PREVIOUS AUDIT
 
 ```yaml
 production_pr: 23
+previous_audited_head: 2a6a74637a1aecc1b82144508c9733c9b0d4abfa
+previous_verdict: B_ACCEPT_AFTER_MINOR_FIXES
+previous_report: audits/history/PR23_2a6a74637a1aecc1b82144508c9733c9b0d4abfa_20260915-1554.md
+blocker:
+  id: F01_self_triggering_review_sync_loop
+  severity: P1
+```
+
+## CORRECTIVE IMPLEMENTATION
+
+```yaml
 production_branch: feature/ac-calculator-ux-clarity
-base_branch: main
-base_sha: e54d642171ed0b342aba0fe2230f3fdeaa82ad06
-audited_head: 2a6a74637a1aecc1b82144508c9733c9b0d4abfa
-implementation_report: audits/implementation/PR23_AC_CALCULATOR_UX_2a6a7463.md
+current_target_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
+implementation_report: audits/implementation/PR23_F01_OBSERVER_FIX_8c70dddc.md
 merged: false
-draft: true
-changed_files:
+draft_PR: true
+changed_files_final:
   - ac-calculator-review-ux.js
   - ac-calculator.html
   - sw.js
   - tests/ac-calculator-review-ux.test.js
+correction:
+  - observers_disconnected_during_review_owned_render
+  - observers_restored_in_finally
+  - idempotent_DOM_writes_added
+  - service_worker_cache_bumped_to_v34
+validation:
+  workflow_run: 35016786924
+  result: SUCCESS
+  temporary_workflow_removed_from_final_diff: true
 ```
 
-## LATEST AUDIT RESULT
+## CURRENT TASK
 
 ```yaml
-task_id: PR23_AC_CALCULATOR_UX_ACCEPTANCE_01
-verdict: B_ACCEPT_AFTER_MINOR_FIXES
-merge_ready: false
-highest_severity: P1
-report: audits/history/PR23_2a6a74637a1aecc1b82144508c9733c9b0d4abfa_20260915-1554.md
-latest_alias: audits/LATEST_AUDIT.md
-browser_runtime: NOT_PERFORMED
-blockers:
-  - F01_self_triggering_review_sync_loop
-next_required_action: fix_F01_on_production_branch_then_reaudit_exact_new_HEAD
-```
-
-## BLOCKER DETAIL
-
-```yaml
-F01:
-  severity: P1
-  file: ac-calculator-review-ux.js
-  defect: review_sync_mutates_observed_status_and_bom_descendants_and_requeues_itself_indefinitely
-  financial_regression: false
-  merge_blocker: true
+current_task_id: PR23_F01_FOCUSED_REAUDIT_8C70DDDC
+current_task_status: ACTIVE
+mode: focused_acceptance_reaudit
+current_target_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
+expected_next_state: PR23_acceptance_decision
 ```
 
 ## HANDOFF RULES
 
 ```yaml
 rules:
-  - read_WORKSPACE_CONTEXT_HANDOFF_IMPLEMENTATION_REPORT_TASK_before_action
+  - read_WORKSPACE_CONTEXT_HANDOFF_source_audit_implementation_report_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
   - production_PR_must_remain_unmodified_during_audit
   - production_code_must_remain_unmodified_during_audit
   - merge_forbidden_during_audit
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - do_not_copy_full_report_into_HANDOFF
-  - do_not_merge_PR23_at_audited_head_2a6a74637a1aecc1b82144508c9733c9b0d4abfa
+  - audit_exact_target_head_8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
 ```
