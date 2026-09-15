@@ -4,14 +4,12 @@
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
-implementation_report: audits/implementation/PR23_F01_OBSERVER_FIX_8c70dddc.md
-source_audit_report: audits/history/PR23_2a6a74637a1aecc1b82144508c9733c9b0d4abfa_20260915-1554.md
+implementation_report: audits/implementation/PR24_SERVICE_CALL_JOURNAL_d58502c8.md
 read_order:
   - audits/WORKSPACE.md
   - audits/CONTEXT.md
   - audits/HANDOFF.md
-  - audits/history/PR23_2a6a74637a1aecc1b82144508c9733c9b0d4abfa_20260915-1554.md
-  - audits/implementation/PR23_F01_OBSERVER_FIX_8c70dddc.md
+  - audits/implementation/PR24_SERVICE_CALL_JOURNAL_d58502c8.md
   - audits/TASK_CURRENT.md
 protocol_required: true
 ```
@@ -30,141 +28,243 @@ mode_guard:
 ```
 
 ```yaml
-task_id: PR23_F01_FOCUSED_REAUDIT_8C70DDDC
-mode: focused_acceptance_reaudit
+task_id: PR24_SERVICE_CALL_JOURNAL_ACCEPTANCE_01
+mode: independent_ux_acceptance_audit
 repository: kot0070/bruno-ac-pwa
-production_pr: 23
-production_branch: feature/ac-calculator-ux-clarity
+production_pr: 24
+production_branch: feature/service-call-journal-ux
 base_branch: main
-base_sha: e54d642171ed0b342aba0fe2230f3fdeaa82ad06
-previous_rejected_head: 2a6a74637a1aecc1b82144508c9733c9b0d4abfa
-target_head: 8c70dddc4d3879dd9a4f8fd58d74049ac1ab1eb1
+base_sha: 492e0340ac6926d4280f043b6d3305a0ec965fd2
+target_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
+last_accepted_main: 492e0340ac6926d4280f043b6d3305a0ec965fd2
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Independently verify that PR23 audit finding `F01_self_triggering_review_sync_loop` is eliminated at the exact target HEAD, while preserving the previously accepted UX-state semantics and financial/lifecycle boundaries.
+Independently determine whether PR #24 makes the existing Dispatch/day-journal first sheet substantially more comfortable and mobile-friendly as a `Service Call Journal` while preserving all existing dispatch/tax/persistence semantics.
 
-Implementation report is context only. Production source/behavior and executable evidence are authority.
+Implementation report is context only. Production source, observable behavior, executable tests and CI evidence are authority.
 
-## PRIMARY F01 CHECK
+## USER PROBLEM TO VERIFY
 
 ```yaml
-must_verify:
-  - review_observers_are_disconnected_before_sync_owned_DOM_writes
-  - observers_are_restored_in_finally_even_if_sync_returns_or_throws
-  - sync_owned_status_writes_cannot_requeue_status_observer
-  - sync_owned_BOM_decorations_cannot_requeue_BOM_observer
-  - authoritative_external_status/BOM/mainApply_changes_still_trigger_sync
-  - no_continuous_zero_delay_queueSync_cycle_after_ready_action_required_or_review_required
-  - repeated_sync_on_unchanged_state_is_idempotent
+before_PR24:
+  top_of_screen_dominated_by: Tax_Settings
+  primary_service_call_workflow_visually_secondary: true
+  mobile_table_feels_like_desktop_form: true
+  user_goal: quickly_view_day_add_call_review_hours_gross_net
 ```
 
-If browser/runtime instrumentation is available, explicitly verify observer callbacks settle after a calculated state. If not available, report `BROWSER_RUNTIME: NOT_PERFORMED` and evaluate source + executable tests without inventing runtime evidence.
-
-## REQUIRED UX REGRESSION CHECKS
+Expected information hierarchy:
 
 ```yaml
-states:
-  ready:
-    banner: selected_BOM_ready_to_apply
-    visible_apply: follows_underlying_apply
-  action_required:
-    trigger: selected_unresolved_or_invalid
-    visible_apply: disabled
-    attention_panel: visible
-  review_required:
-    trigger: selected_valid_zero_no_hard_blocker
-    visible_apply: allowed_subject_to_existing_zero_confirmation
-  dirty_or_stale:
-    must_remain_owned_by_existing_ux_layer: true
-    review_layer_must_not_force_ready: true
-selected_only:
-  deselected_attention_row_does_not_block: true
+order:
+  - day_calendar_and_day_totals
+  - primary_Add_Service_Call_action
+  - service_calls
+  - Tax_Settings_collapsed_secondary
 ```
 
-## DELIVERY / CACHE
+## REQUIRED UX CHECKS
 
 ```yaml
-service_worker:
-  expected_cache: bruno-ac-v34
-  expected_asset: ./ac-calculator-review-ux.js
-final_diff_exactly:
-  - ac-calculator-review-ux.js
-  - ac-calculator.html
-  - sw.js
-  - tests/ac-calculator-review-ux.test.js
-forbidden_final_artifacts:
-  - .github/workflows/pr23-ux-validation.yml
-  - temporary_scripts
+checks:
+  - id: service_journal_reframe
+    expected:
+      panel_title: Service Call Journal
+      concise_subtitle: true
+      concise_intro: true
+
+  - id: hierarchy
+    expected:
+      day_card_before_calls_card: true
+      calls_card_before_tax_settings: true
+      tax_settings_collapsed_by_default: true
+
+  - id: primary_action
+    expected:
+      visible_label: "+ Add Service Call"
+      forwards_to_existing_#disp-add: true
+      duplicate_state_write_or_duplicate_call_creation: false
+
+  - id: existing_calendar_preserved
+    expected:
+      - disp-date_preserved
+      - disp-prev_preserved
+      - disp-next_preserved
+      - disp-today_preserved
+      - disp-week_preserved
+      - disp-day-totals_preserved
+
+  - id: service_call_data_entry_preserved
+    expected:
+      - existing_disp_table_is_authoritative
+      - disp-time_preserved
+      - disp-hours_preserved
+      - disp-addr_preserved
+      - disp-desc_preserved
+      - disp-gross_preserved
+      - disp-tax_preserved
+      - disp-status_preserved
+      - existing_delete_handler_preserved
+      - existing_sort_handler_preserved
+
+  - id: mobile_cards
+    expected:
+      - rows_readable_without_horizontal_desktop_table_workflow
+      - plain_labels_for_time_hours_address_description_gross_tax_net_status
+      - inputs_remain_editable
+      - delete_remains_available
+
+  - id: empty_state
+    expected:
+      - friendly_message_when_no_data_rows
+      - hidden_when_data_rows_exist
+      - updates_after_authoritative_tbody_changes
+
+  - id: tax_settings
+    expected:
+      controls_moved_not_reimplemented: true
+      collapsed_by_default: true
+      existing_tax_inputs_remain_functional: true
+      compact_summary_updates_without_changing_tax_formula: true
+
+  - id: persistence_boundary
+    expected:
+      state_dispatch_schema_changed: false
+      localStorage_compatibility_preserved: true
+      index_dispatch_business_logic_changed: false
+
+  - id: observer_safety
+    expected:
+      tbody_observer_does_not_write_into_tbody: true
+      day_totals_observer_does_not_write_into_day_totals: true
+      no_self_triggering_mutation_loop: true
+
+  - id: loader
+    expected:
+      workspace_v5_loads_service_journal_asset_once: true
+      same_origin_CSP_compatible: true
+
+  - id: service_worker_delivery
+    expected:
+      cache_name: bruno-ac-v35
+      cached_asset: ./service-journal-ux.js
+```
+
+## BROWSER / MOBILE RUNTIME
+
+```yaml
+preferred: true
+if_available:
+  viewport: mobile_phone_width
+  verify:
+    - open_More_or_Dispatch_and_view_Service_Call_Journal
+    - Tax_Settings_not_dominating_first_screen
+    - Add_Service_Call_creates_exactly_one_existing_dispatch_row
+    - edit_time_hours_address_description_gross_tax_status
+    - day_totals_refresh
+    - prev_next_today_and_week_strip_still_work
+    - tax_details_expand_and_controls_work
+    - empty_state_appears_on_empty_day
+    - no_console_error_or_observer_loop
+if_unavailable:
+  report_exactly: NOT_PERFORMED
+  do_not_invent_browser_results: true
 ```
 
 ## EXECUTABLE EVIDENCE
 
-Implementation report references temporary CI run `35016786924` at commit `a94532fb76b7846336a978ae645f7349d3e34ae0`.
+Implementation report references temporary GitHub Actions run `35021139574` on commit `8166737ca61836103d0463a47c6c90e1d56cf249`.
 
-Independently inspect run/job evidence. Expected successful steps:
+Independently inspect run/jobs. Expected successful steps:
 
 ```yaml
 - financial-integrity
-- ac-calculator-pricing
+- calculator-pricing
 - pr22-lifecycle-integration
-- ac-calculator-review-ux
+- calculator-review-ux
+- service-journal-ux
 - JS_syntax_checks
 ```
 
-Also inspect final target HEAD to ensure removal of temporary workflow did not alter production files after the validated code.
+Then compare validated commit to target HEAD. The only intended post-CI change is deletion of `.github/workflows/pr24-service-journal-validation.yml`.
 
-## FINANCIAL REGRESSION GATES
+## FINAL DIFF / SCOPE
 
 ```yaml
-must_remain_unchanged_from_main:
+expected_changed_files_exactly:
+  - service-journal-ux.js
+  - workspace-v5.js
+  - sw.js
+  - tests/service-journal-ux.test.js
+forbidden_final_artifacts:
+  - .github/workflows/pr24-service-journal-validation.yml
+  - temporary_scripts
+must_remain_unchanged_from_base:
+  - index.html
+  - financial-integrity-core.js
   - ac-calculator-engine.js
   - ac-calculator.js
-  - financial-integrity-core.js
+  - ac-calculator-review-ux.js
+```
+
+## REGRESSION GATES
+
+```yaml
 must_remain_true:
-  - Customer_Price_to_Job_unitCost_to_Quote
-  - Your_Cost_to_procurementCostSnapshot_to_PnL
-  - actualCost_overrides_snapshot_in_PnL_only
-  - Calculator_never_creates_actualCost
-  - invalid_financial_never_silently_becomes_zero
-  - legitimate_zero_remains_valid
-  - Calculate_preview_does_not_mutate_Job_Materials
-  - historical_Job_not_mutated_by_Catalog_or_Margins_without_explicit_reapply
+  - existing_dispatch_add_edit_delete_sort_semantics
+  - existing_tax_formula_and_effective_rate_semantics
+  - existing_dispatch_net_calculation
+  - cancelled_call_semantics
+  - week_strip_semantics
+  - dispatch_and_tax_settings_persist_across_existing_storage_flow
+  - Quote_Method_A_unchanged
+  - Customer_Price_and_Your_Cost_financial_architecture_unchanged
+  - AC_Calculator_accepted_PR23_behavior_unchanged
 ```
 
 ## SEVERITY
 
 ```yaml
 P0:
-  - financial_or_lifecycle_regression
-  - Apply_allowed_despite_selected_unresolved_or_invalid
+  - dispatch_data_loss_or_schema_break
+  - tax_or_net_calculation_regression
+  - financial_integrity_or_quote_regression
 P1:
-  - F01_still_reproducible_or_source_design_still_self_triggering
-  - corrected_observer_design_drops_real_upstream_updates
-  - stale_state_can_be_presented_ready
+  - Add_Service_Call_creates_duplicate_or_fails
+  - primary_day_or_call_controls_broken
+  - Tax_Settings_controls_lost_or_nonfunctional
+  - mobile_layout_makes_existing_call_editing_unusable
+  - self_triggering_observer_loop_or_runtime_churn
+  - service_journal_asset_not_delivered_by_PWA
 P2:
-  - minor_nonblocking_copy_or_layout_issue
+  - minor_copy_spacing_or_visual_issue_without_workflow_loss
 ```
 
 ## REQUIRED REPORT
 
 ```yaml
-report_path_template: audits/history/PR23_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+report_path_template: audits/history/PR24_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
 latest_alias: audits/LATEST_AUDIT.md
 minimum_sections:
   - Executive_Verdict
   - Repository_State
   - Exact_Audited_SHA
   - Final_Diff
-  - F01_Observer_Lifecycle
-  - Idempotent_Rendering
-  - Runtime_Or_Static_Settling_Evidence
-  - UX_State_Regression_Matrix
-  - Service_Worker
+  - User_Workflow_Hierarchy
+  - Primary_Add_Call_Action
+  - Calendar_And_Day_Totals
+  - Service_Call_Editing
+  - Mobile_Card_Layout
+  - Empty_State
+  - Tax_Settings
+  - Persistence_And_Data_Boundary
+  - Observer_Safety
+  - Loader_And_Service_Worker
   - Test_CI_Evidence
-  - Financial_Regression_Gates
+  - Regression_Gates
   - Browser_Runtime_Result
   - Findings
   - Merge_Blockers
@@ -173,4 +273,4 @@ minimum_sections:
 
 After successful report write: update `audits/LATEST_AUDIT.md`, update `audits/HANDOFF.md`, enforce history retention, and return only VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT.
 
-Do not modify PR #23 or production code. Do not merge.
+Do not modify PR #24 or production code. Do not merge.
