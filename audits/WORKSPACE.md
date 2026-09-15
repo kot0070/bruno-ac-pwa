@@ -1,13 +1,15 @@
 # BRUNO AC AUDIT AI WORKSPACE
 
 ```yaml
-workspace_version: 3
+workspace_version: 4
 workspace_type: persistent_ai_audit_coordination
 repository: kot0070/bruno-ac-pwa
 audit_branch: audit/pr22-603cbca
 primary_task_file: audits/TASK_CURRENT.md
+protocol_file: audits/PROTOCOL.md
 context_file: audits/CONTEXT.md
 handoff_file: audits/HANDOFF.md
+roadmap_file: audits/ROADMAP_NEXT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
@@ -21,9 +23,12 @@ format: ai_native_structured
 ```yaml
 startup_sequence:
   - read: audits/WORKSPACE.md
+  - read: audits/PROTOCOL.md
   - read: audits/CONTEXT.md
   - read: audits/HANDOFF.md
+  - read: audits/ROADMAP_NEXT.md
   - read: audits/TASK_CURRENT.md
+  - read_implementation_report_if_referenced_by_TASK_CURRENT
   - resolve_active_PR_and_exact_target_HEAD_from_TASK_CURRENT
   - validate_target_against_GitHub
   - execute_task
@@ -49,6 +54,7 @@ source_of_truth_priority:
   - executable_tests
   - CI_artifacts_and_logs
   - static_source_inspection
+  - official_primary_sources_when_material
   - implementation_reports_PR_text_comments_commit_messages_previous_reports
 
 trust_rules:
@@ -86,6 +92,8 @@ missing_file_policy:
   task_file_missing:
     action: BLOCKED
   workspace_file_missing:
+    action: BLOCKED
+  protocol_file_missing_when_required:
     action: BLOCKED
   production_file_expected_by_task_but_absent:
     action: investigate_before_verdict
@@ -142,6 +150,7 @@ rules:
   - compliance_bypass_implies_C
   - historical_job_mutation_without_explicit_lifecycle_action_implies_C
   - contradictory_UI_state_that_can_cause_wrong_apply_action_is_at_least_P1
+  - unresolved_audit_infrastructure_blocker_prevents_substantive_acceptance
 ```
 
 ## OPERATING STYLE
@@ -160,4 +169,4 @@ style:
 
 ## MAINTENANCE RULE
 
-`WORKSPACE.md` is persistent infrastructure. Task-specific PR/branch/SHA/scope belongs in `TASK_CURRENT.md`, not here.
+`WORKSPACE.md` and `PROTOCOL.md` are persistent infrastructure. Task-specific PR/branch/SHA/scope belongs in `TASK_CURRENT.md`, not here.
