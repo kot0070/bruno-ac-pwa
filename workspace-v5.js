@@ -78,6 +78,40 @@ function loadCodeLibraryUX(){
   var core=document.createElement('script');core.src='./code-rule-registry.js';core.async=false;core.setAttribute('data-code-rule-registry','1');core.addEventListener('load',loadUX);document.head.appendChild(core);
 }
 
+function makeActionMenu(label,accent){
+  var d=document.createElement('details');d.className='workspace-action-menu';
+  d.innerHTML='<summary class="btn btn-sm'+(accent?' btn-accent':'')+'">'+label+'</summary><div class="workspace-action-popover"></div>';
+  return d;
+}
+function setupCompactHeader(){
+  var host=document.querySelector('.header-actions');if(!host||host.dataset.workspaceCompact==='1')return;
+  var printQuote=$('btn-print-quote'),printInvoice=$('btn-print-tm'),reset=$('btn-reset'),blank=$('btn-blank'),exportJob=$('btn-export'),exportApp=$('btn-export-app');
+  var importJob=$('btn-import'),importApp=$('btn-import-app');var importJobLabel=importJob&&importJob.closest('label'),importAppLabel=importApp&&importApp.closest('label');
+  if(!printQuote||!printInvoice||!reset)return;
+  var printMenu=makeActionMenu('Print',true),otherMenu=makeActionMenu('Other',false);var pp=printMenu.querySelector('.workspace-action-popover'),op=otherMenu.querySelector('.workspace-action-popover');
+  printQuote.textContent='Print Quote';printInvoice.textContent='Print Invoice';printQuote.classList.remove('btn-accent');pp.appendChild(printQuote);pp.appendChild(printInvoice);
+  [exportJob,importJobLabel,exportApp,importAppLabel,blank].forEach(function(n){if(n)op.appendChild(n)});
+  var prefs=document.createElement('div');prefs.className='workspace-other-prefs';prefs.innerHTML='<div class="workspace-other-label">Display</div><button type="button" class="btn btn-sm" data-workspace-pref="theme">Theme</button><button type="button" class="btn btn-sm" data-workspace-pref="zoom-out">Zoom −</button><button type="button" class="btn btn-sm" data-workspace-pref="zoom-in">Zoom +</button>';op.appendChild(prefs);
+  reset.textContent='Reset';reset.title='Reset demo';
+  var frag=document.createDocumentFragment();frag.appendChild(printMenu);frag.appendChild(reset);frag.appendChild(otherMenu);host.replaceChildren(frag);host.dataset.workspaceCompact='1';
+  var floating=$('ui-prefs');if(floating)floating.classList.add('workspace-prefs-hidden');
+  host.addEventListener('click',function(e){var pref=e.target.closest('[data-workspace-pref]');if(pref){e.preventDefault();var id=pref.getAttribute('data-workspace-pref'),target=id==='theme'?$('ui-prefs-theme'):id==='zoom-out'?$('ui-prefs-zoom-out'):$('ui-prefs-zoom-in');if(target)target.click();return}var action=e.target.closest('.workspace-action-popover .btn,.workspace-action-popover label.btn');if(action&&!action.querySelector('input[type=file]'))setTimeout(function(){printMenu.open=false;otherMenu.open=false},0)});
+  document.addEventListener('pointerdown',function(e){if(!host.contains(e.target)){printMenu.open=false;otherMenu.open=false}},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){printMenu.open=false;otherMenu.open=false}});
+}
+
+var totalsVisibleState=null;
+function activeWorkspaceTab(){if(activePanel('panel-calculator'))return '__calculator';var b=document.querySelector('#nav-tabs .nav-tab.active');return b?b.getAttribute('data-tab'):''}
+function syncContextualTotals(){
+  var live=$('live-totals');if(!live)return;var tab=activeWorkspaceTab();var relevant={quote:1,materials:1,margins:1,labor:1,summary:1,cos:1};var show=!!relevant[tab];
+  live.classList.toggle('workspace-totals-visible',show);live.setAttribute('aria-hidden',show?'false':'true');
+  if(totalsVisibleState!==show){totalsVisibleState=show;requestAnimationFrame(function(){try{window.dispatchEvent(new Event('resize'))}catch(e){}})}
+}
+function setupContextualTotals(){
+  syncContextualTotals();var nav=$('nav-tabs');if(nav&&window.MutationObserver){new MutationObserver(function(){syncContextualTotals()}).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']})}
+  document.addEventListener('click',function(){setTimeout(syncContextualTotals,0)});
+}
+
 function bindGlobal(){
   document.addEventListener('click',function(e){var b=e.target.closest('[data-phase5-tab]');if(b){e.preventDefault();legacyTab(b.getAttribute('data-phase5-tab'))}});
   document.addEventListener('keydown',function(e){
@@ -91,6 +125,6 @@ function bindGlobal(){
     }
   });
 }
-function init(){setupMaterials();setupCatalog();setupSummary();bindGlobal();loadServiceJournalUX();loadCodeLibraryUX();document.body.classList.add('phase5-workspace-ready')}
+function init(){setupMaterials();setupCatalog();setupSummary();setupCompactHeader();setupContextualTotals();bindGlobal();loadServiceJournalUX();loadCodeLibraryUX();document.body.classList.add('phase5-workspace-ready')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
