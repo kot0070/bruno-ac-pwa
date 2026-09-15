@@ -1,0 +1,10 @@
+name: Feature branch diagnostic
+on:
+  push:
+    branches:
+      - feature/financial-integrity-texas-acr-docs
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "runner-ok"
