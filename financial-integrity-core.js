@@ -207,6 +207,80 @@
     return { ok: true, equip: equip, labor: labor, material: material, sub: sub, total: equip + labor + material + sub, error: '' };
   }
 
+  function resolveMaterialCost(row) {
+    row = row || {};
+    var qty = nonNegative(row.qty);
+    if (qty === null) return { ok:false, qty:null, source:'', unitCost:null, extendedCost:null, estimateUnitCost:null, estimateExtended:null, variance:null, error:'Material quantity must be finite and nonnegative.' };
+
+    var suppliedActual = row.actualCost !== null && row.actualCost !== undefined && row.actualCost !== '';
+    var suppliedSnapshot = row.procurementCostSnapshot !== null && row.procurementCostSnapshot !== undefined && row.procurementCostSnapshot !== '';
+    var source = suppliedActual ? 'actual' : (suppliedSnapshot ? 'snapshot' : 'estimate');
+    var raw = suppliedActual ? row.actualCost : (suppliedSnapshot ? row.procurementCostSnapshot : row.unitCost);
+    var used = nonNegative(raw);
+    if (used === null) return { ok:false, qty:qty, source:source, unitCost:null, extendedCost:null, estimateUnitCost:null, estimateExtended:null, variance:null, error:'Material ' + source + ' cost must be finite and nonnegative.' };
+
+    var estimate = nonNegative(row.unitCost);
+    var extended = qty * used;
+    var estimateExtended = estimate === null ? null : qty * estimate;
+    var variance = estimateExtended === null ? null : extended - estimateExtended;
+    return {
+      ok:true,
+      qty:qty,
+      source:source,
+      unitCost:used,
+      extendedCost:extended,
+      estimateUnitCost:estimate,
+      estimateExtended:estimateExtended,
+      variance:variance,
+      error:''
+    };
+  }
+
+  function reconcileMaterialCosts(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var total = 0;
+    var estimateTotal = 0;
+    var estimateComplete = true;
+    var sourceCounts = { actual:0, snapshot:0, estimate:0 };
+    var details = [];
+    var errors = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = resolveMaterialCost(rows[i]);
+      var detail = {
+        index:i,
+        ok:r.ok,
+        qty:r.qty,
+        source:r.source,
+        unitCost:r.unitCost,
+        extendedCost:r.extendedCost,
+        estimateUnitCost:r.estimateUnitCost,
+        estimateExtended:r.estimateExtended,
+        variance:r.variance,
+        error:r.error
+      };
+      details.push(detail);
+      if (!r.ok) {
+        errors.push('Material row ' + (i + 1) + ': ' + r.error);
+        continue;
+      }
+      sourceCounts[r.source]++;
+      total += r.extendedCost;
+      if (r.estimateExtended === null) estimateComplete = false;
+      else estimateTotal += r.estimateExtended;
+    }
+    var ok = errors.length === 0;
+    return {
+      ok:ok,
+      total:ok ? total : null,
+      estimateTotal:estimateComplete ? estimateTotal : null,
+      variance:ok && estimateComplete ? total - estimateTotal : null,
+      estimateComplete:estimateComplete,
+      sourceCounts:sourceCounts,
+      rows:details,
+      errors:errors
+    };
+  }
+
   function validateAcrCompany(company) {
     company = company || {};
     var missing = [];
@@ -240,6 +314,8 @@
     approvedChangeOrders: approvedChangeOrders,
     quotedContractRevenue: quotedContractRevenue,
     tmTotal: tmTotal,
+    resolveMaterialCost: resolveMaterialCost,
+    reconcileMaterialCosts: reconcileMaterialCosts,
     validateAcrCompany: validateAcrCompany
   };
 });

@@ -1899,6 +1899,26 @@ html[data-theme="light"] .panel {
           <input type="checkbox" id="pnl-mat-link" checked /> Auto Actual Material cost hierarchy
         </label>
       </div>
+      <div class="card" id="pnl-material-reconciliation">
+        <div class="panel-head" style="margin-bottom:.65rem">
+          <h3>Material Cost Reconciliation</h3>
+          <span class="hint">Actual purchase → procurement snapshot → estimate fallback</span>
+        </div>
+        <p class="section-help" style="margin-top:0"><strong>Cost provenance:</strong> enter the actual purchased unit cost when known. Blank Actual keeps the snapshot/fallback hierarchy. Invalid supplied costs remain invalid and cannot silently become $0. Use “Refresh snapshot” only when you intentionally want the current Catalog Your Cost to replace that row’s saved procurement snapshot.</p>
+        <div class="note-box warn" id="pnl-mat-recon-validation" style="display:none" role="alert"></div>
+        <div class="table-wrap">
+          <table class="data" id="pnl-mat-recon-table">
+            <thead><tr><th>Material</th><th>Qty</th><th>Estimate / Quote Unit</th><th>Snapshot</th><th>Actual Unit Cost</th><th>Source Used</th><th>Used Ext.</th><th>Variance vs Est.</th><th></th></tr></thead>
+            <tbody id="pnl-mat-recon-body"></tbody>
+          </table>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="lbl">Material used cost</div><div class="val" id="pnl-mat-recon-used">—</div></div>
+          <div class="stat"><div class="lbl">Estimate reference</div><div class="val" id="pnl-mat-recon-est">—</div></div>
+          <div class="stat"><div class="lbl">Cost variance</div><div class="val" id="pnl-mat-recon-var">—</div></div>
+          <div class="stat"><div class="lbl">Cost sources</div><div class="val" id="pnl-mat-recon-source-counts">—</div></div>
+        </div>
+      </div>
       <div class="stat-row">
         <div class="stat"><div class="lbl">Quoted Gross Profit %</div><div class="val" id="pnl-qgp">—</div></div>
         <div class="stat"><div class="lbl">G Profit / Loss</div><div class="val" id="pnl-gp">$0</div></div>
@@ -2914,6 +2934,9 @@ function normalizeState(s) {
       if (!row || typeof row !== 'object') continue;
       row.qty = window.BrunoFinancial.normalizePersistentFinancial(row.qty, 0);
       row.unitCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);
+      if (row.actualCost !== null && row.actualCost !== undefined && row.actualCost !== '') row.actualCost = window.BrunoFinancial.normalizePersistentFinancial(row.actualCost, 0);
+      if (row.procurementCostSnapshot !== null && row.procurementCostSnapshot !== undefined && row.procurementCostSnapshot !== '') row.procurementCostSnapshot = window.BrunoFinancial.normalizePersistentFinancial(row.procurementCostSnapshot, 0);
+      if (row.procurementCostSource == null) row.procurementCostSource = '';
       if (row.lastPriceUpdate == null || row.lastPriceUpdate === '') {
         row.lastPriceUpdate = s.meta.globalPriceUpdate;
       }
@@ -3837,25 +3860,66 @@ function normalizeState(s) {
     document.getElementById('tm-labor-body').innerHTML = html || '<tr><td colspan="5" style="color:var(--text-muted)">Empty — T&M labor = $0</td></tr>';
   }
 
+  function materialSourceLabel(source) {
+    if (source === 'actual') return 'Actual purchase';
+    if (source === 'snapshot') return 'Procurement snapshot';
+    if (source === 'estimate') return 'Estimate fallback';
+    return 'Invalid';
+  }
+
+  function renderMaterialReconciliation(recon) {
+    var body = document.getElementById('pnl-mat-recon-body');
+    if (!body) return;
+    var rows = state.materialsUsed || [];
+    var details = (recon && recon.rows) || [];
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var m = rows[i] || {};
+      var d = details[i] || { ok:false, source:'', unitCost:null, extendedCost:null, estimateUnitCost:null, variance:null };
+      var actualSupplied = m.actualCost !== null && m.actualCost !== undefined && m.actualCost !== '';
+      var actual = actualSupplied ? nonNegativeFinancial(m.actualCost) : null;
+      var snapSupplied = m.procurementCostSnapshot !== null && m.procurementCostSnapshot !== undefined && m.procurementCostSnapshot !== '';
+      var snap = snapSupplied ? nonNegativeFinancial(m.procurementCostSnapshot) : null;
+      var estimate = nonNegativeFinancial(m.unitCost);
+      var actualInvalid = actualSupplied && actual === null;
+      var snapshotInvalid = snapSupplied && snap === null;
+      var label = m.item || m.part || ('Material ' + (i + 1));
+      html += '<tr data-i="' + i + '"' + (!d.ok ? ' class="invalid-financial"' : '') + '>' +
+        '<td><strong>' + esc(label) + '</strong><div class="hint">' + esc(m.part || '') + '</div></td>' +
+        '<td class="num-cell">' + (nonNegativeFinancial(m.qty) === null ? '—' : nonNegativeFinancial(m.qty)) + '</td>' +
+        '<td class="num-cell">' + safeMoney(estimate) + '</td>' +
+        '<td class="num-cell">' + (snapshotInvalid ? '<span style="color:var(--danger)">INVALID</span>' : (snapSupplied ? safeMoney(snap) : '—')) + '</td>' +
+        '<td><input type="number" class="num pnl-mat-actual' + (actualInvalid ? ' invalid-financial' : '') + '" step="0.01" min="0" data-i="' + i + '" value="' + (actual === null ? '' : actual) + '" placeholder="auto"' + (actualInvalid ? ' aria-invalid="true" title="Invalid actual material cost — correct or clear to return to auto hierarchy"' : ' title="Blank = use procurement snapshot or estimate fallback"') + ' /></td>' +
+        '<td><span class="badge">' + esc(materialSourceLabel(d.source)) + '</span></td>' +
+        '<td class="num-cell">' + safeMoney(d.extendedCost) + '</td>' +
+        '<td class="num-cell">' + safeMoney(d.variance) + '</td>' +
+        '<td><button type="button" class="btn btn-sm pnl-mat-refresh-snapshot" data-i="' + i + '" title="Replace this row procurement snapshot with current Catalog Your Cost">Refresh snapshot</button></td>' +
+        '</tr>';
+    }
+    body.innerHTML = html || '<tr><td colspan="9" style="color:var(--text-muted);padding:1rem">No job materials to reconcile.</td></tr>';
+    var used = document.getElementById('pnl-mat-recon-used'); if (used) used.textContent = recon && recon.ok ? money(recon.total) : '—';
+    var est = document.getElementById('pnl-mat-recon-est'); if (est) est.textContent = recon && recon.estimateComplete ? money(recon.estimateTotal) : '—';
+    var vari = document.getElementById('pnl-mat-recon-var'); if (vari) { vari.textContent = recon && recon.variance !== null ? money(recon.variance) : '—'; vari.style.color = recon && recon.variance !== null && recon.variance <= 0 ? 'var(--success)' : 'var(--warning)'; }
+    var counts = document.getElementById('pnl-mat-recon-source-counts');
+    if (counts && recon) counts.textContent = 'Actual ' + recon.sourceCounts.actual + ' · Snapshot ' + recon.sourceCounts.snapshot + ' · Fallback ' + recon.sourceCounts.estimate;
+    var val = document.getElementById('pnl-mat-recon-validation');
+    if (val) { val.style.display = recon && recon.errors && recon.errors.length ? 'block' : 'none'; val.textContent = recon && recon.errors ? recon.errors.join(' ') : ''; }
+  }
+
   function renderPnL(calc) {
     var pnl=state.pnl||(state.pnl={}); if(!pnl.revenueMode)pnl.revenueMode='quoted_contract';
     var mode=pnl.revenueMode, errors=[];
     function actualValue(v,label){var n=nonNegativeFinancial(v);if(n===null){errors.push(label+' must be finite and nonnegative.');return NaN;}return n;}
     var actLabor=actualValue(pnl.actualLabor,'Actual labor'), actEquip=actualValue(pnl.actualEquip,'Actual equipment'), actSub=actualValue(pnl.actualSub,'Actual subcontractor');
     var link=pnl.linkMaterial!==false, actMat=0, matSource='explicit actual';
-    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=actualValue(pnl.actualMaterial,'Actual material');}
+    var materialRecon = window.BrunoFinancial.reconcileMaterialCosts(state.materialsUsed || []);
+    renderMaterialReconciliation(materialRecon);
+    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=actualValue(pnl.actualMaterial,'Actual material');matSource='manual total override';}
     else {
-      var rows=state.materialsUsed||[], sourceCounts={actual:0,snapshot:0,estimate:0}; actMat=0;
-      for(var i=0;i<rows.length;i++){
-        var mr=rows[i]||{}, q=nonNegativeFinancial(mr.qty), pc=null, source='';
-        if(q===null){errors.push('Material row '+(i+1)+' quantity must be finite and nonnegative.');actMat=NaN;break;}
-        if(mr.actualCost !== null && mr.actualCost !== undefined && mr.actualCost !== '') { pc=nonNegativeFinancial(mr.actualCost); source='actual'; }
-        else if(mr.procurementCostSnapshot !== null && mr.procurementCostSnapshot !== undefined && mr.procurementCostSnapshot !== '') { pc=nonNegativeFinancial(mr.procurementCostSnapshot); source='snapshot'; }
-        else { pc=nonNegativeFinancial(mr.unitCost); source='estimate'; }
-        if(pc===null){errors.push('Material row '+(i+1)+' '+source+' cost must be finite and nonnegative.');actMat=NaN;break;}
-        sourceCounts[source]++; actMat += q*pc;
-      }
-      if(isFinite(actMat)) {
+      if (!materialRecon.ok) { errors = errors.concat(materialRecon.errors || []); actMat = NaN; }
+      else {
+        actMat = materialRecon.total;
+        var sourceCounts = materialRecon.sourceCounts || {actual:0,snapshot:0,estimate:0};
         var labels=[];
         if(sourceCounts.actual) labels.push('explicit actual');
         if(sourceCounts.snapshot) labels.push('procurement snapshot');
@@ -5030,6 +5094,33 @@ function normalizeState(s) {
     on('pnl-mat-link', 'change', function () {
       state.pnl.linkMaterial = this.checked;
       softRefresh();
+    });
+    on('pnl-mat-recon-body', 'change', function (e) {
+      if (!e.target.classList.contains('pnl-mat-actual')) return;
+      var i = +e.target.getAttribute('data-i');
+      var row = (state.materialsUsed || [])[i];
+      if (!row) return;
+      var raw = String(e.target.value == null ? '' : e.target.value).trim();
+      if (raw === '') delete row.actualCost;
+      else { var n = Number(raw); row.actualCost = (isFinite(n) && n >= 0) ? n : window.BrunoFinancial.INVALID_FINANCIAL; }
+      softRefresh();
+    });
+    on('pnl-mat-recon-body', 'click', function (e) {
+      if (!e.target.classList.contains('pnl-mat-refresh-snapshot')) return;
+      var i = +e.target.getAttribute('data-i');
+      var row = (state.materialsUsed || [])[i];
+      if (!row) return;
+      var cid = row.catalogId || row.id;
+      var cat = state.catalog || [], found = null;
+      for (var ci = 0; ci < cat.length; ci++) if (cat[ci] && String(cat[ci].id) === String(cid)) { found = cat[ci]; break; }
+      if (!found) { toast('No matching Catalog row for this material'); return; }
+      var yc = nonNegativeFinancial(found.yourCost);
+      if (yc === null) { toast('Catalog Your Cost is invalid — correct it before refreshing snapshot'); return; }
+      row.procurementCostSnapshot = yc;
+      row.procurementCostSource = 'catalog_yourCost_snapshot_manual_refresh';
+      row.procurementCostUpdated = todayISO();
+      softRefresh();
+      toast('Procurement snapshot refreshed from Catalog Your Cost');
     });
 
     on('btn-export', 'click', function () { doExportJob(); });

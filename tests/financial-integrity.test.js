@@ -139,7 +139,7 @@ assert.ok(migratePos >= 0 && asNumPos > migratePos, 'strict legacy migration mus
 assert.ok(!source.includes('function legacyLaborNumber(v)'), 'duplicate late validator must be removed from production');
 assert.ok(source.includes("if(amt<0){errors.push('Negative Change Orders are not supported."), 'negative CO must be rejected');
 assert.ok(source.includes("function customerTotalMoney(n) { return validMoneyValue(n) ? money(n) : '—'; }"), 'customer total formatter must reject null/nonfinite');
-assert.ok(source.includes("mr.actualCost !== null") && source.includes("mr.procurementCostSnapshot !== null") && source.includes("source='estimate'"), 'material actual cost must resolve per row');
+assert.ok(typeof F.resolveMaterialCost === 'function' && typeof F.reconcileMaterialCosts === 'function', 'material actual cost hierarchy must be executable in shared core');
 
 
 // Final invalid-zero regression coverage.
@@ -254,4 +254,51 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
   }
   assert.strictEqual(F.normalizePersistentFinancial(0, 0), 0, 'legitimate zero direct cost must remain valid zero');
   assert.strictEqual(F.normalizePersistentFinancial('75.50', 0), 75.5);
+}
+
+
+// Material Cost Reconciliation — executable next-phase coverage.
+{
+  const rows = [
+    { qty: 1, unitCost: 100, procurementCostSnapshot: 80, actualCost: 90 },
+    { qty: 2, unitCost: 100, procurementCostSnapshot: 70 },
+    { qty: 3, unitCost: 50 }
+  ];
+  const r = F.reconcileMaterialCosts(rows);
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.total, 380);
+  assert.strictEqual(r.estimateTotal, 450);
+  assert.strictEqual(r.variance, -70);
+  assert.deepStrictEqual(r.sourceCounts, { actual: 1, snapshot: 1, estimate: 1 });
+  assert.strictEqual(r.rows[0].source, 'actual');
+  assert.strictEqual(r.rows[1].source, 'snapshot');
+  assert.strictEqual(r.rows[2].source, 'estimate');
+
+  const invalidActual = F.reconcileMaterialCosts([{ qty: 1, unitCost: 100, procurementCostSnapshot: 80, actualCost: F.INVALID_FINANCIAL }]);
+  assert.strictEqual(invalidActual.ok, false, 'invalid explicit actual must not fall through to snapshot');
+  assert.strictEqual(invalidActual.total, null);
+
+  const invalidSnapshot = F.reconcileMaterialCosts([{ qty: 1, unitCost: 100, procurementCostSnapshot: F.INVALID_FINANCIAL }]);
+  assert.strictEqual(invalidSnapshot.ok, false, 'invalid supplied snapshot must not fall through to estimate');
+
+  const zeroActual = F.reconcileMaterialCosts([{ qty: 2, unitCost: 100, actualCost: 0 }]);
+  assert.strictEqual(zeroActual.ok, true);
+  assert.strictEqual(zeroActual.total, 0, 'legitimate zero actual cost remains valid zero');
+
+  const persisted = JSON.parse(JSON.stringify({ actualCost: F.normalizePersistentFinancial('abc', 0), procurementCostSnapshot: F.normalizePersistentFinancial('Infinity', 0) }));
+  assert.strictEqual(persisted.actualCost, F.INVALID_FINANCIAL);
+  assert.strictEqual(persisted.procurementCostSnapshot, F.INVALID_FINANCIAL);
+}
+
+// Material reconciliation production integration invariants.
+{
+  const src = source;
+  assert(src.includes('id="pnl-material-reconciliation"'), 'P&L must expose material reconciliation UI');
+  assert(src.includes('id="pnl-mat-recon-body"'));
+  assert(src.includes("window.BrunoFinancial.reconcileMaterialCosts(state.materialsUsed || [])"), 'P&L must use executable shared reconciliation core');
+  assert(src.includes("row.actualCost = window.BrunoFinancial.normalizePersistentFinancial(row.actualCost, 0)"), 'actual material unit cost must persist strictly');
+  assert(src.includes("row.procurementCostSnapshot = window.BrunoFinancial.normalizePersistentFinancial(row.procurementCostSnapshot, 0)"), 'procurement snapshot must persist strictly');
+  assert(src.includes("if (raw === '') delete row.actualCost"), 'clearing actual should intentionally return to hierarchy rather than synthesize zero');
+  assert(src.includes("row.procurementCostSnapshot = yc"), 'snapshot refresh must be explicit and use validated Catalog Your Cost');
+  assert(src.includes("Catalog Your Cost is invalid — correct it before refreshing snapshot"));
 }
