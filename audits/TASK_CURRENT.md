@@ -1,136 +1,175 @@
-# CURRENT AUDIT TASK
+# CURRENT WORKSPACE TASK
 
 ```yaml
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
-protocol_required: true
 read_order:
   - audits/WORKSPACE.md
   - audits/CONTEXT.md
-  - audits/TASK_CURRENT.md
   - audits/HANDOFF.md
+  - audits/TASK_CURRENT.md
+protocol_required: true
 ```
 
 ```yaml
-task_id: PR22_FINAL_ACCEPTANCE_603CBCA
-mode: independent_final_acceptance_audit
+task_id: PR22_CLOSE_ACCEPTANCE_GAPS_01
+mode: corrective_implementation
 repository: kot0070/bruno-ac-pwa
 production_pr: 22
 production_branch: feature/financial-integrity-texas-acr-docs
-expected_base_sha: f0c8d11e8d1331811f14e4820f3e0ebeff86b7b5
-expected_head_sha: 603cbca03e292ae1d3bf424514fb60da6233bfc6
-previous_rejected_head: 104c8229f2c0ee4ac377e9081fe807f58683db4e
-corrective_production_commit: 67952a6bc3504aeb2ea580dcc10fccf4318a6aa8
-authoritative_ci_run: 34995112030
+starting_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
+source_audit_report: audits/history/PR22_603cbca03e292ae1d3bf424514fb60da6233bfc6_20260915-1235.md
+source_verdict: B_ACCEPT_AFTER_MINOR_FIXES
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
 ```yaml
-acceptance_question: is_PR22_safe_to_merge_at_actual_current_production_HEAD
-independence_required: true
-production_code_is_authority: true
-previous_reports_are_context_only: true
+primary_goal: close_remaining_acceptance_gap_without_regressing_production_financial_lifecycle
+required_outcome:
+  - add_genuine_executable_integration_coverage_for_catalog_and_margins_lifecycle
+  - cover_persist_reload_and_explicit_reapply
+  - fix_blank_your_cost_clear_to_restore_fallback_semantics
+  - preserve_all_existing_financial_and_compliance_invariants
+  - keep_PR_open_unmerged
 ```
 
-## REQUIRED CHECKS
+## SCOPE
 
 ```yaml
-checks:
-  - id: lifecycle_historical_job_immutability
-    fixture_ref: CONTEXT.canonical_lifecycle_fixture
-    fail_gate: P0_C
-  - id: margins_customer_price_lifecycle
-    requirement: no_existing_job_unitCost_mutation_before_explicit_reapply
-    fail_gate: P0_C
-  - id: blank_your_cost_provenance
-    fixture_ref: CONTEXT.fallback_provenance_fixture
-    fail_gate: P1
-  - id: dual_pricing_track_separation
-    fixture_ref: CONTEXT.financial_architecture
-    fail_gate: cross_track_is_P0_C
-  - id: strict_invalid_financial_semantics
-    fixture_ref: CONTEXT.strict_financial_semantics
-  - id: material_reconciliation
-    fixture_ref: CONTEXT.reconciliation_model
-  - id: write_inventory
-    targets:
-      - materialsUsed[].unitCost
-      - procurementCostSnapshot
-    classify: explicit_lifecycle_vs_implicit_background
-  - id: persistence_reload
-    requirement: Catalog_110_55_can_coexist_with_historical_Job_100_70_until_explicit_reapply
-  - id: export_import_normalization
-    requirement: must_not_reconnect_catalog_and_historical_job_implicitly
-  - id: calculator_calculate_nonmutation
-  - id: manual_material_preservation
-  - id: snapshot_refresh_explicit_only
-  - id: method_A_quote_separation
-    fixture_ref: CONTEXT.adversarial_quote
-  - id: profitability_actual_snapshot_estimate_precedence
-  - id: regression_sweep
-    areas:
-      - Method_A
-      - Quote_validity
-      - Quote_print
-      - Job_Profitability
-      - Labor
-      - Burden
-      - Small_Tools
-      - Equipment
-      - Subcontractors
-      - Change_Orders
-      - T_and_M
-      - Company_ACR
-      - Texas_ACR_TECL_separation
-      - Service_Worker
-  - id: ci_provenance
-    run: 34995112030
-  - id: final_tree_scope
-    expected_diff_ref: CONTEXT.expected_pr_net_diff
-  - id: test_quality
-    classifications:
-      - EXECUTABLE_INTEGRATION
-      - EXECUTABLE_CORE
-      - CI_LOG
-      - STATIC_SOURCE
-      - SOURCE_ASSERTION
-      - WEAK_STRING_ASSERTION
-  - id: browser_runtime
-    rule: if_unavailable_report_NOT_PERFORMED
+allowed_changes:
+  production:
+    - index.html
+  tests:
+    - tests/ac-calculator-pricing.test.js
+    - tests/financial-integrity.test.js
+    - new_minimal_integration_test_file_if_strictly_needed
+  tooling:
+    - temporary_local_or_ci_test_harness_if_removed_from_final_net_diff
+forbidden:
+  - unrelated_refactor
+  - HVAC_scope_logic_changes
+  - method_A_formula_changes
+  - financial_precedence_changes
+  - quote_pricing_model_changes
+  - ACR_compliance_relaxation
+  - merge_PR
 ```
 
-## REQUIRED OUTPUT
-
-Follow `audits/WORKSPACE.md` report protocol exactly.
+## REQUIRED IMPLEMENTATION
 
 ```yaml
-full_report_sections_minimum:
-  - Executive_Verdict
-  - Repository_State
-  - Audited_SHA
-  - Changed_Files
-  - CI_Provenance
-  - Browser_DOM_Result
-  - Findings_Table
-  - Catalog_Job_Lifecycle
-  - Blank_Your_Cost_Fallback_Provenance
-  - Dual_Pricing
-  - Apply_Mapping
-  - Persistence
-  - Material_Reconciliation
-  - Profitability
-  - Method_A_Quote
-  - Regression_Sweep
-  - Service_Worker
-  - Test_Quality
-  - Unsafe_Financial_Coercion_Sweep
-  - Job_Material_Write_Inventory
-  - Merge_Blockers
-  - Non_Blocking_Follow_Ups
-  - Final_Verdict
+integration_test:
+  classification_target: EXECUTABLE_INTEGRATION
+  must_execute_real_production_paths: true
+  must_not_be_only_source_assertions: true
+  minimum_fixture:
+    initial:
+      catalog_customer: 100
+      catalog_your: 70
+      calculator_apply: true
+      expected_job_unitCost: 100
+      expected_job_snapshot: 70
+    mutate_catalog_without_reapply:
+      catalog_customer: 110
+      catalog_your: 55
+      expected_job_unitCost: 100
+      expected_job_snapshot: 70
+    margins_customer_edit_without_reapply:
+      expected_job_unitCost: 100
+      expected_job_snapshot: 70
+    save_reload:
+      expected_catalog_customer: 110
+      expected_catalog_your: 55
+      expected_job_unitCost: 100
+      expected_job_snapshot: 70
+    explicit_reapply:
+      expected_job_unitCost: 110
+      expected_job_snapshot: 55
+  required_assertions:
+    - no_implicit_catalog_to_job_unitCost_write
+    - no_implicit_margins_to_job_unitCost_write
+    - historical_snapshot_unchanged_until_explicit_action
+    - explicit_reapply_updates_both_tracks
+    - calculate_preview_does_not_mutate_persisted_job
+    - manual_material_rows_survive_reapply
 ```
 
-Do not modify production code, production branch, or PR #22. Do not merge. Do not fix findings during this task.
+```yaml
+blank_your_cost_clear_semantics:
+  target_controls:
+    - Catalog_cat-your
+    - Margins_mrg-your
+  required_behavior:
+    blank_input:
+      semantic: restore_missing_blank
+      remove_explicit_your_cost_override: true
+      remove_persisted_cost_map_entry: true
+      must_not_write: INVALID_FINANCIAL
+    malformed_nonblank_input:
+      semantic: INVALID_FINANCIAL
+    calculator_after_clear:
+      yourCostSource: customer-price-fallback
+      yourUnitCost: current_customer_price
+  dynamic_fixture:
+    explicit_your: 70
+    clear_to_blank: true
+    customer_after_clear: 60
+    expected_your: 60
+    expected_source: customer-price-fallback
+```
+
+## REGRESSION GATES
+
+```yaml
+must_remain_true:
+  - Catalog_edit_does_not_mutate_existing_Job_before_explicit_reapply
+  - Margins_edit_does_not_mutate_existing_Job_before_explicit_reapply
+  - Customer_track_to_Quote_only
+  - YourCost_track_to_snapshot_PnL_only
+  - Actual_overrides_snapshot_only_in_PnL
+  - Calculator_never_creates_actualCost
+  - invalid_financial_never_silently_becomes_zero
+  - legitimate_zero_remains_valid
+  - explicit_invalid_higher_priority_cost_does_not_fall_through
+  - reconciliation_fixture_used_380_estimate_450_variance_minus70
+  - method_A_existing_tests_pass
+  - ACR_TECL_separation_preserved
+  - service_worker_consistency_preserved_if_assets_change
+```
+
+## VALIDATION
+
+```yaml
+required_tests:
+  - node tests/financial-integrity.test.js
+  - node tests/ac-calculator-pricing.test.js
+  - new_integration_test_command_if_added
+required_syntax:
+  - node_check_modified_js
+  - validate_index_inline_js_if_index_changed
+final_tree:
+  - no_temporary_scripts
+  - no_temporary_workflows
+  - no_unrelated_files
+```
+
+## DELIVERY
+
+```yaml
+implementation_target: production_branch
+commit_required: true
+push_required: true
+merge_forbidden: true
+post_implementation:
+  - update audits/HANDOFF.md on audit_branch with new production_HEAD and task result
+  - set next audit task in audits/TASK_CURRENT.md for focused acceptance re-audit
+chat_response_schema:
+  - "STATUS: <DONE|BLOCKED>"
+  - "NEW HEAD: <full_sha>"
+  - "TESTS: <short_status>"
+  - "FILES: <short_changed_files>"
+  - "NEXT: <focused_reaudit_ready|blocker>"
+```
