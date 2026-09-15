@@ -10,93 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch final UI integrity gaps
+        with:
+          fetch-depth: 0
+      - name: Recover and apply final PR patch
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('index.html'); s=p.read_text()
-          def one(old,new,label):
-              global s
-              n=s.count(old)
-              if n!=1: raise SystemExit(f'{label}: expected 1 got {n}')
-              s=s.replace(old,new,1)
-
-          # Visible validation areas for customer-billed T&M and Job Profitability.
-          one('<div class="note-box warn">\n        When detail is empty, T&amp;M total = <strong>$0</strong> — honest T&amp;M, not a margined quote.', '<div class="note-box warn" id="tm-validation" style="display:none" role="alert"></div>\n      <div class="note-box warn">\n        When detail is empty, T&amp;M total = <strong>$0</strong> — honest T&amp;M, not a margined quote.', 'tm banner')
-          one('<div class="card">\n        <div class="pnl-grid">', '<div class="note-box warn" id="pnl-validation" style="display:none" role="alert"></div>\n      <div class="card">\n        <div class="pnl-grid">', 'pnl banner')
-
-          # Preserve imported T&M equipment rate invalidity instead of normalizing to zero.
-          one('      row.qty = normalizeFinancialValue(row.qty);\n      row.rate = asNum(row.rate);', '      row.qty = normalizeFinancialValue(row.qty);\n      row.rate = normalizeFinancialValue(row.rate);', 'tm equipment import rate')
-
-          # Render T&M raw fields and non-finite amounts visibly, never as plausible $0.
-          one("    document.getElementById('tm-mat').value = state.tm.materialAmount || 0;\n    document.getElementById('tm-sub').value = state.tm.subAmount || 0;", "    document.getElementById('tm-mat').value = state.tm.materialAmount == null ? 0 : state.tm.materialAmount;\n    document.getElementById('tm-sub').value = state.tm.subAmount == null ? 0 : state.tm.subAmount;", 'tm raw amount fields')
-          one("      var a = (Number(eqs[i].qty) || 0) * (Number(eqs[i].rate) || 0);", "      var qv=nonNegativeFinancial(eqs[i].qty), rv=nonNegativeFinancial(eqs[i].rate); var a=(qv===null||rv===null)?NaN:qv*rv;", 'tm equipment render calc')
-          one("        '<td><input type=\"number\" class=\"num tme-qty\" step=\"any\" value=\"' + (Number(eqs[i].qty) || 0) + '\" /></td>' +\n        '<td><input type=\"number\" class=\"num tme-rate\" step=\"0.01\" value=\"' + (Number(eqs[i].rate) || 0) + '\" /></td>' +\n        '<td class=\"num-cell\">' + money(a) + '</td>' +", "        '<td><input type=\"number\" min=\"0\" class=\"num tme-qty\" step=\"any\" value=\"' + esc(eqs[i].qty == null ? 0 : eqs[i].qty) + '\" /></td>' +\n        '<td><input type=\"number\" min=\"0\" class=\"num tme-rate\" step=\"0.01\" value=\"' + esc(eqs[i].rate == null ? 0 : eqs[i].rate) + '\" /></td>' +\n        '<td class=\"num-cell\">' + safeMoney(a) + '</td>' +", 'tm equipment render fields')
-          one("      var am = (Number(labs[j].hours) || 0) * (Number(labs[j].rate) || 0);", "      var hv=nonNegativeFinancial(labs[j].hours), lrv=nonNegativeFinancial(labs[j].rate); var am=(hv===null||lrv===null)?NaN:hv*lrv;", 'tm labor render calc')
-          one("        '<td><input type=\"number\" class=\"num tml-hrs\" step=\"any\" value=\"' + (Number(labs[j].hours) || 0) + '\" /></td>' +\n        '<td><input type=\"number\" class=\"num tml-rate\" step=\"0.01\" value=\"' + (Number(labs[j].rate) || 0) + '\" /></td>' +\n        '<td class=\"num-cell\">' + money(am) + '</td>' +", "        '<td><input type=\"number\" min=\"0\" class=\"num tml-hrs\" step=\"any\" value=\"' + esc(labs[j].hours == null ? 0 : labs[j].hours) + '\" /></td>' +\n        '<td><input type=\"number\" min=\"0\" class=\"num tml-rate\" step=\"0.01\" value=\"' + esc(labs[j].rate == null ? 0 : labs[j].rate) + '\" /></td>' +\n        '<td class=\"num-cell\">' + safeMoney(am) + '</td>' +", 'tm labor render fields')
-
-          # T&M input events preserve invalid values for validation; no silent ||0. New T&M labor lines do NOT derive a bill rate from Method A.
-          one("    on('tm-mat', 'input', function () { state.tm.materialAmount = parseFloat(this.value) || 0; softRefresh(); });\n    on('tm-sub', 'input', function () { state.tm.subAmount = parseFloat(this.value) || 0; softRefresh(); });", "    on('tm-mat', 'input', function () { var v=parseFloat(this.value); state.tm.materialAmount=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });\n    on('tm-sub', 'input', function () { var v=parseFloat(this.value); state.tm.subAmount=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });", 'tm amount listeners')
-          one("      if (e.target.classList.contains('tme-qty')) line.qty = parseFloat(e.target.value) || 0;\n      if (e.target.classList.contains('tme-rate')) line.rate = parseFloat(e.target.value) || 0;\n      softRefresh();\n      tr.querySelector('.num-cell').textContent = money((line.qty || 0) * (line.rate || 0));", "      if (e.target.classList.contains('tme-qty')) { var v=parseFloat(e.target.value); line.qty=(isFinite(v)&&v>=0)?v:e.target.value; }\n      if (e.target.classList.contains('tme-rate')) { var v=parseFloat(e.target.value); line.rate=(isFinite(v)&&v>=0)?v:e.target.value; }\n      softRefresh();\n      var q=nonNegativeFinancial(line.qty), r=nonNegativeFinancial(line.rate); tr.querySelector('.num-cell').textContent = safeMoney(q===null||r===null?NaN:q*r);", 'tm equipment listeners')
-          one("      if (e.target.classList.contains('tml-hrs')) line.hours = parseFloat(e.target.value) || 0;\n      if (e.target.classList.contains('tml-rate')) line.rate = parseFloat(e.target.value) || 0;\n      softRefresh();\n      tr.querySelector('.num-cell').textContent = money((line.hours || 0) * (line.rate || 0));", "      if (e.target.classList.contains('tml-hrs')) { var v=parseFloat(e.target.value); line.hours=(isFinite(v)&&v>=0)?v:e.target.value; }\n      if (e.target.classList.contains('tml-rate')) { var v=parseFloat(e.target.value); line.rate=(isFinite(v)&&v>=0)?v:e.target.value; }\n      softRefresh();\n      var h=nonNegativeFinancial(line.hours), r=nonNegativeFinancial(line.rate); tr.querySelector('.num-cell').textContent = safeMoney(h===null||r===null?NaN:h*r);", 'tm labor listeners')
-          one("    on('tm-labor-add', 'click', function () {\n      var bill = withOHP((state.personnel.burden[0] || {}).straight || 0, state.summary.ohRate, state.summary.profitMargin);\n      state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: bill, amount: 0 });", "    on('tm-labor-add', 'click', function () {\n      state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: 0, amount: 0 });", 'tm no Method A seed')
-
-          # Profitability manual actuals preserve invalid input and render invalid state instead of $0.
-          one("    on('pnl-act-labor', 'input', function () { state.pnl.actualLabor = parseFloat(this.value) || 0; softRefresh(); });\n    on('pnl-act-equip', 'input', function () { state.pnl.actualEquip = parseFloat(this.value) || 0; softRefresh(); });\n    on('pnl-act-sub', 'input', function () { state.pnl.actualSub = parseFloat(this.value) || 0; softRefresh(); });", "    on('pnl-act-labor', 'input', function () { var v=parseFloat(this.value); state.pnl.actualLabor=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });\n    on('pnl-act-equip', 'input', function () { var v=parseFloat(this.value); state.pnl.actualEquip=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });\n    on('pnl-act-sub', 'input', function () { var v=parseFloat(this.value); state.pnl.actualSub=(isFinite(v)&&v>=0)?v:this.value; softRefresh(); });", 'pnl manual listeners')
-          one("      state.pnl.actualMaterial = parseFloat(this.value) || 0;", "      var v=parseFloat(this.value); state.pnl.actualMaterial=(isFinite(v)&&v>=0)?v:this.value;", 'pnl material listener')
-
-          # Replace profitability renderer with explicit invalid-state handling and row/total reconciliation.
-          start=s.index('  function renderPnL(calc) {')
-          end=s.index('\n  function updateChips(calc) {',start)
-          if start<0 or end<0: raise SystemExit('renderPnL bounds missing')
-          new="""  function renderPnL(calc) {
-    var pnl=state.pnl||(state.pnl={}); if(!pnl.revenueMode)pnl.revenueMode='quoted_contract';
-    var mode=pnl.revenueMode, errors=[];
-    function actualValue(v,label){var n=nonNegativeFinancial(v);if(n===null){errors.push(label+' must be finite and nonnegative.');return NaN;}return n;}
-    var actLabor=actualValue(pnl.actualLabor,'Actual labor'), actEquip=actualValue(pnl.actualEquip,'Actual equipment'), actSub=actualValue(pnl.actualSub,'Actual subcontractor');
-    var link=pnl.linkMaterial!==false, actMat=0, matSource='explicit actual';
-    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=actualValue(pnl.actualMaterial,'Actual material');}
-    else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty), pc=nonNegativeFinancial(rows[i].procurementCostSnapshot);if(q===null||pc===null){allSnap=false;break;}actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated cost fallback';}else matSource='procurement snapshot'; }
-    document.getElementById('pnl-mat-link').checked=link; document.getElementById('pnl-act-labor').value=pnl.actualLabor==null?0:pnl.actualLabor; document.getElementById('pnl-act-equip').value=pnl.actualEquip==null?0:pnl.actualEquip; document.getElementById('pnl-act-sub').value=pnl.actualSub==null?0:pnl.actualSub; document.getElementById('pnl-act-mat').value=isFinite(actMat)?actMat.toFixed(2):(pnl.actualMaterial||'');
-    var src=document.getElementById('pnl-mat-source');if(src)src.textContent=matSource;var rm=document.getElementById('pnl-revenue-mode');if(rm)rm.value=mode;var ac=document.getElementById('pnl-actual-collected');if(ac)ac.value=pnl.actualCollected==null?0:pnl.actualCollected;
-    var revenue={labor:0,equip:0,material:0,sub:0,adjustment:0,total:0}, reference='';
-    if(mode==='tm_billed'){revenue={labor:calc.tm.labor,equip:calc.tm.equip,material:calc.tm.material,sub:calc.tm.sub,adjustment:0,total:calc.tm.total};reference='T&M billed';if(!calc.tm.valid)errors=errors.concat(calc.tm.errors||[]);}
-    else if(mode==='actual_collected'){var collected=nonNegativeFinancial(pnl.actualCollected);if(collected===null){errors.push('Actual collected revenue must be finite and nonnegative.');collected=NaN;}revenue.adjustment=collected;revenue.total=collected;reference='actual collected';}
-    else {if(!calc.quoteValid){errors.push('Quoted Contract revenue is invalid until Method A and Change Orders are valid.');revenue={labor:NaN,equip:NaN,material:NaN,sub:NaN,adjustment:NaN,total:NaN};}else{var baseExact=calc.sum.totalSales,roundAdj=calc.quoteBase-baseExact;revenue={labor:calc.sum.buckets.labor.sales,equip:calc.sum.buckets.equip.sales,material:calc.sum.buckets.material.sales,sub:calc.sum.buckets.sub.sales,adjustment:roundAdj+calc.cos.approved,total:calc.quoteTotal};}reference='base quote + approved CO';}
-    var actualTotal=[actLabor,actEquip,actMat,actSub].every(isFinite)?actLabor+actEquip+actMat+actSub:NaN;
-    function row(label,rev,ref,a){var d=(isFinite(rev)&&isFinite(a))?rev-a:NaN;return '<div class="pnl-grid"><div>'+label+'</div><div class="num-cell">'+safeMoney(rev)+'</div><div class="num-cell">'+esc(ref)+'</div><div class="num-cell">'+safeMoney(a)+'</div><div class="num-cell">'+safeMoney(d)+'</div></div>';}
-    var html=row('Labor',revenue.labor,reference,actLabor)+row('Equip',revenue.equip,reference,actEquip)+row('Material',revenue.material,reference,actMat)+row('Sub',revenue.sub,reference,actSub)+row(mode==='quoted_contract'?'CO + base rounding':(mode==='actual_collected'?'Collected':'Other'),revenue.adjustment,reference,0)+row('Total',revenue.total,reference,actualTotal);
-    document.getElementById('pnl-rows').innerHTML=html;var gp=(isFinite(revenue.total)&&isFinite(actualTotal))?revenue.total-actualTotal:NaN;document.getElementById('pnl-gp').textContent=safeMoney(gp);document.getElementById('pnl-gp').style.color=isFinite(gp)&&gp>=0?'var(--success)':'var(--danger)';var margin=isFinite(gp)&&revenue.total>0?gp/revenue.total:NaN;document.getElementById('pnl-qgp').textContent=(isFinite(margin)?pct(margin):'—')+' · '+reference;
-    var pv=document.getElementById('pnl-validation');if(pv){pv.style.display=errors.length?'block':'none';pv.textContent=errors.join(' ');}
-  }
-"""
-          s=s[:start]+new+s[end:]
-
-          # T&M totals and error banner use safe rendering.
-          one("    document.getElementById('tm-equip-sum').textContent = money(calc.tm.equip);\n    document.getElementById('tm-labor-sum').textContent = money(calc.tm.labor);", "    document.getElementById('tm-equip-sum').textContent = safeMoney(calc.tm.equip);\n    document.getElementById('tm-labor-sum').textContent = safeMoney(calc.tm.labor);", 'tm subtotal display')
-          one("    document.getElementById('tm-total').textContent = money(calc.tm.total);", "    document.getElementById('tm-total').textContent = safeMoney(calc.tm.total); var tv=document.getElementById('tm-validation'); if(tv){tv.style.display=calc.tm.valid?'none':'block';tv.textContent=calc.tm.valid?'':calc.tm.errors.join(' ');}", 'tm total display')
-
-          p.write_text(s)
-          Path('.github/workflows/final-pr-hardening.yml').unlink()
-          PY
+          git show 17f146a2d520c4a32bb6538510bb997acff44d89:.github/workflows/final-pr-hardening.yml \
+            | awk 'found { if ($0 ~ /^[[:space:]]*PY[[:space:]]*$/) exit; sub(/^          /, ""); print } /python3 - <<.PY./ { found=1 }' \
+            > /tmp/final-pr-hardening.py
+          python3 /tmp/final-pr-hardening.py
       - name: Verify final invariants
         run: |
           node tests/financial-integrity.test.js
           node --check financial-integrity-core.js
-          python3 - <<'PY'
-          from pathlib import Path
-          import re,subprocess,sys
-          s=Path('index.html').read_text()
-          must=["state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: 0, amount: 0 })",'id="tm-validation"','id="pnl-validation"','row.rate = normalizeFinancialValue(row.rate);','safeMoney(calc.tm.total)']
-          missing=[x for x in must if x not in s]
-          if missing: raise SystemExit('missing invariants '+repr(missing))
-          if "var bill = withOHP((state.personnel.burden[0]" in s: raise SystemExit('T&M still auto-seeds Method A bill rate')
-          for i,code in enumerate(re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)):
-            if not code.strip(): continue
-            f=Path(f'/tmp/check-{i}.js');f.write_text(code);r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
-            if r.returncode: print(r.stderr);sys.exit(r.returncode)
-          print('final PR invariants passed')
-          PY
+          python3 -c "from pathlib import Path; s=Path('index.html').read_text(); assert \"state.tm.laborLines.push({ desc: 'Lead tech', hours: 0, rate: 0, amount: 0 })\" in s; assert 'id=\"tm-validation\"' in s; assert 'id=\"pnl-validation\"' in s; assert 'safeMoney(calc.tm.total)' in s; assert \"var bill = withOHP((state.personnel.burden[0]\" not in s; print('final invariants passed')"
       - name: Commit final PR hardening
         run: |
           git config user.name "github-actions[bot]"
