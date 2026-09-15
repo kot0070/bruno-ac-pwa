@@ -42,6 +42,11 @@ if old not in s:
     raise SystemExit('margins customer edit anchor missing')
 s = s.replace(old, new, 1)
 
+# Defensive sweep: a duplicate customer-price helper used the same legacy invalid->zero line.
+legacy_zero = "if (!isFinite(price) || price < 0) price = 0;"
+if legacy_zero in s:
+    s = s.replace(legacy_zero, "if (!isFinite(price) || price < 0) price = window.BrunoFinancial.INVALID_FINANCIAL;")
+
 index.write_text(s)
 
 t = tests.read_text()
