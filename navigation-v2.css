@@ -32,6 +32,9 @@ body.phase2-nav-ready main{padding-top:1rem}
 .phase4-result-mirror .calc-explain-box strong{display:block;font-size:15px}
 .phase4-result-mirror .muted{color:var(--text-muted);font-size:12px}
 .phase4-result-mirror .calc-ref-list{margin:8px 0 0;padding-left:18px}.phase4-result-mirror .calc-ref-list li{margin:5px 0}
+html[data-theme="light"] .phase4-result-mirror{border-color:var(--border);background:linear-gradient(180deg,var(--bg-card),var(--bg-elev));color:var(--text);box-shadow:0 10px 28px rgba(15,23,42,.14)}
+html[data-theme="light"] .phase4-result-mirror .calc-explain-box{background:var(--bg-input);border-color:var(--border)}
+html[data-theme="light"] .phase4-result-mirror.stale-result:before{background:#fff8df;color:#6b4f00;border-color:#c59a2f}
 
 /* Phase 4: tablet/PC is the primary estimating workspace. */
 @media(min-width:768px){
