@@ -46,10 +46,20 @@ catalog_mats = re.compile(r"\n      var mats = \(state && state\.materialsUsed\)
 s, n = catalog_mats.subn("\n      /* Catalog edits are template changes only. Existing Job Materials retain their stored quote basis until explicit Calculator Apply/Re-Apply. */", s, count=1)
 if n != 1: raise SystemExit('catalog -> Job propagation block missing')
 
-# Keep Margins handler braces/loops intact; remove only the forbidden pricing mutation statement.
-if 'mats[mi].unitCost = row.unitCost;' not in s:
-    raise SystemExit('margins Customer Price assignment missing')
-s = s.replace('mats[mi].unitCost = row.unitCost;', '/* Catalog/Margins template edit: stored Job Material unitCost remains unchanged until explicit Calculator Apply/Re-Apply. */', 1)
+# Remove the complete legacy Margins -> Job sync block, preserving surrounding listener braces.
+old_margin_sync = """      // sync job materials customer price if same id
+      if (e.target.classList.contains('mrg-cust')) {
+        var mats = (state && state.materialsUsed) || [];
+        for (var mi = 0; mi < mats.length; mi++) {
+          if (String(mats[mi].id) === String(id) || String(mats[mi].catalogId || '') === String(id)) mats[mi].unitCost = row.unitCost;
+        }
+      }
+"""
+new_margin_sync = """      // Catalog/Margins edits update the pricing template only.
+      // Existing Job Materials remain immutable until explicit Calculator Apply/Re-Apply.
+"""
+if old_margin_sync not in s: raise SystemExit('exact margins sync block missing')
+s = s.replace(old_margin_sync, new_margin_sync, 1)
 
 old_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);\n"
 new_cost_map = "      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);\n      /* No map entry means Your Cost remains genuinely blank. Effective fallback is resolved at read time so provenance remains customer-price-fallback. */\n"
