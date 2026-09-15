@@ -1,0 +1,56 @@
+name: Finalize targeted financial integrity branch
+on:
+  push:
+    branches:
+      - feature/financial-integrity-texas-acr-docs
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix print letterhead return and clean temporary workflows
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old="function makeLetterhead(docDate, docLabel) { return\n      '<div class=\"letterhead\">' +"
+          new="function makeLetterhead(docDate, docLabel) { return '<div class=\"letterhead\">' +"
+          if s.count(old) != 1:
+              raise SystemExit(f'letterhead return patch expected 1 match, got {s.count(old)}')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          for rel in ['.github/workflows/diagnostic.yml','.github/workflows/finalize-financial-integrity.yml']:
+              q=Path(rel)
+              if q.exists(): q.unlink()
+          PY
+      - name: Run deterministic and syntax tests
+        run: |
+          node tests/financial-integrity.test.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+          s=Path('index.html').read_text()
+          if "function makeLetterhead(docDate, docLabel) { return '<div class=\"letterhead\">' +" not in s:
+              raise SystemExit('letterhead return regression')
+          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
+          for i,code in enumerate(scripts):
+              if not code.strip(): continue
+              f=Path(f'/tmp/inline-{i}.js'); f.write_text(code)
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr); sys.exit(r.returncode)
+          print('finalize checks passed')
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize financial integrity print path and cleanup"
+          git push
