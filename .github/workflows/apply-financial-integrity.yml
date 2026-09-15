@@ -1,359 +1,40 @@
 name: Apply targeted financial integrity phase
 on:
   push:
-    branches: [feature/financial-integrity-texas-acr-docs]
+    branches:
+      - feature/financial-integrity-texas-acr-docs
 permissions:
   contents: write
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Apply targeted source patch
-        shell: bash
+      - name: Recover and apply reviewed one-shot patch
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('index.html')
-          s = p.read_text()
-
-          def once(old, new, label):
-              global s
-              n = s.count(old)
-              if n != 1:
-                  raise SystemExit(f'{label}: expected 1 match, got {n}')
-              s = s.replace(old, new, 1)
-
-          def replace_func(name, next_name, body):
-              global s
-              a = s.find('  function ' + name + '(')
-              if a < 0: raise SystemExit('missing function ' + name)
-              b = s.find('\n  function ' + next_name + '(', a + 1)
-              if b < 0: raise SystemExit('missing next function ' + next_name)
-              s = s[:a] + body.rstrip() + '\n' + s[b:]
-
-          # Load deterministic financial core before the legacy application closure.
-          once('  <script>\n/* SHIP_MODE: true = customer product UI. */', '  <script src="./financial-integrity-core.js"></script>\n  <script>\n/* SHIP_MODE: true = customer product UI. */', 'core script include')
-
-          # Customer-facing labels and guidance only; no navigation structure changes.
-          s = s.replace('>Profit &amp; Loss</button>', '>Job Profitability</button>')
-          s = s.replace('<h2>Profit &amp; Loss</h2>', '<h2>Job Profitability / Variance</h2>')
-          once('<span class="hint">Quoted / Billed / Actual · materials default → Material Cost</span>', '<span class="hint">Explicit revenue mode · actual job-cost variance</span>', 'pnl hint')
-          once('<p class="section-help"><strong>Compare:</strong> Quoted = Summary sales buckets. Billed = T&amp;M detail. Actual Material defaults to Material Cost until you override. Use this to see job variance after work starts.</p>', '<p class="section-help"><strong>Job profitability:</strong> Choose one revenue basis for the whole view: Quoted Contract, T&amp;M Billed, or Actual Collected. Actual material cost uses an explicit override first, then a procurement-cost snapshot when available, then a clearly labelled estimating fallback.</p>', 'pnl help')
-          once('<div class="note-box">\n        <strong>Actual Material</strong> defaults to Material Cost (estimate)\n        until you enter actual spend. Quoted buckets = Summary sales. Billed = T&amp;M detail.\n      </div>', '<div class="note-box"><strong>Revenue integrity:</strong> row revenue and total revenue always use the same selected mode. Approved Change Orders are customer-approved sales amounts and are included once in Quoted Contract revenue.</div>\n      <div class="grid grid-2" style="margin-bottom:.75rem">\n        <div class="field"><label>Revenue mode</label><select id="pnl-revenue-mode"><option value="quoted_contract">Quoted Contract</option><option value="tm_billed">T&amp;M Billed</option><option value="actual_collected">Actual Collected</option></select></div>\n        <div class="field"><label>Actual collected revenue $</label><input type="number" id="pnl-actual-collected" step="0.01" min="0" /></div>\n      </div>', 'pnl mode controls')
-          s = s.replace('<div class="hdr">Billed (T&amp;M)</div>\n          <div class="hdr">Quoted</div>', '<div class="hdr">Selected Revenue</div>\n          <div class="hdr">Reference</div>', 1)
-          s = s.replace('<label>Actual Material $ <span class="badge">default=mat cost</span></label>', '<label>Actual Material $ <span class="badge" id="pnl-mat-source">auto</span></label>', 1)
-          s = s.replace(' Link Actual Material to Material Cost', ' Auto Actual Material cost hierarchy', 1)
-
-          # Texas ACR company fields.
-          once('<div class="field"><label>License / ACR #</label><input type="text" id="co-license" placeholder="ACR / TACLA #####" /></div>', '<div class="field"><label>ACR Contractor License #</label><input type="text" id="co-license" placeholder="TACLA / TACLB #####" /></div>\n          <div class="field"><label>License Class</label><select id="co-acr-class"><option value="">—</option><option value="A">A</option><option value="B">B</option></select></div>\n          <div class="field"><label>Endorsement</label><select id="co-acr-endorsement"><option value="">—</option><option value="E">E — Environmental Air</option><option value="R">R — Commercial Refrigeration</option><option value="C">C — Combined</option></select></div>\n          <div class="field"><label>License Holder Name (optional)</label><input type="text" id="co-license-holder" /></div>\n          <div class="field"><label>Business Affiliation Reference (optional)</label><input type="text" id="co-affiliation" /></div>', 'acr company fields')
-          s = s.replace('<p class="section-help"><strong>Company</strong> stores shop letterheads (legal name, address, license, footer).', '<p class="section-help"><strong>Company</strong> stores Texas ACR customer-document identity (legal/business name, address, phone, ACR license, class/endorsement, footer).', 1)
-
-          # Labor semantics and tool cost classes in static UI.
-          once('<p class="section-help"><strong>Costs that feed Summary:</strong> Equipment rows, <strong>small tools line items</strong> (qty × unit cost, summed into Equip Cost), subcontractors, and labor blocks (burden rates come from Workers). Suggested hours from materials are informational.</p>', '<p class="section-help"><strong>Costs that feed Summary:</strong> Equipment rental/direct rows, classified tools/assets, subcontractors, and explicit labor-hour classes. Straight, OT 1.5, OT 2.0 and Holiday hours are entered explicitly; hours/day never auto-creates overtime. Suggested hours remain informational.</p>', 'labor page help')
-          s = s.replace('<h3>Small Tools <span class="sub">qty × unit cost · feeds Equip Cost on Summary</span></h3>', '<h3>Tools / Asset Recovery <span class="sub">estimating recovery only · no tax depreciation</span></h3>', 1)
-          once('<p class="section-help" style="margin-top:0">HVAC install tools / PPE / A2L accessories. Set qty on this job (defaults 0). Extension = Qty × Unit Cost. The sum is the small-tools dollar amount previously entered as a single field, and is included in <strong>Equip Cost</strong> on Summary.</p>', '<p class="section-help" style="margin-top:0"><strong>Cost class:</strong> Consumable = qty × direct cost; Reusable Tool / Major Equipment = recovery rate × usage; Rental = actual rental cost; Shop Overhead Tool = $0 direct job charge. Legacy rows stay <strong>Legacy direct — review</strong> so historical totals are not silently reclassified. Recovery is for estimating only, not IRS/tax depreciation.</p>', 'tool help')
-          once('<tr>\n                <th class="col-qty">Qty</th>\n                <th>Description</th>\n                <th>Supplier</th>\n                <th>Part #</th>\n                <th class="col-cost">Unit cost</th>\n                <th class="col-ext">Extension</th>\n                <th class="col-actions"></th>\n              </tr>', '<tr><th>Class</th><th>Description</th><th>Qty / Usage</th><th>Purchase / Direct $</th><th>Residual $</th><th>Life h</th><th>Maint / h</th><th>Other / h</th><th>Unit</th><th>Recovery / Job Cost</th><th></th></tr>', 'tool table header')
-          s = s.replace('<div class="stat"><div class="lbl">Small tools total</div>', '<div class="stat"><div class="lbl">Tools / asset job cost</div>', 1)
-          once('<p class="section-help" style="margin-top:0"><strong>Job costing:</strong> Edit <strong>straight</strong> burden only — Sat/Sun/Holiday columns are fixed multipliers (×1.5 / ×2 / ×3) of straight and are not editable. Labor &amp; Equip uses these burden rates. Bill-out columns follow Method A with current OH and profit. Separate from worker take-home pay below.</p>', '<p class="section-help" style="margin-top:0"><strong>Labor Burden</strong> is the internal job-cost rate and may include base wage, employer payroll taxes, workers comp, benefits, PTO allocation, and other labor-specific employer costs. Company rent, general admin/software and general overhead belong in Company OH, not Labor Burden, to avoid double recovery. OT/Holiday columns are reference multipliers; Labor &amp; Equip uses explicit classified hours. Worker take-home tax estimates remain separate.</p>', 'burden semantics')
-          once('<p class="section-help"><strong>Pricing engine:</strong> Adjust OH and profit of sales. Final sales price is rounded for the base quote. This is the single margin layer — do not also mark up materials.</p>', '<p class="section-help"><strong>Pricing engine:</strong> Valid Method A behavior is unchanged. Cost and OH must be finite/nonnegative; profit margin must be finite and at least 0% but strictly below 100%. Invalid financial states block Final Sales and customer Quote printing instead of producing a plausible underpriced result.</p>', 'method A help')
-          once('</div>\n      <div class="table-wrap" style="margin-top:1.25rem">', '</div>\n      <div class="note-box warn" id="financial-validation" style="display:none" role="alert"></div>\n      <div class="table-wrap" style="margin-top:1.25rem">', 'validation banner')
-          once('<p class="section-help"><strong>Time &amp; material:</strong> Invoice total comes from equipment/labor lines plus materials and sub on this page — not from Summary OH&amp;P. Print Invoice uses the active Company letterhead and footer.</p>', '<p class="section-help"><strong>Time &amp; material:</strong> Rates on this page are <strong>customer bill rates</strong>, independent from internal burden/job cost and Method A. Invoice total comes only from T&amp;M detail. Print Invoice uses its own invoice date/number and the active compliant ACR letterhead.</p>', 'tm semantics')
-
-          # Central financial helpers inside legacy closure.
-          marker = "  function pct(n) {\n"
-          pos = s.find(marker)
-          if pos < 0: raise SystemExit('helper insertion marker missing')
-          helpers = '''  function finiteFinancial(n) { var x = Number(n); return isFinite(x) ? x : null; }\n  function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }\n  function financeError(msg) { return { ok: false, value: null, error: msg }; }\n  function safeMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }\n  function customerTotalMoney(n) { return isFinite(Number(n)) ? money(n) : '—'; }\n\n'''
-          s = s[:pos] + helpers + s[pos:]
-
-          # Explicit labor classes. Legacy blocks migrate preserving their previous dollar semantics once.
-          replace_func('laborBlockCost', 'smallToolsLineExt', '''  function laborBlockCost(block, burden) {
-    var b = burden[block.burdenIndex] || { straight: 0 };
-    var rate = nonNegativeFinancial(b.straight);
-    var straight = nonNegativeFinancial(block.straightHours);
-    var ot15 = nonNegativeFinancial(block.ot15Hours);
-    var ot2 = nonNegativeFinancial(block.ot2Hours);
-    var holiday = nonNegativeFinancial(block.holidayHours);
-    var holidayMult = nonNegativeFinancial(block.holidayMultiplier == null ? 3 : block.holidayMultiplier);
-    if ([rate, straight, ot15, ot2, holiday, holidayMult].some(function (x) { return x === null; })) {
-      return { valid:false, error:'Labor hours/rates must be finite and nonnegative.', straightHrs:0, ot15Hrs:0, ot2Hrs:0, holidayHrs:0, totalHrs:0, cost:NaN, rates:{} };
-    }
-    var cost = straight * rate + ot15 * rate * 1.5 + ot2 * rate * 2 + holiday * rate * holidayMult;
-    return { valid:true, straightHrs:straight, ot15Hrs:ot15, ot2Hrs:ot2, holidayHrs:holiday, totalHrs:straight+ot15+ot2+holiday, cost:cost,
-      rates:{ straight:rate, ot15:rate*1.5, ot2:rate*2, holiday:rate*holidayMult } };
-  }''')
-
-          replace_func('smallToolsLineExt', 'smallToolsCost', '''  function smallToolsLineExt(line) {
-    if (!line) return 0;
-    var result = window.BrunoFinancial.toolJobCost(line);
-    line.recoveryRate = result.ok ? result.rate : null;
-    line.recoveryFormula = result.formula || result.error || '';
-    return result.ok ? result.cost : NaN;
-  }''')
-
-          replace_func('smallToolsCost', 'cloneSmallToolsTemplate', '''  function smallToolsCost(s) {
-    var le = (s && s.laborEquip) || {};
-    var lines = le.smallToolsLines;
-    if (Array.isArray(lines) && lines.length) {
-      var sum = 0;
-      for (var i = 0; i < lines.length; i++) {
-        var ext = smallToolsLineExt(lines[i]);
-        if (!isFinite(ext)) return NaN;
-        sum += ext;
-      }
-      le.smallTools = sum;
-      return sum;
-    }
-    var legacy = nonNegativeFinancial(le.smallTools);
-    return legacy === null ? NaN : legacy;
-  }''')
-
-          replace_func('cloneSmallToolsTemplate', 'calcLaborEquip', '''  function cloneSmallToolsTemplate(src) {
-    var list = (src && src.length) ? src : (window.BRUNO_SMALL_TOOLS_TEMPLATE || []);
-    var out = [];
-    for (var i = 0; i < list.length; i++) {
-      var t = list[i] || {};
-      out.push({ qty:0, description:t.description||'', unitCost:Number(t.unitCost)||0, supplier:t.supplier||'', part:t.part!=null?String(t.part):'', group:t.group||'', costClass:t.costClass||'CONSUMABLE', recoveryUnit:'hour', residualValue:0, lifeHours:0, maintenancePerHour:0, otherPerHour:0, usage:0, dailyRecoveryRate:0, needsCostClassReview:false });
-    }
-    return out;
-  }''')
-
-          replace_func('withOHP', 'calcSummary', '''  function withOHP(cost, oh, profit) {
-    var r = window.BrunoFinancial.methodASales(cost, oh, profit);
-    return r.ok ? r.value : NaN;
-  }''')
-
-          replace_func('calcSummary', 'calcTM', '''  function calcSummary(s, mats, le) {
-    var oh = finiteFinancial(s.summary.ohRate);
-    var profit = finiteFinancial(s.summary.profitMargin);
-    var errors = [];
-    if (oh === null || oh < 0) errors.push('Overhead must be finite and nonnegative.');
-    if (profit === null || profit < 0 || profit >= 1) errors.push('Profit margin must be finite, >= 0% and < 100%.');
-    var costs = [le.equipCost, le.laborCost, mats.cost, le.subCost];
-    if (costs.some(function(x){ return !isFinite(x) || x < 0; })) errors.push('Direct job costs must be finite and nonnegative; use an explicit Credit / Adjustment instead of hidden negative cost rows.');
-    var valid = errors.length === 0;
-    var buckets = {
-      equip: { cost: le.equipCost, sales: valid ? withOHP(le.equipCost, oh, profit) : NaN },
-      labor: { cost: le.laborCost, sales: valid ? withOHP(le.laborCost, oh, profit) : NaN },
-      material: { cost: mats.cost, sales: valid ? withOHP(mats.cost, oh, profit) : NaN },
-      sub: { cost: le.subCost, sales: valid ? withOHP(le.subCost, oh, profit) : NaN }
-    };
-    var totalCost = buckets.equip.cost + buckets.labor.cost + buckets.material.cost + buckets.sub.cost;
-    var totalSales = valid ? buckets.equip.sales + buckets.labor.sales + buckets.material.sales + buckets.sub.sales : NaN;
-    if (valid && !isFinite(totalSales)) { valid = false; errors.push('Method A produced a non-finite result.'); }
-    var ohAmt = valid ? totalCost * oh : NaN;
-    var breakEven = valid ? totalCost + ohAmt : NaN;
-    var profitAmt = valid ? totalSales - breakEven : NaN;
-    return { valid:valid, errors:errors, oh:oh, profit:profit, buckets:buckets, totalCost:totalCost, totalSales:totalSales, ohAmt:ohAmt, breakEven:breakEven, profitAmt:profitAmt, quoteRounded:valid ? Math.round(totalSales) : null };
-  }''')
-
-          replace_func('calcAll', 'save', '''  function calcAll(s) {
-    var mats = calcMaterial(s);
-    var le = calcLaborEquip(s);
-    var sum = calcSummary(s, mats, le);
-    var tm = calcTM(s);
-    var cos = calcCOs(s);
-    var quoteBase = sum.valid ? sum.quoteRounded : null;
-    return { mats:mats, le:le, sum:sum, tm:tm, cos:cos, quoteBase:quoteBase, quoteTotal:sum.valid ? quoteBase + cos.approved : null };
-  }''')
-
-          # Material, equipment and subcontractor direct cost validation in calculations.
-          replace_func('calcMaterial', 'suggestedHours', '''  function calcMaterial(s) {
-    var sum = 0, lines = s.materialsUsed || [];
-    for (var i=0;i<lines.length;i++) {
-      var q = nonNegativeFinancial(lines[i].qty), c = nonNegativeFinancial(lines[i].unitCost);
-      if (q === null || c === null) { lines[i].extension = NaN; return { cost:NaN, markup:0, quotedSheet:NaN, valid:false }; }
-      lines[i].extension = q * c; sum += lines[i].extension;
-    }
-    return { cost:sum, markup:0, quotedSheet:sum, valid:true };
-  }''')
-
-          # Preserve direct rental rows but reject invalid costs.
-          old = "for (var i = 0; i < eqs.length; i++) equipSum += Number(eqs[i].cost) || 0;"
-          new = "for (var i = 0; i < eqs.length; i++) { var ec = nonNegativeFinancial(eqs[i].cost); if (ec === null) { equipSum = NaN; break; } equipSum += ec; }"
-          once(old,new,'equipment calc validation')
-          old = "for (var j = 0; j < subs.length; j++) subSum += Number(subs[j].price) || 0;"
-          new = "for (var j = 0; j < subs.length; j++) { var sp = nonNegativeFinancial(subs[j].price); if (sp === null) { subSum = NaN; break; } subSum += sp; }"
-          once(old,new,'sub calc validation')
-
-          # Migration: explicit labor-hour fields preserve legacy current semantics; tool rows default LEGACY_DIRECT/manual review.
-          migration_anchor = "      row.sunHours = asNum(row.sunHours);\n"
-          migration_add = migration_anchor + "      if (row.straightHours == null && row.ot15Hours == null && row.ot2Hours == null) {\n        var lp=asNum(row.persons), ld=asNum(row.days), lh=asNum(row.hoursPerDay);\n        row.straightHours = lp * ld * Math.min(lh, 8);\n        row.ot15Hours = lp * ld * Math.max(lh - 8, 0) + asNum(row.satPersons)*asNum(row.satDays)*asNum(row.satHours);\n        row.ot2Hours = asNum(row.sunPersons)*asNum(row.sunDays)*asNum(row.sunHours);\n        row.holidayHours = 0; row.holidayMultiplier = 3; row.laborModelVersion = 2;\n      }\n      row.straightHours = row.straightHours == null ? 0 : row.straightHours; row.ot15Hours = row.ot15Hours == null ? 0 : row.ot15Hours; row.ot2Hours = row.ot2Hours == null ? 0 : row.ot2Hours; row.holidayHours = row.holidayHours == null ? 0 : row.holidayHours; row.holidayMultiplier = row.holidayMultiplier == null ? 3 : row.holidayMultiplier;\n"
-          once(migration_anchor,migration_add,'labor migration')
-
-          tool_anchor = "        if (row.group == null) row.group = '';\n"
-          tool_add = tool_anchor + "        if (!row.costClass) { row.costClass = 'LEGACY_DIRECT'; row.needsCostClassReview = true; }\n        if (!row.recoveryUnit) row.recoveryUnit = 'hour';\n        if (row.residualValue == null) row.residualValue = 0; if (row.lifeHours == null) row.lifeHours = 0; if (row.maintenancePerHour == null) row.maintenancePerHour = 0; if (row.otherPerHour == null) row.otherPerHour = 0; if (row.usage == null) row.usage = 0; if (row.dailyRecoveryRate == null) row.dailyRecoveryRate = 0;\n"
-          once(tool_anchor,tool_add,'tool migration')
-
-          # Procurement-cost snapshot for new catalog-added materials; quote unitCost remains untouched.
-          once("        units: c.units, unitCost: c.unitCost, crew: c.crew || 1, prod: c.prod || 0, prodUnit: c.prodUnit || 'Day',", "        units: c.units, unitCost: c.unitCost, procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? Number(c.yourCost) : null), procurementCostSource: (c.yourCost != null && c.yourCost !== '' ? 'catalog_yourCost_snapshot' : ''), crew: c.crew || 1, prod: c.prod || 0, prodUnit: c.prodUnit || 'Day',", 'procurement snapshot')
-
-          # Company ACR normalization/aliases while retaining generic license compatibility.
-          once("    if (!c.license && c.tecl) c.license = c.tecl;", "    if (!c.license && c.tecl) c.license = c.tecl; /* legacy import only */\n    if (!c.acrLicense) c.acrLicense = c.license || '';\n    if (!c.license) c.license = c.acrLicense || '';", 'company license migration')
-          once("    if (c.website == null) c.website = '';", "    if (c.website == null) c.website = '';\n    if (c.acrLicense == null) c.acrLicense = c.license || '';\n    if (c.acrClass == null) c.acrClass = '';\n    if (c.acrEndorsement == null) c.acrEndorsement = '';\n    if (c.licenseHolderName == null) c.licenseHolderName = '';\n    if (c.businessAffiliation == null) c.businessAffiliation = '';", 'company acr defaults')
-          s = s.replace("    c.tecl = c.license;\n", "    c.license = c.acrLicense || c.license || ''; /* generic backward-compatible export alias */\n", 1)
-          once("      license: c.license || '',\n      website:", "      license: c.acrLicense || c.license || '',\n      acrLicense: c.acrLicense || c.license || '',\n      acrClass: c.acrClass || '',\n      acrEndorsement: c.acrEndorsement || '',\n      licenseHolderName: c.licenseHolderName || '',\n      businessAffiliation: c.businessAffiliation || '',\n      website:", 'companyFields ACR')
-          once("      license: fields.license || '',\n      website:", "      license: fields.acrLicense || fields.license || '',\n      acrLicense: fields.acrLicense || fields.license || '',\n      acrClass: fields.acrClass || '',\n      acrEndorsement: fields.acrEndorsement || '',\n      licenseHolderName: fields.licenseHolderName || '',\n      businessAffiliation: fields.businessAffiliation || '',\n      website:", 'profile ACR')
-          # Apply active profile: inject fields after license.
-          s = s.replace("      license: p.license,\n      website: p.website,", "      license: p.acrLicense || p.license,\n      acrLicense: p.acrLicense || p.license,\n      acrClass: p.acrClass || '', acrEndorsement: p.acrEndorsement || '', licenseHolderName: p.licenseHolderName || '', businessAffiliation: p.businessAffiliation || '',\n      website: p.website,", 1)
-          # bind/read company UI.
-          s = s.replace("      license: p.license,\n      website: p.website,", "      license: p.acrLicense || p.license,\n      acrLicense: p.acrLicense || p.license, acrClass:p.acrClass||'', acrEndorsement:p.acrEndorsement||'', licenseHolderName:p.licenseHolderName||'', businessAffiliation:p.businessAffiliation||'',\n      website: p.website,", 1)
-          once("    set('co-license', c.license);", "    set('co-license', c.acrLicense || c.license);\n    set('co-acr-class', c.acrClass); set('co-acr-endorsement', c.acrEndorsement); set('co-license-holder', c.licenseHolderName); set('co-affiliation', c.businessAffiliation);", 'bind ACR UI')
-          once("    p.license = g('co-license');", "    p.acrLicense = g('co-license'); p.license = p.acrLicense;\n    p.acrClass = g('co-acr-class'); p.acrEndorsement = g('co-acr-endorsement'); p.licenseHolderName = g('co-license-holder'); p.businessAffiliation = g('co-affiliation');", 'read ACR UI')
-          s = s.replace("'co-phone','co-email','co-license','co-website','co-footer'", "'co-phone','co-email','co-license','co-acr-class','co-acr-endorsement','co-license-holder','co-affiliation','co-website','co-footer'", 1)
-
-          # Dedicated exact Texas Department block and blocking customer-document validation.
-          qmarker = "  var QUOTE_VALID_TXT = 'This quote is valid for 15 days from the quote date.';\n"
-          qadd = qmarker + "  var TDLR_ACR_NOTICE = 'Regulated by The Texas Department of Licensing and Regulation, P.O. Box 12157, Austin, Texas 78711, 1-800-803-9202, 512-463-6599, www.tdlr.texas.gov';\n  function customerDocumentErrors(mode, calc) {\n    var c = letterheadCompany(); var v = window.BrunoFinancial.validateAcrCompany(c); var out = v.missing.slice();\n    if (mode === 'quote' && (!calc || !calc.sum || !calc.sum.valid)) out.push('valid Method A financial inputs');\n    if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); }\n    return out;\n  }\n  function tdlrAcrBlock(c) { return '<div class=\"tdlr-acr-block\"><strong>ACR License:</strong> ' + esc(c.acrLicense || c.license || '') + (c.acrClass ? ' · Class ' + esc(c.acrClass) : '') + (c.acrEndorsement ? ' · Endorsement ' + esc(c.acrEndorsement) : '') + '<br>' + esc(TDLR_ACR_NOTICE) + '</div>'; }\n"
-          once(qmarker,qadd,'TDLR helpers')
-
-          # Explicit labor UI.
-          replace_func('renderLaborBlocks', 'fieldNum', '''  function renderLaborBlocks(calc) {
-    var blocks=state.laborEquip.blocks||[], burden=state.personnel.burden||[], html='';
-    for (var i=0;i<blocks.length;i++) { var b=blocks[i], bur=burden[b.burdenIndex]||{straight:0,type:'?'}, det=calc.le.blockDetails[i]||{};
-      html += '<div class="labor-block card" style="background:var(--bg-input)" data-i="'+i+'"><h3>'+esc(b.label)+' <span class="sub">burden $'+(Number(bur.straight)||0).toFixed(2)+'/hr · '+safeMoney(det.cost)+' · '+(Number(det.totalHrs)||0).toFixed(1)+' h</span></h3><div class="labor-inputs">'+
-        fieldNum('Straight hours','lb-straight',b.straightHours)+fieldNum('OT 1.5 hours','lb-ot15',b.ot15Hours)+fieldNum('OT 2.0 hours','lb-ot2',b.ot2Hours)+fieldNum('Holiday hours','lb-holiday',b.holidayHours)+fieldNum('Holiday multiplier','lb-holiday-mult',b.holidayMultiplier)+'</div></div>';
-    }
-    document.getElementById('labor-blocks').innerHTML=html;
-  }''')
-
-          # Tool class UI with visible recovery inputs/formula.
-          replace_func('renderSmallTools', 'renderSubs', '''  function renderSmallTools() {
-    var tbody=document.getElementById('st-body'); if(!tbody)return; var rows=(state.laborEquip&&state.laborEquip.smallToolsLines)||[], html='';
-    var classes=['LEGACY_DIRECT','CONSUMABLE','REUSABLE_TOOL','MAJOR_EQUIPMENT','RENTAL','SHOP_OVERHEAD_TOOL'];
-    for(var i=0;i<rows.length;i++){var m=rows[i], ext=smallToolsLineExt(m), opts=''; classes.forEach(function(c){opts+='<option value="'+c+'"'+(String(m.costClass||'LEGACY_DIRECT')===c?' selected':'')+'>'+c.replace(/_/g,' ')+'</option>';});
-      html+='<tr data-i="'+i+'"><td><select class="st-class">'+opts+'</select>'+(m.needsCostClassReview?'<div class="hint">review</div>':'')+'</td><td><input type="text" class="st-desc" value="'+esc(m.description)+'" /></td><td><input type="number" min="0" class="num st-usage" step="any" value="'+(Number(m.costClass==='CONSUMABLE'||m.costClass==='RENTAL'||m.costClass==='LEGACY_DIRECT'?m.qty:m.usage)||0)+'" /></td><td><input type="number" min="0" class="num st-cost" step="0.01" value="'+(Number(m.purchaseCost!=null?m.purchaseCost:m.unitCost)||0)+'" /></td><td><input type="number" min="0" class="num st-residual" step="0.01" value="'+(Number(m.residualValue)||0)+'" /></td><td><input type="number" min="0" class="num st-life" step="1" value="'+(Number(m.lifeHours)||0)+'" /></td><td><input type="number" min="0" class="num st-maint" step="0.01" value="'+(Number(m.maintenancePerHour)||0)+'" /></td><td><input type="number" min="0" class="num st-other" step="0.01" value="'+(Number(m.otherPerHour)||0)+'" /></td><td><select class="st-unit"><option value="hour"'+(m.recoveryUnit!=='day'?' selected':'')+'>hour</option><option value="day"'+(m.recoveryUnit==='day'?' selected':'')+'>day</option></select><input type="number" min="0" class="num st-daily" step="0.01" title="Daily recovery rate" value="'+(Number(m.dailyRecoveryRate)||0)+'" /></td><td class="num-cell st-ext">'+safeMoney(ext)+'<div class="hint">'+esc(m.recoveryFormula||'')+'</div></td><td><button type="button" class="btn btn-sm btn-danger st-del">×</button></td></tr>';
-    }
-    tbody.innerHTML=html||'<tr><td colspan="11" style="color:var(--text-muted);padding:1rem">No tool lines</td></tr>';
-  }''')
-
-          # Profitability revenue modes and actual procurement hierarchy.
-          replace_func('renderPnL', 'updateChips', '''  function renderPnL(calc) {
-    var pnl=state.pnl||(state.pnl={}); if(!pnl.revenueMode)pnl.revenueMode='quoted_contract';
-    var mode=pnl.revenueMode, actLabor=nonNegativeFinancial(pnl.actualLabor)||0, actEquip=nonNegativeFinancial(pnl.actualEquip)||0, actSub=nonNegativeFinancial(pnl.actualSub)||0;
-    var link=pnl.linkMaterial!==false, actMat=0, matSource='explicit actual';
-    if(!link && pnl.actualMaterial!=='' && pnl.actualMaterial!=null){actMat=nonNegativeFinancial(pnl.actualMaterial)||0;} else { var rows=state.materialsUsed||[], allSnap=true; for(var i=0;i<rows.length;i++){var q=nonNegativeFinancial(rows[i].qty); var pc=nonNegativeFinancial(rows[i].procurementCostSnapshot); if(q===null||pc===null){allSnap=false;break;} actMat+=q*pc;} if(!allSnap){actMat=calc.mats.cost;matSource='estimated customer-price fallback';} else matSource='procurement snapshot'; }
-    document.getElementById('pnl-mat-link').checked=link; document.getElementById('pnl-act-labor').value=actLabor; document.getElementById('pnl-act-equip').value=actEquip; document.getElementById('pnl-act-sub').value=actSub; document.getElementById('pnl-act-mat').value=actMat.toFixed(2);
-    var src=document.getElementById('pnl-mat-source'); if(src)src.textContent=matSource; var rm=document.getElementById('pnl-revenue-mode'); if(rm)rm.value=mode; var ac=document.getElementById('pnl-actual-collected'); if(ac)ac.value=pnl.actualCollected||0;
-    var revenue={labor:0,equip:0,material:0,sub:0,adjustment:0,total:0}, reference='';
-    if(mode==='tm_billed'){revenue={labor:calc.tm.labor,equip:calc.tm.equip,material:calc.tm.material,sub:calc.tm.sub,adjustment:0,total:calc.tm.total};reference='T&M billed';}
-    else if(mode==='actual_collected'){revenue.adjustment=nonNegativeFinancial(pnl.actualCollected)||0; revenue.total=revenue.adjustment;reference='actual collected';}
-    else { var baseExact=calc.sum.valid?calc.sum.totalSales:0, roundAdj=calc.sum.valid?calc.quoteBase-baseExact:0; revenue={labor:calc.sum.valid?calc.sum.buckets.labor.sales:0,equip:calc.sum.valid?calc.sum.buckets.equip.sales:0,material:calc.sum.valid?calc.sum.buckets.material.sales:0,sub:calc.sum.valid?calc.sum.buckets.sub.sales:0,adjustment:roundAdj+calc.cos.approved,total:calc.sum.valid?calc.quoteTotal:0};reference='base quote + approved CO'; }
-    var actual={labor:actLabor,equip:actEquip,material:actMat,sub:actSub,total:actLabor+actEquip+actMat+actSub};
-    function row(label,rev,ref,a){return '<div class="pnl-grid"><div>'+label+'</div><div class="num-cell">'+money(rev)+'</div><div class="num-cell">'+esc(ref)+'</div><div class="num-cell">'+money(a)+'</div><div class="num-cell">'+money(rev-a)+'</div></div>';}
-    var html=row('Labor',revenue.labor,reference,actual.labor)+row('Equip',revenue.equip,reference,actual.equip)+row('Material',revenue.material,reference,actual.material)+row('Sub',revenue.sub,reference,actual.sub)+row(mode==='quoted_contract'?'CO + base rounding':(mode==='actual_collected'?'Collected':'Other'),revenue.adjustment,reference,0)+row('Total',revenue.total,reference,actual.total);
-    document.getElementById('pnl-rows').innerHTML=html; var gp=revenue.total-actual.total; document.getElementById('pnl-gp').textContent=money(gp); document.getElementById('pnl-gp').style.color=gp>=0?'var(--success)':'var(--danger)'; var m=revenue.total>0?gp/revenue.total:0; document.getElementById('pnl-qgp').textContent=pct(m)+' · '+reference;
-  }''')
-
-          # Validation-aware displays and CO-cent policy.
-          s = s.replace("document.getElementById('chip-quote').textContent = money0(calc.quoteTotal);", "document.getElementById('chip-quote').textContent = customerTotalMoney(calc.quoteTotal);", 1)
-          s = s.replace("document.getElementById('q-total').textContent = money0(calc.quoteTotal);", "document.getElementById('q-total').textContent = customerTotalMoney(calc.quoteTotal);", 1)
-          s = s.replace("document.getElementById('chip-sales').textContent = money(calc.sum.totalSales);", "document.getElementById('chip-sales').textContent = safeMoney(calc.sum.totalSales);", 1)
-          s = s.replace("document.getElementById('sum-final').textContent = money(calc.sum.totalSales);", "document.getElementById('sum-final').textContent = safeMoney(calc.sum.totalSales); var fv=document.getElementById('financial-validation'); if(fv){fv.style.display=calc.sum.valid?'none':'block';fv.textContent=calc.sum.valid?'':calc.sum.errors.join(' ');}", 1)
-          s = s.replace("' = <strong>' + money0(calc.quoteTotal) + '</strong>';", "' = <strong>' + customerTotalMoney(calc.quoteTotal) + '</strong>';", 2)
-          s = s.replace("'<div class=\"total-line\">Quote Total: ' + money0(calc.quoteTotal) + '</div>' +", "'<div class=\"total-line\">Quote Total: ' + customerTotalMoney(calc.quoteTotal) + '</div>' +", 1)
-
-          # Compliance block in quote preview.
-          once("      '<h3>Quote</h3>' +", "      tdlrAcrBlock(c) +\n      '<h3>Quote</h3>' +", 'preview TDLR block')
-
-          # Print document: split quote and invoice letterheads so invoice cannot leak q.date.
-          once("    var letter =\n      '<div class=\"letterhead\">' +", "    function makeLetterhead(docDate, docLabel) { return\n      '<div class=\"letterhead\">' +", 'letter function start')
-          once("          '<div class=\"lh-date\">Date: ' + esc(formatQuoteDate(q.date) || q.date || '—') + '</div>' +", "          '<div class=\"lh-date\">' + esc(docLabel) + ': ' + esc(formatQuoteDate(docDate) || docDate || '—') + '</div>' +", 'letter date')
-          once("      '</div>';\n\n    var coRows", "      '</div>' + tdlrAcrBlock(c); }\n    var quoteLetter = makeLetterhead(q.date, 'Quote date');\n\n    var coRows", 'letter function end')
-          s = s.replace("    var quoteHtml = letter +", "    var quoteHtml = quoteLetter +", 1)
-          s = s.replace("    var tmHtml = letter +", "    var tmLetter = makeLetterhead(tm.date, 'Invoice date');\n    var tmHtml = tmLetter +", 1)
-          s = s.replace("'<div class=\"grand\">Quote Total: $' + (Math.round(calc.quoteTotal)).toLocaleString('en-US') + '</div>' +", "'<div class=\"grand\">Quote Total: $' + moneyPlain(calc.quoteTotal) + '</div>' +", 1)
-          # Invoice metadata: explicit invoice number/date and no contradictory quote date.
-          s = s.replace("      '<h1>T&amp;M Invoice ' + esc(tm.invoice) + '</h1>' +\n      '<p><strong>Date:</strong> ' + esc(tm.date) +", "      '<h1>T&amp;M Invoice ' + esc(tm.invoice) + '</h1>' +\n      '<p><strong>Invoice #:</strong> ' + esc(tm.invoice || '—') + ' &nbsp;·&nbsp; <strong>Invoice date:</strong> ' + esc(formatQuoteDate(tm.date) || tm.date || '—') +", 1)
-
-          # Block final customer printing on compliance/financial invalidity.
-          replace_func('runPrint', 'measureSticky', '''  function runPrint(mode) {
-    var calc=calcAll(state); var errs=customerDocumentErrors(mode==='tm'?'tm':'quote',calc);
-    if(errs.length){ alert('Cannot print final customer document. Complete/fix: '+errs.join(', ')+'.'); return false; }
-    buildPrintDocs(calc); document.body.classList.remove('print-quote','print-tm'); document.body.classList.add(mode==='tm'?'print-tm':'print-quote'); var restored=false;
-    function cleanup(){if(restored)return;restored=true;document.body.classList.remove('print-quote','print-tm');window.removeEventListener('afterprint',cleanup);} window.addEventListener('afterprint',cleanup); setTimeout(function(){window.print();setTimeout(cleanup,1000);},60); return true;
-  }''')
-
-          # Labor/tool event handlers: explicit classified hours, nonnegative direct costs.
-          oldmap = "      var map = {\n        'lb-persons': 'persons', 'lb-days': 'days', 'lb-hpd': 'hoursPerDay',\n        'lb-satp': 'satPersons', 'lb-satd': 'satDays', 'lb-sath': 'satHours',\n        'lb-sunp': 'sunPersons', 'lb-sund': 'sunDays', 'lb-sunh': 'sunHours'\n      };"
-          newmap = "      var map = { 'lb-straight':'straightHours', 'lb-ot15':'ot15Hours', 'lb-ot2':'ot2Hours', 'lb-holiday':'holidayHours', 'lb-holiday-mult':'holidayMultiplier' };"
-          once(oldmap,newmap,'labor event map')
-          s = s.replace("          b[map[cls]] = parseFloat(e.target.value) || 0;", "          var lv=parseFloat(e.target.value); b[map[cls]] = (isFinite(lv)&&lv>=0)?lv:e.target.value;", 1)
-          s = s.replace("if (e.target.classList.contains('eq-cost')) eq.cost = parseFloat(e.target.value) || 0;", "if (e.target.classList.contains('eq-cost')) { var ec=parseFloat(e.target.value); eq.cost=(isFinite(ec)&&ec>=0)?ec:e.target.value; }", 1)
-          s = s.replace("if (e.target.classList.contains('sub-price')) s.price = parseFloat(e.target.value) || 0;", "if (e.target.classList.contains('sub-price')) { var sp=parseFloat(e.target.value); s.price=(isFinite(sp)&&sp>=0)?sp:e.target.value; }", 1)
-          s = s.replace("      state.summary.ohRate = parseFloat(this.value) || 0;", "      var v=parseFloat(this.value); state.summary.ohRate=isFinite(v)?v:this.value;", 1)
-          s = s.replace("      state.summary.profitMargin = parseFloat(this.value) || 0;", "      var v=parseFloat(this.value); state.summary.profitMargin=isFinite(v)?v:this.value;", 1)
-          # Material event reject arbitrary negative/nonfinite.
-          s = s.replace("if (e.target.classList.contains('mat-qty')) m.qty = parseFloat(e.target.value) || 0;", "if (e.target.classList.contains('mat-qty')) { var mq=parseFloat(e.target.value); m.qty=(isFinite(mq)&&mq>=0)?mq:e.target.value; }", 1)
-          s = s.replace("        m.unitCost = parseFloat(e.target.value) || 0;", "        var mc=parseFloat(e.target.value); m.unitCost=(isFinite(mc)&&mc>=0)?mc:e.target.value;", 1)
-
-          # Replace small-tool input handler assignments with class-aware model.
-          oldhandler = "      if (e.target.classList.contains('st-qty')) line.qty = parseFloat(e.target.value) || 0;\n      if (e.target.classList.contains('st-desc')) line.description = e.target.value;\n      if (e.target.classList.contains('st-supplier')) line.supplier = e.target.value;\n      if (e.target.classList.contains('st-part')) line.part = e.target.value;\n      if (e.target.classList.contains('st-cost')) line.unitCost = parseFloat(e.target.value) || 0;"
-          newhandler = "      if (e.target.classList.contains('st-class')) { line.costClass=e.target.value; line.needsCostClassReview=false; }\n      if (e.target.classList.contains('st-desc')) line.description=e.target.value;\n      if (e.target.classList.contains('st-usage')) { var u=parseFloat(e.target.value); if(line.costClass==='CONSUMABLE'||line.costClass==='RENTAL'||line.costClass==='LEGACY_DIRECT') line.qty=(isFinite(u)&&u>=0)?u:e.target.value; else line.usage=(isFinite(u)&&u>=0)?u:e.target.value; }\n      if (e.target.classList.contains('st-cost')) { var pc=parseFloat(e.target.value); if(isFinite(pc)&&pc>=0){line.unitCost=pc;line.purchaseCost=pc;} else {line.unitCost=e.target.value;line.purchaseCost=e.target.value;} }\n      if (e.target.classList.contains('st-residual')) line.residualValue=e.target.value; if(e.target.classList.contains('st-life')) line.lifeHours=e.target.value; if(e.target.classList.contains('st-maint')) line.maintenancePerHour=e.target.value; if(e.target.classList.contains('st-other')) line.otherPerHour=e.target.value; if(e.target.classList.contains('st-unit')) line.recoveryUnit=e.target.value; if(e.target.classList.contains('st-daily')) line.dailyRecoveryRate=e.target.value;"
-          once(oldhandler,newhandler,'tool input handler')
-          s = s.replace("qty: 0, description: 'New small tool', unitCost: 0, supplier: '', part: '', group: ''", "qty:0, description:'New tool / asset', unitCost:0, purchaseCost:0, supplier:'', part:'', group:'', costClass:'CONSUMABLE', recoveryUnit:'hour', residualValue:0, lifeHours:0, maintenancePerHour:0, otherPerHour:0, usage:0, dailyRecoveryRate:0, needsCostClassReview:false", 1)
-
-          # P&L mode listeners.
-          pnl_listener_anchor = "    on('pnl-mat-link', 'change', function () {\n"
-          idx = s.find(pnl_listener_anchor)
-          if idx < 0: raise SystemExit('pnl listener anchor missing')
-          s = s[:idx] + "    on('pnl-revenue-mode','change',function(){state.pnl.revenueMode=this.value;renderPnL(calcAll(state));save();});\n    on('pnl-actual-collected','input',function(){var v=parseFloat(this.value);state.pnl.actualCollected=(isFinite(v)&&v>=0)?v:this.value;renderPnL(calcAll(state));save();});\n" + s[idx:]
-
-          # Sales-tax limitation note; no universal tax engine.
-          s = s.replace('</div>\n      <div class="note-box">\n        Overhead applies to job cost.', '</div>\n      <div class="note-box warn"><strong>Texas sales tax:</strong> no blanket tax percentage is applied here. Taxability depends on job/contract facts (including residential vs nonresidential, new construction vs repair/remodel, and lump-sum vs separated treatment). This phase intentionally preserves quote math; use a later dedicated tax engine.</div>\n      <div class="note-box">\n        Overhead applies to job cost.', 1)
-
-          # Exact TDLR block also visible in print CSS/preview; lightweight style.
-          s = s.replace('</style>\n  <script>/* ui-prefs early */', '.tdlr-acr-block{margin:.65rem 0;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.78rem;line-height:1.35}.quote-preview .tdlr-acr-block,.print-doc .tdlr-acr-block{color:#222;border-color:#bbb;background:#f7f7f7}\n</style>\n  <script>/* ui-prefs early */', 1)
-
-          # Cache/app version metadata.
-          s = s.replace("swCache: 'bruno-ac-v10'", "swCache: 'bruno-ac-v31'", 1)
-          s = s.replace("version: 'v1.2'", "version: 'v1.3-financial-integrity'", 1)
-
-          p.write_text(s)
-
-          # Service worker: cache new deterministic core and bump cache.
-          sw=Path('sw.js'); w=sw.read_text(); w=w.replace("const CACHE = 'bruno-ac-v30';", "const CACHE = 'bruno-ac-v31';")
-          w=w.replace("  './sw-register.js',", "  './sw-register.js',\n  './financial-integrity-core.js',")
-          sw.write_text(w)
-
-          # Source-level regressions for customer documents and scope boundaries.
-          text=p.read_text()
-          checks={
-            'invoice uses tm date': "makeLetterhead(tm.date, 'Invoice date')" in text,
-            'quote uses q date': "makeLetterhead(q.date, 'Quote date')" in text,
-            'tdlr exact notice': 'Regulated by The Texas Department of Licensing and Regulation, P.O. Box 12157, Austin, Texas 78711, 1-800-803-9202, 512-463-6599, www.tdlr.texas.gov' in text,
-            'print compliance blocker': "customerDocumentErrors(mode==='tm'?'tm':'quote',calc)" in text,
-            'explicit labor classes': "'lb-straight':'straightHours'" in text and "'lb-holiday':'holidayHours'" in text,
-            'profitability revenue mode': 'pnl-revenue-mode' in text,
-            'approved CO cents display': "moneyPlain(calc.quoteTotal)" in text,
-            'core cached': 'financial-integrity-core.js' in w,
-          }
-          bad=[k for k,v in checks.items() if not v]
-          if bad: raise SystemExit('source checks failed: '+', '.join(bad))
-
-          # Remove one-shot workflow from final tree; this phase should not ship build automation.
-          Path('.github/workflows/apply-financial-integrity.yml').unlink()
-          PY
+          git show b23c4bbcb0540506ad3b2cceb6d0b7b697a71677:.github/workflows/apply-financial-integrity.yml \
+            | sed -n "/python3 - <<'PY'/,/^          PY$/p" \
+            | sed '1d;$d;s/^          //' > /tmp/apply-financial-phase.py
+          python3 /tmp/apply-financial-phase.py
       - name: Run deterministic tests
         run: |
           node tests/financial-integrity.test.js
           python3 - <<'PY'
           from pathlib import Path
-          import re, subprocess, tempfile, sys
+          import re, subprocess, sys
           s=Path('index.html').read_text()
           scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
           for i,code in enumerate(scripts):
-            if not code.strip(): continue
-            f=Path(f'/tmp/inline-{i}.js'); f.write_text(code)
-            r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
-            if r.returncode:
-              print(r.stderr); sys.exit(r.returncode)
+              if not code.strip():
+                  continue
+              f=Path(f'/tmp/inline-{i}.js')
+              f.write_text(code)
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr)
+                  sys.exit(r.returncode)
           print('inline JavaScript syntax checks passed')
           PY
       - name: Commit implementation
