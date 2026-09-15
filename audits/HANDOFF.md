@@ -1,14 +1,14 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 11
+handoff_version: 12
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR24_SERVICE_JOURNAL_ACCEPTED_AND_MERGED
+state: PR25_CODE_LIBRARY_AUDIT_PENDING
 ```
 
 ## LAST ACCEPTED PRODUCTION BASELINE
@@ -22,43 +22,49 @@ blockers: []
 full_report: audits/history/PR24_d58502c884db66e5bd7c65a004db5ef4097a8be7_20260915-1543.md
 ```
 
-## PR24 IMPLEMENTATION
+## CURRENT IMPLEMENTATION
 
 ```yaml
-production_pr: 24
-production_branch: feature/service-call-journal-ux
-base_sha: 492e0340ac6926d4280f043b6d3305a0ec965fd2
-accepted_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
-implementation_report: audits/implementation/PR24_SERVICE_CALL_JOURNAL_d58502c8.md
-merged: true
-draft_before_merge: false
+production_pr: 25
+production_branch: feature/code-library-rule-registry
+base_branch: main
+base_sha: 6f48420748da960d977d036bcc1be83a12ec4872
+production_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
+implementation_report: audits/implementation/PR25_CODE_LIBRARY_RULE_REGISTRY_90ebe4d2.md
+merged: false
+draft: true
 changed_files:
-  - service-journal-ux.js
-  - workspace-v5.js
+  - code-library-ux.js
+  - code-library/texas-hvac-2026.json
+  - code-rule-registry.js
   - sw.js
-  - tests/service-journal-ux.test.js
+  - tests/code-rule-registry.test.js
+  - workspace-v5.js
 ```
 
-## INDEPENDENT AUDIT RESULT
+## IMPLEMENTATION PURPOSE
 
 ```yaml
-task_id: PR24_SERVICE_CALL_JOURNAL_ACCEPTANCE_01
-status: COMPLETE
-verdict: A_ACCEPT
-audited_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
-blockers: []
-browser_runtime: NOT_PERFORMED
-full_report: audits/history/PR24_d58502c884db66e5bd7c65a004db5ef4097a8be7_20260915-1543.md
-latest_alias: audits/LATEST_AUDIT.md
+phase: Code_Library_and_Rule_Registry_foundation
+future_target:
+  - building_and_room_inputs
+  - applicable_code_rules
+  - scope_and_BOM_rules
+  - Catalog_resolution
+  - Customer_Price_and_Your_Cost
+  - source_traceability
+current_PR_does_not_yet_implement_room_based_calculation: true
+calculator_engine_consumes_rule_map_in_PR25: false
 ```
 
 ## VALIDATION
 
 ```yaml
-ci_run: 35021139574
-validated_commit: 8166737ca61836103d0463a47c6c90e1d56cf249
+ci_run: 35024484325
+validated_commit: 5035fe1a58a42635e7b1d5198fac3507526d50da
 ci_result: SUCCESS
 successful_steps:
+  - code-rule-registry
   - financial-integrity
   - calculator-pricing
   - pr22-lifecycle-integration
@@ -66,34 +72,45 @@ successful_steps:
   - service-journal-ux
   - JS_syntax_checks
 post_ci_change: remove_temporary_workflow_only
-final_accepted_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
+final_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
 temporary_workflow_in_final_diff: false
 ```
 
-## MERGE RESULT
+## SOURCE / COPYRIGHT BOUNDARY
 
 ```yaml
-merge_performed_outside_audit_mode: true
-expected_head_sha_guard: d58502c884db66e5bd7c65a004db5ef4097a8be7
-merge_commit: 6f48420748da960d977d036bcc1be83a12ec4872
-main_updated: true
+local_registry: code-library/texas-hvac-2026.json
+full_copyrighted_code_books_stored: false
+stored_content:
+  - identifiers
+  - editions
+  - sections
+  - original concise summaries
+  - provenance
+  - verification metadata
+  - official_or_public_source_links
+local_AHJ_verification_required: true
 ```
 
 ## NEXT STATE
 
 ```yaml
-current_task_status: COMPLETE
-expected_next_state: new_task_required_for_any_further_changes
+next_task_id: PR25_CODE_LIBRARY_ACCEPTANCE_01
+next_task_mode: independent_code_library_acceptance_audit
+expected_next_state: PR25_acceptance_decision
+merge_before_acceptance: forbidden
 ```
 
 ## HANDOFF RULES
 
 ```yaml
 rules:
-  - read_WORKSPACE_CONTEXT_HANDOFF_TASK_before_action
+  - read_WORKSPACE_CONTEXT_HANDOFF_IMPLEMENTATION_REPORT_TASK_before_action
+  - task_file_defines_active_PR_branch_SHA
+  - production_PR_and_code_remain_read_only_during_audit
+  - merge_forbidden_during_audit
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - implementation_report_is_context_not_authority
-  - latest_accepted_feature_head_is_d58502c884db66e5bd7c65a004db5ef4097a8be7
-  - latest_main_merge_commit_is_6f48420748da960d977d036bcc1be83a12ec4872
-  - browser_runtime_was_NOT_PERFORMED_and_must_not_be_represented_as_executed
+  - browser_runtime_must_not_be_claimed_without_execution
+  - exact_target_head_is_90ebe4d2408a7b0af7e6e7671540f632585a8804
 ```
