@@ -1,14 +1,14 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 9
+handoff_version: 10
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR24_SERVICE_JOURNAL_AUDIT_PENDING
+state: PR24_SERVICE_JOURNAL_AUDIT_ACCEPTED
 ```
 
 ## LAST ACCEPTED PRODUCTION BASELINE
@@ -40,19 +40,18 @@ changed_files:
   - tests/service-journal-ux.test.js
 ```
 
-## IMPLEMENTATION SUMMARY
+## INDEPENDENT AUDIT RESULT
 
 ```yaml
-objective: mobile_first_Service_Call_Journal_presentation
-business_logic_rewrite: false
-state_dispatch_schema_changed: false
-index_html_changed: false
-existing_dispatch_handlers_preserved: true
-existing_tax_net_logic_preserved: true
-Tax_Settings_collapsed_by_default: true
-primary_Add_Service_Call_forwards_to_existing_disp_add: true
-mobile_service_rows_presented_as_cards: true
-service_worker_cache: bruno-ac-v35
+task_id: PR24_SERVICE_CALL_JOURNAL_ACCEPTANCE_01
+status: COMPLETE
+verdict: A_ACCEPT
+audited_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
+blockers: []
+browser_runtime: NOT_PERFORMED
+full_report: audits/history/PR24_d58502c884db66e5bd7c65a004db5ef4097a8be7_20260915-1543.md
+latest_alias: audits/LATEST_AUDIT.md
+next_state: PR24_merge_decision
 ```
 
 ## VALIDATION
@@ -73,26 +72,15 @@ final_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
 temporary_workflow_in_final_diff: false
 ```
 
-## CURRENT TASK
-
-```yaml
-current_task_id: PR24_SERVICE_CALL_JOURNAL_ACCEPTANCE_01
-current_task_status: ACTIVE
-mode: independent_ux_acceptance_audit
-current_target_head: d58502c884db66e5bd7c65a004db5ef4097a8be7
-expected_next_state: PR24_merge_decision_if_A_ACCEPT
-```
-
 ## HANDOFF RULES
 
 ```yaml
 rules:
   - read_WORKSPACE_CONTEXT_HANDOFF_IMPLEMENTATION_REPORT_TASK_before_action
-  - audit_exact_PR24_head_from_TASK_CURRENT
-  - production_PR_and_code_are_read_only_during_audit
-  - merge_forbidden_during_audit
+  - production_PR_and_code_remain_read_only_during_audit
+  - merge_was_not_performed_by_auditor
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - implementation_report_is_context_not_authority
-  - missing_file_recovery_protocol_from_WORKSPACE_is_mandatory
-  - do_not_copy_full_report_into_HANDOFF
+  - exact_audited_head_is_d58502c884db66e5bd7c65a004db5ef4097a8be7
+  - browser_runtime_was_NOT_PERFORMED_and_must_not_be_represented_as_executed
 ```
