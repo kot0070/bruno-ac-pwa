@@ -57,7 +57,6 @@ if n != 1:
 margin_mats = re.compile(r"\n\s*var mats\s*=\s*\(state\s*&&\s*state\.materialsUsed\)\s*\|\|\s*\[\];\s*for\s*\(var mi\s*=\s*0;\s*mi\s*<\s*mats\.length;\s*mi\+\+\)\s*\{\s*if\s*\([^\n\{]*\)\s*\{?\s*mats\[mi\]\.unitCost\s*=\s*row\.unitCost;\s*\}?\s*\}", re.S)
 s, n2 = margin_mats.subn("\n        /* Margins edits update Catalog only; Job Materials change only on explicit Calculator Apply/Re-Apply. */", s, count=1)
 if n2 != 1:
-    # Fallback: remove only the known matching line if loop formatting is compact; invariant gate will still prevent hidden assignment.
     if 'mats[mi].unitCost = row.unitCost' not in s:
         n2 = 1
     else:
@@ -97,20 +96,20 @@ append = r'''
   assert.strictEqual(state.catalog[0].unitCost, 110);
   assert.deepStrictEqual(state.materialsUsed[0], beforeJob, 'Catalog edit must not mutate historical Job Material before explicit Apply');
 
-  const scope = { version: 'test', inputs: {} };
-  const bom = [{ key:'k1', selected:true, resolved:true, qty:2, units:'ea', label:'A', level:'scope', reason:'', code:'', catalogId:'CAT-A', item:'A', part:'', vendor:'', customerUnitPrice:110, yourUnitCost:55, customerPriceSource:'catalog-customer-price', yourCostSource:'catalog-your-cost', pricingState:'valid' }];
-  const reapplied = E.applyBomToJob(state, scope, bom).state;
-  const generated = reapplied.materialsUsed.find(r => r.calcSource === 'ac-calculator');
+  const scope = scopeFor('fixture-a', 2);
+  const currentBom = E.buildResolvedBom({catalog:[catalog('CAT-A','fixture-a',110,55)],materialsUsed:state.materialsUsed}, scope);
+  const reapplied = E.applyBomToJob(state, scope, currentBom).state;
+  const generated = reapplied.materialsUsed.find(r => r.calcSource === E.SOURCE_TAG);
   assert.strictEqual(generated.unitCost, 110, 'explicit re-Apply should update Customer Price');
   assert.strictEqual(generated.procurementCostSnapshot, 55, 'explicit re-Apply should update procurement snapshot');
 }
 
 // Blank Your Cost stays blank upstream; Calculator owns transparent fallback provenance.
 {
-  const p = E.catalogPricing({ id:'CAT-B', unitCost:50, yourCost:'' });
-  assert.strictEqual(p.customerUnitPrice, 50);
-  assert.strictEqual(p.yourUnitCost, 50);
-  assert.strictEqual(p.yourCostSource, 'customer-price-fallback');
+  const b = E.buildResolvedBom({catalog:[catalog('CAT-B','fixture-b',50,null,false)],materialsUsed:[]}, scopeFor('fixture-b',1));
+  assert.strictEqual(b[0].customerUnitPrice, 50);
+  assert.strictEqual(b[0].yourUnitCost, 50);
+  assert.strictEqual(b[0].yourCostSource, 'customer-price-fallback');
 }
 
 assert.ok(!source.includes('mats[mi].unitCost = price'), 'Catalog Customer Price edit must not rewrite existing Job Materials');
