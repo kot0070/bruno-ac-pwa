@@ -1,9 +1,10 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 12
+handoff_version: 13
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
+roadmap: audits/ROADMAP_NEXT.md
 current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
@@ -57,6 +58,26 @@ current_PR_does_not_yet_implement_room_based_calculation: true
 calculator_engine_consumes_rule_map_in_PR25: false
 ```
 
+## PLANNED NEXT PHASE
+
+```yaml
+roadmap_file: audits/ROADMAP_NEXT.md
+next_major_phase: room_based_code_driven_estimator
+quantity_provenance_model:
+  - code_minimum
+  - calculated_baseline
+  - contractor_or_customer_override
+  - override_reason
+  - final_quantity
+repricing_after_valid_override:
+  - Customer_Materials
+  - Your_Material_Cost
+  - Material_Margin
+  - Material_Margin_Percent
+below_hard_code_minimum_must_not_silently_pass: true
+PR25_scope_unchanged_by_this_plan: true
+```
+
 ## VALIDATION
 
 ```yaml
@@ -105,7 +126,7 @@ merge_before_acceptance: forbidden
 
 ```yaml
 rules:
-  - read_WORKSPACE_CONTEXT_HANDOFF_IMPLEMENTATION_REPORT_TASK_before_action
+  - read_WORKSPACE_CONTEXT_HANDOFF_ROADMAP_IMPLEMENTATION_REPORT_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
   - production_PR_and_code_remain_read_only_during_audit
   - merge_forbidden_during_audit
