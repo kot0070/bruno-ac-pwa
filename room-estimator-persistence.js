@@ -3,7 +3,8 @@
 var STORAGE_KEY='bruno-ac-v1';
 function validJob(s){return !!(s&&typeof s==='object'&&!Array.isArray(s)&&s.quote&&typeof s.quote==='object'&&Array.isArray(s.materialsUsed)&&Array.isArray(s.catalog))}
 function readJob(){try{var raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;var s=JSON.parse(raw);return validJob(s)?s:null}catch(e){return null}}
-function snapshot(){var ux=window.BrunoRoomEstimatorUX;return ux&&typeof ux.getSnapshot==='function'?ux.getSnapshot():null}
+function unwrapPlan(v){return v&&v.plan&&v.plan.building&&Array.isArray(v.plan.rooms)?v.plan:v}
+function snapshot(){var ux=window.BrunoRoomEstimatorUX,snap=ux&&typeof ux.getSnapshot==='function'?ux.getSnapshot():null;var plan=unwrapPlan(snap);return plan&&plan.building&&Array.isArray(plan.rooms)&&plan.overrides?plan:null}
 function persist(){
   var snap=snapshot();if(!snap)return false;
   try{
@@ -14,12 +15,7 @@ function persist(){
   }catch(e){return false}
 }
 function generatedAt(){var s=readJob();return s&&s.acCalculator?String(s.acCalculator.generatedAt||''):''}
-function persistAfterSuccessfulApply(beforeGeneratedAt){
-  setTimeout(function(){
-    var after=generatedAt();
-    if(after&&after!==beforeGeneratedAt)persist();
-  },0);
-}
+function persistAfterSuccessfulApply(beforeGeneratedAt){setTimeout(function(){var after=generatedAt();if(after&&after!==beforeGeneratedAt)persist()},0)}
 function init(){
   var heading=document.querySelector('#room-estimator-card h2');if(heading&&heading.firstChild)heading.firstChild.nodeValue='Building & room estimator ';
   var apply=document.getElementById('apply');if(apply)apply.addEventListener('click',function(){persistAfterSuccessfulApply(generatedAt())});
@@ -29,5 +25,5 @@ function init(){
   }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-window.BrunoRoomEstimatorPersistence={persist:persist,generatedAt:generatedAt};
+window.BrunoRoomEstimatorPersistence={persist:persist,generatedAt:generatedAt,unwrapPlan:unwrapPlan};
 })();
