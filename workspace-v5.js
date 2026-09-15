@@ -57,6 +57,16 @@ function setupSummary(){
   if(stats)stats.classList.add('phase5-summary-stats');
 }
 
+function loadServiceJournalUX(){
+  if(window.BrunoServiceJournalUX){window.BrunoServiceJournalUX.init();return}
+  if(document.querySelector('script[data-service-journal-ux]'))return;
+  var s=document.createElement('script');
+  s.src='./service-journal-ux.js';
+  s.async=false;
+  s.setAttribute('data-service-journal-ux','1');
+  document.head.appendChild(s);
+}
+
 function bindGlobal(){
   document.addEventListener('click',function(e){var b=e.target.closest('[data-phase5-tab]');if(b){e.preventDefault();legacyTab(b.getAttribute('data-phase5-tab'))}});
   document.addEventListener('keydown',function(e){
@@ -70,6 +80,6 @@ function bindGlobal(){
     }
   });
 }
-function init(){setupMaterials();setupCatalog();setupSummary();bindGlobal();document.body.classList.add('phase5-workspace-ready')}
+function init(){setupMaterials();setupCatalog();setupSummary();bindGlobal();loadServiceJournalUX();document.body.classList.add('phase5-workspace-ready')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
