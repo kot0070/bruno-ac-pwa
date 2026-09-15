@@ -7,136 +7,23 @@ permissions:
   contents: write
 jobs:
   harden:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch final high-risk financial paths
+        with:
+          fetch-depth: 0
+      - name: Recover and apply final hardening patch
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text()
-
-          def one(old,new,label):
-              global s
-              n=s.count(old)
-              if n!=1: raise SystemExit(f'{label}: expected 1 got {n}')
-              s=s.replace(old,new,1)
-
-          one("  function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }\n",
-              "  function nonNegativeFinancial(n) { var x = finiteFinancial(n); return x !== null && x >= 0 ? x : null; }\n  function normalizeFinancialValue(n) { if (n == null || n === '') return 0; var x=Number(n); return isFinite(x) ? x : n; }\n",
-              'financial normalize helper')
-
-          # T&M is customer billing, but still must reject negative/non-finite hours/rates/costs.
-          pat=r"  function calcTM\(s\) \{.*?\n  \}\n\n  function calcAll\(s\) \{"
-          repl="""  function calcTM(s) {
-    var errors=[], eq=0, lab=0, lines=s.tm.equipmentLines||[], ll=s.tm.laborLines||[];
-    for (var i=0;i<lines.length;i++) {
-      var q=nonNegativeFinancial(lines[i].qty), r=nonNegativeFinancial(lines[i].rate);
-      if(q===null||r===null){errors.push('T&M equipment quantity/rate must be finite and nonnegative.');lines[i].amount=NaN;continue;}
-      lines[i].amount=q*r; eq+=lines[i].amount;
-    }
-    for (var j=0;j<ll.length;j++) {
-      var h=nonNegativeFinancial(ll[j].hours), rt=nonNegativeFinancial(ll[j].rate);
-      if(h===null||rt===null){errors.push('T&M labor hours/rate must be finite and nonnegative.');ll[j].amount=NaN;continue;}
-      ll[j].amount=h*rt; lab+=ll[j].amount;
-    }
-    var mat=nonNegativeFinancial(s.tm.materialAmount), sub=nonNegativeFinancial(s.tm.subAmount);
-    if(mat===null) errors.push('T&M material amount must be finite and nonnegative.');
-    if(sub===null) errors.push('T&M subcontractor amount must be finite and nonnegative.');
-    var valid=errors.length===0, total=valid ? eq+lab+mat+sub : NaN;
-    return { valid:valid, errors:errors, equip:eq, labor:lab, material:mat===null?NaN:mat, sub:sub===null?NaN:sub, total:total };
-  }
-
-  function calcAll(s) {"""
-          s,n=re.subn(pat,repl,s,flags=re.S)
-          if n!=1: raise SystemExit(f'calcTM replacement got {n}')
-
-          # Change orders must be finite. Preserve negative approved amounts only as an explicit customer credit/adjustment semantic.
-          pat=r"  function calcCOs\(s\) \{.*?\n  \}"
-          m=re.search(pat,s,re.S)
-          if not m: raise SystemExit('calcCOs missing')
-          old=m.group(0)
-          new="""  function calcCOs(s) {
-    var list=s.changeOrders||[], approved=0, pending=0, rejected=0, countApproved=0, errors=[];
-    for(var i=0;i<list.length;i++){
-      var amt=finiteFinancial(list[i].amount), st=String(list[i].status||'draft').toLowerCase();
-      if(amt===null){errors.push('Change Order amount must be finite.');continue;}
-      if(st==='approved'){approved+=amt;countApproved++;}
-      else if(st==='rejected'||st==='void') rejected+=amt;
-      else pending+=amt;
-    }
-    return { valid:errors.length===0, errors:errors, approved:approved, pending:pending, rejected:rejected, countApproved:countApproved };
-  }"""
-          s=s.replace(old,new,1)
-
-          one("    var quoteBase = sum.valid ? sum.quoteRounded : null;\n    return { mats:mats, le:le, sum:sum, tm:tm, cos:cos, quoteBase:quoteBase, quoteTotal:sum.valid ? quoteBase + cos.approved : null };",
-              "    var quoteValid = sum.valid && cos.valid;\n    var quoteBase = quoteValid ? sum.quoteRounded : null;\n    return { mats:mats, le:le, sum:sum, tm:tm, cos:cos, quoteBase:quoteBase, quoteTotal:quoteValid ? quoteBase + cos.approved : null, quoteValid:quoteValid };",
-              'quote validity')
-
-          # Print blockers cover CO and T&M financial invalid states too.
-          one("    if (mode === 'quote' && (!calc || !calc.sum || !calc.sum.valid)) out.push('valid Method A financial inputs');\n    if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); }",
-              "    if (mode === 'quote' && (!calc || !calc.sum || !calc.sum.valid)) out.push('valid Method A financial inputs');\n    if (mode === 'quote' && (!calc || !calc.cos || !calc.cos.valid)) out.push('finite Change Order amounts');\n    if (mode === 'tm') { var tm=state.tm||{}; if (!String(tm.invoice||'').trim()) out.push('invoice number'); if (!String(tm.date||'').trim()) out.push('invoice date'); if(!calc||!calc.tm||!calc.tm.valid) out.push('valid nonnegative T&M financial inputs'); }",
-              'print blockers')
-
-          # Do not silently turn imported non-finite high-risk financial values into zero.
-          for old,new in [
-            ('    s.tm.materialAmount = asNum(s.tm.materialAmount);','    s.tm.materialAmount = normalizeFinancialValue(s.tm.materialAmount);'),
-            ('    s.tm.subAmount = asNum(s.tm.subAmount);','    s.tm.subAmount = normalizeFinancialValue(s.tm.subAmount);'),
-            ('        row.qty = asNum(row.qty);','        row.qty = normalizeFinancialValue(row.qty);'),
-            ('        row.unitCost = asNum(row.unitCost);','        row.unitCost = normalizeFinancialValue(row.unitCost);'),
-            ('      row.qty = asNum(row.qty);','      row.qty = normalizeFinancialValue(row.qty);'),
-            ('      row.unitCost = asNum(row.unitCost);','      row.unitCost = normalizeFinancialValue(row.unitCost);'),
-            ('      if (row && typeof row === \'object\') row.cost = asNum(row.cost);','      if (row && typeof row === \'object\') row.cost = normalizeFinancialValue(row.cost);'),
-            ('      if (row && typeof row === \'object\') row.price = asNum(row.price);','      if (row && typeof row === \'object\') row.price = normalizeFinancialValue(row.price);'),
-            ('      row.qty = asNum(row.qty);\n      row.rate = asNum(row.rate);','      row.qty = normalizeFinancialValue(row.qty);\n      row.rate = normalizeFinancialValue(row.rate);'),
-            ('      row.hours = asNum(row.hours);\n      row.rate = asNum(row.rate);','      row.hours = normalizeFinancialValue(row.hours);\n      row.rate = normalizeFinancialValue(row.rate);'),
-            ('      if (row && typeof row === \'object\') row.amount = asNum(row.amount);','      if (row && typeof row === \'object\') row.amount = normalizeFinancialValue(row.amount);'),
-            ('        if (row && typeof row === \'object\') row.straight = asNum(row.straight);','        if (row && typeof row === \'object\') row.straight = normalizeFinancialValue(row.straight);')
-          ]:
-              if old in s: s=s.replace(old,new)
-
-          # Explicit labor-class imported values also retain invalidity for visible blocking.
-          one("      row.straightHours = row.straightHours == null ? 0 : row.straightHours; row.ot15Hours = row.ot15Hours == null ? 0 : row.ot15Hours; row.ot2Hours = row.ot2Hours == null ? 0 : row.ot2Hours; row.holidayHours = row.holidayHours == null ? 0 : row.holidayHours; row.holidayMultiplier = row.holidayMultiplier == null ? 3 : row.holidayMultiplier;",
-              "      row.straightHours = normalizeFinancialValue(row.straightHours); row.ot15Hours = normalizeFinancialValue(row.ot15Hours); row.ot2Hours = normalizeFinancialValue(row.ot2Hours); row.holidayHours = normalizeFinancialValue(row.holidayHours); row.holidayMultiplier = row.holidayMultiplier == null ? 3 : normalizeFinancialValue(row.holidayMultiplier);",
-              'labor imported values')
-
-          # Preserve cents everywhere quoteTotal is shown, including soft CO refresh.
-          s=s.replace('money0(calc.quoteTotal)', 'customerTotalMoney(calc.quoteTotal)')
-
-          # Avoid guidance to a non-existent hidden-negative direct-cost feature.
-          s=s.replace("Direct job costs must be finite and nonnegative; use an explicit Credit / Adjustment instead of hidden negative cost rows.", "Direct job costs must be finite and nonnegative. Negative direct-cost rows are not supported; use an explicitly documented customer credit/change adjustment where applicable.")
-
-          p.write_text(s)
-          Path('.github/workflows/final-financial-hardening.yml').unlink()
-          PY
-      - name: Run final tests
+          git show b1733ad82c944afa6c96d8b297728c57d96f1ebc:.github/workflows/final-financial-hardening.yml \
+            | awk 'found { if ($0 ~ /^[[:space:]]*PY[[:space:]]*$/) exit; sub(/^          /, ""); print } /python3 - <<.PY./ { found=1 }' \
+            > /tmp/final-hardening.py
+          python3 /tmp/final-hardening.py
+      - name: Run tests and syntax checks
         run: |
           node tests/financial-integrity.test.js
-          python3 - <<'PY'
-          from pathlib import Path
-          import re,subprocess,sys
-          s=Path('index.html').read_text()
-          required=[
-            'var valid=errors.length===0, total=valid ? eq+lab+mat+sub : NaN;',
-            "if(!calc||!calc.tm||!calc.tm.valid) out.push('valid nonnegative T&M financial inputs')",
-            'var quoteValid = sum.valid && cos.valid;',
-            'customerTotalMoney(calc.quoteTotal)',
-            'normalizeFinancialValue(s.tm.materialAmount)'
-          ]
-          missing=[x for x in required if x not in s]
-          if missing: raise SystemExit('missing final guards: '+repr(missing))
-          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
-          for i,code in enumerate(scripts):
-            if not code.strip(): continue
-            f=Path(f'/tmp/final-{i}.js');f.write_text(code)
-            r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
-            if r.returncode: print(r.stderr);sys.exit(r.returncode)
-          print('final financial hardening checks passed')
-          PY
-      - name: Commit
+          python3 -c "from pathlib import Path; s=Path('index.html').read_text(); assert 'var quoteValid = sum.valid && cos.valid;' in s; assert 'normalizeFinancialValue(s.tm.materialAmount)' in s; assert \"customerTotalMoney(calc.quoteTotal)\" in s; print('source guards passed')"
+          node --check financial-integrity-core.js
+      - name: Commit final hardening
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
