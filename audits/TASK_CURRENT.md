@@ -12,6 +12,29 @@ read_order:
 protocol_required: true
 ```
 
+# MODE GUARD — IMPLEMENTATION ONLY
+
+```yaml
+mode_guard:
+  task_type: IMPLEMENTATION
+  audit_mode: FORBIDDEN
+  verdict_output: FORBIDDEN
+  report_generation: FORBIDDEN
+  production_write_required: true
+  production_commit_required: true
+  production_push_required: true
+  merge_forbidden: true
+  success_requires_new_production_head: true
+  if_no_code_change_made: task_status_BLOCKED_not_DONE
+```
+
+DO NOT perform another acceptance audit.
+DO NOT return A/B/C verdict.
+DO NOT write an audit report.
+DO NOT stop after analysis.
+
+This task is successful only if the required corrective implementation is made on the production branch, tests pass, a new commit is pushed, and a NEW production HEAD is returned.
+
 ```yaml
 task_id: PR22_CLOSE_ACCEPTANCE_GAPS_01
 mode: corrective_implementation
