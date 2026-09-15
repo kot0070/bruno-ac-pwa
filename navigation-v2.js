@@ -35,9 +35,7 @@ function fitCalculatorFrame(){
   if(!calculatorFrame)return;
   try{
     var doc=calculatorFrame.contentDocument;if(!doc)return;var wrap=doc.querySelector('.wrap');if(!wrap)return;
-    var rect=wrap.getBoundingClientRect();
-    var contentHeight=Math.max(wrap.scrollHeight||0,wrap.offsetHeight||0,Math.ceil(rect.height));
-    var next=Math.max(760,Math.ceil(contentHeight+wrap.offsetTop+16));var current=Math.round(calculatorFrame.getBoundingClientRect().height);
+    var rect=wrap.getBoundingClientRect();var next=Math.max(760,Math.ceil(rect.height+wrap.offsetTop+16));var current=Math.round(calculatorFrame.getBoundingClientRect().height);
     if(Math.abs(current-next)>1)calculatorFrame.style.height=next+'px';
   }catch(e){}
 }
