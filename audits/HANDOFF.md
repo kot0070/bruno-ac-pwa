@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 15
+handoff_version: 16
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,7 +10,7 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR25_CODE_LIBRARY_REAUDIT_READY
+state: PR25_CODE_LIBRARY_ACCEPTED
 ```
 
 ## LAST ACCEPTED PRODUCTION BASELINE
@@ -34,7 +34,7 @@ production_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
 implementation_report: audits/implementation/PR25_CODE_LIBRARY_RULE_REGISTRY_90ebe4d2.md
 merged: false
 draft: true
-production_changed_since_blocked_audit: false
+production_changed_during_reaudit: false
 changed_files:
   - code-library-ux.js
   - code-library/texas-hvac-2026.json
@@ -42,6 +42,36 @@ changed_files:
   - sw.js
   - tests/code-rule-registry.test.js
   - workspace-v5.js
+```
+
+## INDEPENDENT AUDIT RESULT
+
+```yaml
+task_id: PR25_CODE_LIBRARY_ACCEPTANCE_01
+audited_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
+verdict: A_ACCEPT
+blockers: []
+findings:
+  P0: 0
+  P1: 0
+  P2: 1
+browser_runtime: NOT_PERFORMED
+full_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_20260915-1635.md
+independent_ci_audit_completed: true
+ci_run: 35024484325
+validated_commit: 5035fe1a58a42635e7b1d5198fac3507526d50da
+post_ci_delta_verified:
+  - .github/workflows/pr25-code-library-validation.yml removed only
+```
+
+### Non-blocking finding
+
+```yaml
+id: F01
+severity: P2
+rule_id: IRC-M1401.3-EQUIPMENT-SIZING
+issue: registry source URL points to IRC Chapter 44 referenced standards instead of the Chapter 14 page containing M1401.3
+blocking: false
 ```
 
 ## IMPLEMENTATION PURPOSE
@@ -79,50 +109,35 @@ below_hard_code_minimum_must_not_silently_pass: true
 PR25_scope_unchanged_by_this_plan: true
 ```
 
-## AUDIT INFRASTRUCTURE REPAIR
+## AUDIT INFRASTRUCTURE STATUS
 
 ```yaml
 previous_blocked_report: audits/history/PR25_90ebe4d2408a7b0af7e6e7671540f632585a8804_20260915-1621.md
 previous_verdict: C_BLOCKED_INCOMPLETE_AUDIT
-previous_production_acceptance_decision: NOT_REACHED
-root_cause: audits/PROTOCOL.md_missing_while_TASK_CURRENT_protocol_required_true
-repair:
-  protocol_created: audits/PROTOCOL.md
-  workspace_registered_protocol: true
-  production_PR_modified: false
-  production_HEAD_modified: false
-reaudit_required: true
-reaudit_target_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
-```
-
-## IMPLEMENTATION VALIDATION CONTEXT
-
-```yaml
-ci_run_claimed_by_implementation: 35024484325
-validated_commit_claimed_by_implementation: 5035fe1a58a42635e7b1d5198fac3507526d50da
-final_head: 90ebe4d2408a7b0af7e6e7671540f632585a8804
-independent_ci_audit_completed: false
-reason: previous audit stopped before substantive verification due missing protocol
+previous_root_cause: audits/PROTOCOL.md_missing_while_TASK_CURRENT_protocol_required_true
+repair_complete: true
+protocol_present: true
+reaudit_completed: true
+reaudit_same_production_head: true
 ```
 
 ## SOURCE / COPYRIGHT BOUNDARY
 
 ```yaml
 local_registry: code-library/texas-hvac-2026.json
-implementation_claims_full_copyrighted_code_books_stored: false
-implementation_claims_summary_only: true
+full_copyrighted_code_books_stored: false
+summary_only: true
 local_AHJ_verification_required: true
-independent_acceptance_verified: false
+independent_acceptance_verified: true
 ```
 
 ## NEXT STATE
 
 ```yaml
 next_action:
-  - rerun_PR25_CODE_LIBRARY_ACCEPTANCE_01_from_exact_same_target_head
-  - auditor_reads_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_IMPLEMENTATION_REPORT_TASK
-  - complete_substantive_acceptance_audit
-merge_before_acceptance: forbidden
+  - PR25 may proceed according to normal project merge governance because independent audit verdict is A_ACCEPT
+  - any production change after 90ebe4d2408a7b0af7e6e7671540f632585a8804 requires a new exact-HEAD audit before relying on this acceptance
+merge_performed_by_auditor: false
 ```
 
 ## HANDOFF RULES
@@ -132,10 +147,10 @@ rules:
   - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_IMPLEMENTATION_REPORT_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
   - production_PR_and_code_remain_read_only_during_audit
-  - merge_forbidden_during_audit
+  - auditor_does_not_merge
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - implementation_report_is_context_not_authority
   - browser_runtime_must_not_be_claimed_without_execution
-  - exact_target_head_for_current_task_is_90ebe4d2408a7b0af7e6e7671540f632585a8804
-  - previous_C_verdict_was_audit_infrastructure_blocker_not_a_production_rejection
+  - accepted_target_head_is_90ebe4d2408a7b0af7e6e7671540f632585a8804
+  - prior_C_verdict_was_audit_infrastructure_blocker_not_a_production_rejection
 ```
