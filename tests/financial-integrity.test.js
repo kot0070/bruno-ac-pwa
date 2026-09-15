@@ -171,3 +171,32 @@ assert.ok(source.includes("if (value === null) return '—';"), 'money formatter
 assert.ok(!source.includes("value=\"' + (Number(val) || 0) + '\""), 'labor field renderer must not display invalid sentinel as 0');
 assert.ok(source.includes('INVALID — correct before pricing'), 'labor field renderer must visibly mark invalid values');
 assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteBase) : '—')"), 'invalid quote preview base must render dash');
+
+
+// Final caller-integrity regression coverage.
+{
+  const inv = F.INVALID_FINANCIAL;
+  for (const bad of [NaN, Infinity, -Infinity, 'Infinity', 'NaN', 'abc', -1]) {
+    assert.strictEqual(F.normalizePersistentFinancial(bad, 0), inv);
+  }
+  assert.strictEqual(F.normalizePersistentFinancial(null, 0), 0);
+  assert.strictEqual(F.normalizePersistentFinancial('', 0), 0);
+  assert.strictEqual(F.normalizePersistentFinancial('12.5', 0), 12.5);
+  const persisted = JSON.parse(JSON.stringify({ actualLabor: F.normalizePersistentFinancial(NaN, 0) }));
+  assert.strictEqual(persisted.actualLabor, inv);
+  assert.strictEqual(F.normalizePersistentFinancial(persisted.actualLabor, 0), inv);
+}
+
+{
+  const src = source;
+  assert(!src.includes('s.pnl.actualLabor = asNum(s.pnl.actualLabor)'));
+  assert(!src.includes('s.pnl.actualEquip = asNum(s.pnl.actualEquip)'));
+  assert(!src.includes('s.pnl.actualSub = asNum(s.pnl.actualSub)'));
+  assert(!src.includes('money(calc.le.smallToolsCost || 0)'));
+  assert(!src.includes("b.straight = parseFloat(e.target.value) || 0"));
+  assert(!src.includes("value=\"' + (Number(eqs[i].cost) || 0)"));
+  assert(!src.includes("value=\"' + (Number(subs[i].price) || 0)"));
+  assert(!src.includes("var ext = (Number(m.qty) || 0) * (Number(m.unitCost) || 0)"));
+  assert(src.includes('normalizePersistentFinancial(s.pnl.actualLabor, 0)'));
+  assert(src.includes('safeMoney(calc.le.smallToolsCost)'));
+}

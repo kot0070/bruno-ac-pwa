@@ -38,7 +38,15 @@
     return { ok: true, value: value, error: '' };
   }
 
+  var INVALID_FINANCIAL = 'INVALID_FINANCIAL';
   var INVALID_EXPLICIT_LABOR = 'INVALID_EXPLICIT_LABOR';
+
+  function normalizePersistentFinancial(value, defaultValue) {
+    if (value === INVALID_FINANCIAL) return INVALID_FINANCIAL;
+    if (value === null || value === undefined || value === '') return defaultValue;
+    var n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : INVALID_FINANCIAL;
+  }
 
   function normalizeExplicitLaborValue(value, defaultValue) {
     if (value === 'INVALID_LEGACY_LABOR' || value === INVALID_EXPLICIT_LABOR) return value;
@@ -222,7 +230,9 @@
     validProfitMargin: validProfitMargin,
     methodASales: methodASales,
     laborCost: laborCost,
+    normalizePersistentFinancial: normalizePersistentFinancial,
     normalizeExplicitLaborValue: normalizeExplicitLaborValue,
+    INVALID_FINANCIAL: INVALID_FINANCIAL,
     INVALID_EXPLICIT_LABOR: INVALID_EXPLICIT_LABOR,
     migrateLegacyLaborBlock: migrateLegacyLaborBlock,
     recoveryRate: recoveryRate,

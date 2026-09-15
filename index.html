@@ -2889,10 +2889,10 @@ function normalizeState(s) {
     s.laborEquip.smallTools = smallToolsCost(s);
     if (s.pnl == null || typeof s.pnl !== 'object' || Array.isArray(s.pnl)) s.pnl = {};
     if (s.pnl.linkMaterial === undefined) s.pnl.linkMaterial = true;
-    s.pnl.actualLabor = asNum(s.pnl.actualLabor);
-    s.pnl.actualEquip = asNum(s.pnl.actualEquip);
-    s.pnl.actualSub = asNum(s.pnl.actualSub);
-    if (s.pnl.actualMaterial != null && s.pnl.actualMaterial !== '') s.pnl.actualMaterial = asNum(s.pnl.actualMaterial);
+    s.pnl.actualLabor = window.BrunoFinancial.normalizePersistentFinancial(s.pnl.actualLabor, 0);
+    s.pnl.actualEquip = window.BrunoFinancial.normalizePersistentFinancial(s.pnl.actualEquip, 0);
+    s.pnl.actualSub = window.BrunoFinancial.normalizePersistentFinancial(s.pnl.actualSub, 0);
+    if (s.pnl.actualMaterial != null && s.pnl.actualMaterial !== '') s.pnl.actualMaterial = window.BrunoFinancial.normalizePersistentFinancial(s.pnl.actualMaterial, 0);
     if (!s.quote || typeof s.quote !== 'object' || Array.isArray(s.quote)) s.quote = {};
     if (!s.quote.jobNumber) s.quote.jobNumber = s.quote.proposal || '';
     if (!s.jobSettings) s.jobSettings = {};
@@ -2912,19 +2912,19 @@ function normalizeState(s) {
     for (i = 0; i < s.materialsUsed.length; i++) {
       row = s.materialsUsed[i];
       if (!row || typeof row !== 'object') continue;
-      row.qty = normalizeFinancialValue(row.qty);
-      row.unitCost = normalizeFinancialValue(row.unitCost);
+      row.qty = window.BrunoFinancial.normalizePersistentFinancial(row.qty, 0);
+      row.unitCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);
       if (row.lastPriceUpdate == null || row.lastPriceUpdate === '') {
         row.lastPriceUpdate = s.meta.globalPriceUpdate;
       }
     }
     for (i = 0; i < s.laborEquip.equipment.length; i++) {
       row = s.laborEquip.equipment[i];
-      if (row && typeof row === 'object') row.cost = normalizeFinancialValue(row.cost);
+      if (row && typeof row === 'object') row.cost = window.BrunoFinancial.normalizePersistentFinancial(row.cost, 0);
     }
     for (i = 0; i < s.laborEquip.subcontractors.length; i++) {
       row = s.laborEquip.subcontractors[i];
-      if (row && typeof row === 'object') row.price = normalizeFinancialValue(row.price);
+      if (row && typeof row === 'object') row.price = window.BrunoFinancial.normalizePersistentFinancial(row.price, 0);
     }
     for (i = 0; i < s.laborEquip.blocks.length; i++) {
       row = s.laborEquip.blocks[i];
@@ -2978,7 +2978,7 @@ function normalizeState(s) {
     if (s.personnel && Array.isArray(s.personnel.burden)) {
       for (i = 0; i < s.personnel.burden.length; i++) {
         row = s.personnel.burden[i];
-        if (row && typeof row === 'object') row.straight = normalizeFinancialValue(row.straight);
+        if (row && typeof row === 'object') row.straight = window.BrunoFinancial.normalizePersistentFinancial(row.straight, 0);
       }
     }
     if (s.personnel && Array.isArray(s.personnel.employees)) {
@@ -3678,15 +3678,16 @@ function normalizeState(s) {
     var html = '';
     for (var i = 0; i < rows.length; i++) {
       var m = rows[i];
-      var ext = (Number(m.qty) || 0) * (Number(m.unitCost) || 0);
+      var mq = nonNegativeFinancial(m.qty), mc = nonNegativeFinancial(m.unitCost);
+      var ext = (mq === null || mc === null) ? NaN : mq * mc;
       html += '<tr data-i="' + i + '">' +
-        '<td><input type="number" class="num mat-qty" step="any" value="' + (Number(m.qty) || 0) + '" /></td>' +
+        '<td><input type="number" class="num mat-qty' + (mq === null ? ' invalid-financial' : '') + '" step="any" min="0" value="' + (mq === null ? '' : mq) + '"' + (mq === null ? ' aria-invalid="true" title="Invalid financial value — correct before pricing"' : '') + ' /></td>' +
         '<td><input type="text" class="mat-item" value="' + esc(m.item) + '" /></td>' +
         '<td><input type="text" class="mat-part" value="' + esc(m.part) + '" /></td>' +
         '<td><input type="text" class="mat-units" value="' + esc(m.units || 'EA') + '" style="width:70px" /></td>' +
-        '<td><input type="number" class="num mat-cost" step="0.01" value="' + (Number(m.unitCost) || 0) + '" /></td>' +
+        '<td><input type="number" class="num mat-cost' + (mc === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (mc === null ? '' : mc) + '"' + (mc === null ? ' aria-invalid="true" title="Invalid financial value — correct before pricing"' : '') + ' /></td>' +
         '<td><input type="date" class="mat-price-date" value="' + esc(m.lastPriceUpdate || '') + '" /></td>' +
-        '<td class="num-cell">' + money(ext) + '</td>' +
+        '<td class="num-cell">' + safeMoney(ext) + '</td>' +
         '<td class="col-actions"><button type="button" class="btn btn-sm btn-danger mat-del" title="Remove">×</button></td>' +
         '</tr>';
     }
@@ -3707,9 +3708,10 @@ function normalizeState(s) {
     var eqs = state.laborEquip.equipment || [];
     var html = '';
     for (var i = 0; i < eqs.length; i++) {
+      var ecv = nonNegativeFinancial(eqs[i].cost);
       html += '<tr data-i="' + i + '">' +
         '<td><input type="text" class="eq-name" value="' + esc(eqs[i].name) + '" /></td>' +
-        '<td><input type="number" class="num eq-cost" step="0.01" value="' + (Number(eqs[i].cost) || 0) + '" /></td>' +
+        '<td><input type="number" class="num eq-cost' + (ecv === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (ecv === null ? '' : ecv) + '"' + (ecv === null ? ' aria-invalid="true" title="Invalid financial value — correct before pricing"' : '') + ' /></td>' +
         '<td><input type="text" class="eq-vendor" value="' + esc(eqs[i].vendor) + '" /></td>' +
         '<td><button type="button" class="btn btn-sm btn-danger eq-del">×</button></td></tr>';
     }
@@ -3729,10 +3731,11 @@ function normalizeState(s) {
     var subs = state.laborEquip.subcontractors || [];
     var html = '';
     for (var i = 0; i < subs.length; i++) {
+      var spv = nonNegativeFinancial(subs[i].price);
       html += '<tr data-i="' + i + '">' +
         '<td><input type="text" class="sub-name" value="' + esc(subs[i].name) + '" /></td>' +
         '<td><input type="text" class="sub-work" value="' + esc(subs[i].work) + '" /></td>' +
-        '<td><input type="number" class="num sub-price" step="0.01" value="' + (Number(subs[i].price) || 0) + '" /></td>' +
+        '<td><input type="number" class="num sub-price' + (spv === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (spv === null ? '' : spv) + '"' + (spv === null ? ' aria-invalid="true" title="Invalid financial value — correct before pricing"' : '') + ' /></td>' +
         '<td><button type="button" class="btn btn-sm btn-danger sub-del">×</button></td></tr>';
     }
     document.getElementById('sub-body').innerHTML = html || '<tr><td colspan="4" style="color:var(--text-muted)">No subcontractors</td></tr>';
@@ -3755,20 +3758,20 @@ function normalizeState(s) {
   }
 
   function renderPersonnel() {
-    var oh = Number(state.summary.ohRate) || 0;
-    var profit = Number(state.summary.profitMargin) || 0;
+    var oh = finiteFinancial(state.summary.ohRate);
+    var profit = finiteFinancial(state.summary.profitMargin);
     var html = '';
     var bur = state.personnel.burden || [];
     for (var i = 0; i < bur.length; i++) {
       var b = bur[i];
-      var st = Number(b.straight) || 0;
-      var bill = withOHP(st, oh, profit);
+      var st = nonNegativeFinancial(b.straight);
+      var bill = (st === null || oh === null || profit === null) ? NaN : withOHP(st, oh, profit);
       html += '<tr data-i="' + i + '">' +
         '<td><input type="text" class="bur-type" value="' + esc(b.type) + '" /></td>' +
-        '<td><input type="number" class="num bur-st" step="0.01" value="' + (Number(st) || 0) + '" /></td>' +
-        '<td class="num-cell">' + money(st * 1.5) + '</td>' +
-        '<td class="num-cell">' + money(st * 2) + '</td>' +
-        '<td class="num-cell">' + money(st * 3) + '</td>' +
+        '<td><input type="number" class="num bur-st' + (st === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (st === null ? '' : st) + '"' + (st === null ? ' aria-invalid="true" title="Invalid burden rate — correct before pricing"' : '') + ' /></td>' +
+        '<td class="num-cell">' + safeMoney(st === null ? NaN : st * 1.5) + '</td>' +
+        '<td class="num-cell">' + safeMoney(st === null ? NaN : st * 2) + '</td>' +
+        '<td class="num-cell">' + safeMoney(st === null ? NaN : st * 3) + '</td>' +
         '<td class="num-cell">' + money(bill) + '</td></tr>';
     }
     document.getElementById('burden-body').innerHTML = html;
@@ -3898,7 +3901,7 @@ function normalizeState(s) {
 
     document.getElementById('le-equip-total').textContent = money(calc.le.equipCost);
     var stTot = document.getElementById('le-st-total');
-    if (stTot) stTot.textContent = money(calc.le.smallToolsCost || 0);
+    if (stTot) stTot.textContent = safeMoney(calc.le.smallToolsCost);
     document.getElementById('le-sub-total').textContent = money(calc.le.subCost);
     document.getElementById('le-hrs').textContent = calc.le.laborHrs.toFixed(1);
     document.getElementById('le-labor-total').textContent = money(calc.le.laborCost);
@@ -4033,7 +4036,7 @@ function normalizeState(s) {
       if (e.target.classList.contains('mat-price-date')) m.lastPriceUpdate = e.target.value;
       var calc = calcAll(state);
       updateChips(calc);
-      tr.querySelector('.num-cell').textContent = money((m.qty || 0) * (m.unitCost || 0));
+      var mqv=nonNegativeFinancial(m.qty), mcv=nonNegativeFinancial(m.unitCost); tr.querySelector('.num-cell').textContent = safeMoney(mqv===null||mcv===null?NaN:mqv*mcv);
       renderPnL(calc);
       renderQuotePreview(calc);
       save();
@@ -4879,7 +4882,7 @@ function normalizeState(s) {
       var h3 = block.querySelector('h3 .sub');
       if (h3 && det) {
         var bur = state.personnel.burden[b.burdenIndex] || {};
-        h3.textContent = 'burden $' + (bur.straight || 0).toFixed(2) + '/hr · ' + money(det.cost) + ' · ' + det.totalHrs.toFixed(1) + ' h';
+        var br=nonNegativeFinancial(bur.straight); h3.textContent = 'burden ' + (br===null?'—':money(br)) + '/hr · ' + safeMoney(det.cost) + ' · ' + (isFinite(det.totalHrs)?det.totalHrs.toFixed(1):'—') + ' h';
       }
     });
 
@@ -4901,7 +4904,7 @@ function normalizeState(s) {
       var b = state.personnel.burden[i];
       if (e.target.classList.contains('bur-type')) b.type = e.target.value;
       if (e.target.classList.contains('bur-st')) {
-        b.straight = parseFloat(e.target.value) || 0;
+        var bv=parseFloat(e.target.value); b.straight=(isFinite(bv)&&bv>=0)?bv:e.target.value;
         softRefresh();
         renderPersonnel();
       }
