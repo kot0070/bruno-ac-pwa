@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 19
+handoff_version: 20
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,7 +10,7 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR26_LIVE_HISTORY_LEVELS_AUDIT_PENDING
+state: PR26_REWORK_REQUIRED_AFTER_AUDIT
 ```
 
 ## LAST ACCEPTED / MERGED PRODUCTION BASELINE
@@ -22,128 +22,89 @@ main_merge_commit: e84c9e9b6c53693d087db46156975ffec93d238a
 verdict: A_ACCEPT
 ```
 
-## CURRENT IMPLEMENTATION
+## CURRENT PRODUCTION PR
 
 ```yaml
 production_pr: 26
 production_branch: feature/room-based-code-estimator
 base_branch: main
 base_sha: e84c9e9b6c53693d087db46156975ffec93d238a
-production_head: 43cbc681f579b4009cc55674c4db7507d0910a7c
+audited_head: 43cbc681f579b4009cc55674c4db7507d0910a7c
 merged: false
 draft: true
-implementation_reports:
-  - audits/implementation/PR26_ROOM_BASED_ESTIMATOR_a04915f4.md
-  - audits/implementation/PR26_LIVE_CODE_ESTIMATOR_5b069931.md
-  - audits/implementation/PR26_HISTORY_LEVELS_43cbc681.md
-obsolete_heads:
-  - a04915f472679866ff941d0fb7b4b8752519becb
-  - 5b069931eaf98311f31d344c1acd6cc8e5553ade
-```
-
-## CURRENT USER FLOW
-
-```text
-Building / room inputs
--> L0-L6 live evaluation
--> code/design references
--> calculated baseline
--> override + reason
--> compliance state
--> BOM/components
--> current Catalog pricing
--> explicit Apply to Job
--> Confirm & Save Calculation
--> Active frozen snapshot
--> History
--> Duplicate as new
--> Export / Import
-```
-
-## LIVE LEVEL MODEL
-
-```yaml
-L0: Raw inputs
-L1: Normalized building / room model
-L2: Code / design requirements
-L3: Calculated baseline
-L4: Override / compliance
-L5: BOM / components
-L6: Catalog / pricing
-L7: Confirmed snapshot / history
-```
-
-Dependency classification is exposed through `earliestDirtyLevel()`. Override-only changes start at L4; room/building changes are upstream. Existing AC Calculator still performs authoritative BOM/Catalog Calculate; level model must not be described as replacing that engine.
-
-## HISTORY / REUSE
-
-```yaml
-storage_path: state.acCalculator.calculationHistory
-features:
-  - active_confirmed_snapshot_near_top
-  - frozen_historical_customer_your_margin_values
-  - immutable_by_value_snapshot
-  - multiple_history_records
-  - activate_old_snapshot
-  - duplicate_as_editable_new_plan
-  - export_single_snapshot
-  - export_history_bundle
-  - import_single_or_bundle
-  - imported_records_get_new_IDs
-  - malformed_import_non_destructive
-```
-
-Historical price records are display/history only. New live calculations must continue to use current Catalog pricing.
-
-## SAFETY BOUNDARIES
-
-```yaml
-no_sqft_to_tonnage_inference: true
-no_claim_of_performing_Manual_J_S_or_D: true
-planning_defaults_are_code_minimums: false
-unknown_numeric_minimum_fabricated: false
-known_hard_minimum_violation_red_and_blocking: true
-live_preview_writes_job: false
-explicit_Apply_required_for_job_mutation: true
-history_snapshot_overwrites_job_financial_state: false
-```
-
-## FINANCIAL INVARIANTS
-
-```yaml
-customer_track: Catalog.unitCost -> Calculator.customerUnitPrice -> Job.unitCost -> Quote
-internal_track: Catalog.yourCost -> Calculator.yourUnitCost -> Job.procurementCostSnapshot -> PnL
-actual_track: Job.actualCost -> PnL_override_only
-```
-
-## PWA
-
-```yaml
-cache: bruno-ac-v39
-new_assets:
-  - ./room-estimator-live.js
-  - ./calculation-history-core.js
-  - ./calculation-history-ux.js
-```
-
-## VALIDATION
-
-```yaml
-latest_ci_run: 35030476333
-validated_commit: 4eaaecea6922e73a10e0bf09ecb9b6da9bc63bb4
-result: SUCCESS
-post_ci_change: delete_temporary_workflow_only
-final_head: 43cbc681f579b4009cc55674c4db7507d0910a7c
-temporary_workflow_in_final_diff: false
+audit_verdict: C_REJECT_REWORK_REQUIRED
+latest_report: audits/history/PR26_43cbc681f579b4009cc55674c4db7507d0910a7c_20260915-1749.md
 browser_runtime: NOT_PERFORMED
+```
+
+## AUDIT BLOCKERS
+
+```yaml
+F01:
+  severity: P1
+  defect: room-estimator-live consumes BrunoRoomEstimatorUX.getSnapshot wrapper as if it were the raw plan; live L0-L6 evaluates defaults instead of the current room plan
+F02:
+  severity: P1
+  defect: Confirm & Save passes the wrapper as roomPlan; calculation-history-core rejects it as invalid_room_plan
+F03:
+  severity: P1
+  defect: persisted roomEstimator wrapper is restored with E.normalizePlan(saved) instead of saved.plan, losing room rows/overrides on reload
+F04:
+  severity: P1
+  defect: blocked live edits do not invalidate prior Calculator BOM/pricing/review/Apply state, leaving stale materials applyable
+F05:
+  severity: P1
+  defect: confirmed history hard-codes compliance.ready=true when required-input checks may still be unresolved
+```
+
+Non-blocking findings:
+
+```yaml
+F06:
+  severity: P2
+  defect: Duplicate sourceCalculationId is computed in core but discarded by UX
+F07:
+  severity: P2
+  defect: imported snapshots can normalize incomplete/invalid historical pricing fields to null rather than rejecting them
+```
+
+## VERIFIED POSITIVE EVIDENCE
+
+```yaml
+exact_head_matches_task: true
+pr_state: open_draft_unmerged
+final_diff_files: 14
+temporary_workflow_in_final_diff: false
+ci_run: 35030476333
+ci_validated_commit: 4eaaecea6922e73a10e0bf09ecb9b6da9bc63bb4
+ci_result: SUCCESS
+post_ci_delta: delete_.github/workflows/pr26-history-levels-validation.yml_only
+pwa_cache: bruno-ac-v39
+required_history_live_assets_cached: true
+texas_acr_2024_code_adoption_effective_2026_09_01_verified: true
+acca_manual_d_2016_design_reference_verified: true
+```
+
+## REQUIRED NEXT IMPLEMENTATION
+
+```yaml
+must_fix_before_reaudit:
+  - standardize_room_snapshot_contract_between_UX_live_persistence_history
+  - use_actual_plan_for_live_engine_dependency_and_calculator_bridge
+  - make_confirm_save_work_with_real_UX_snapshot
+  - restore_full_persisted_room_plan_and_overrides_on_reload
+  - fail_closed_and_disable_or_invalidate_Apply_when_live_plan_is_blocked_or_stale
+  - derive_confirmed_compliance_ready_from_authoritative_required_checks
+  - add_executable_integration_tests_covering_real_UX_snapshot_shape
+  - rerun_all_PR22_PR26_regressions
 ```
 
 ## NEXT STATE
 
 ```yaml
-next_task_id: PR26_LIVE_HISTORY_LEVELS_ACCEPTANCE_03
-next_task_mode: independent_large_block_acceptance_audit
-merge_before_acceptance: forbidden
+next_task_mode: implementation_fix_on_same_PR26
+merge_before_new_exact_head_acceptance: forbidden
+reaudit_required: true
 ```
 
 ## HANDOFF RULES
@@ -152,11 +113,11 @@ merge_before_acceptance: forbidden
 rules:
   - read_WORKSPACE_PROTOCOL_CONTEXT_HANDOFF_ROADMAP_all_PR26_implementation_reports_TASK_before_action
   - task_file_defines_active_PR_branch_SHA
-  - audit_exact_head_43cbc681f579b4009cc55674c4db7507d0910a7c
-  - obsolete_heads_must_not_be_used_for_acceptance
+  - audited_head_43cbc681f579b4009cc55674c4db7507d0910a7c_is_rejected
+  - do_not_reuse_rejected_head_for_acceptance
+  - fix_same_PR_then_refresh_TASK_CURRENT_to_new_exact_HEAD
   - production_PR_and_code_read_only_during_audit
   - auditor_does_not_merge
   - reports_and_workspace_writes_only_on_audit_branch_under_audits
   - browser_runtime_must_not_be_claimed_without_execution
-  - if_findings_exist_fix_same_PR_then_reaudit_new_exact_HEAD
 ```
