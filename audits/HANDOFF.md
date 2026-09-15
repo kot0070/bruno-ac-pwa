@@ -1,7 +1,7 @@
-# BRUNO AC AUDIT HANDOFF
+# BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 1
+handoff_version: 2
 workspace: audits/WORKSPACE.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
@@ -10,43 +10,41 @@ history_dir: audits/history
 production_pr: 22
 production_branch: feature/financial-integrity-texas-acr-docs
 known_current_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
-state: READY_FOR_ACTIVE_TASK
+state: CORRECTIVE_IMPLEMENTATION_PENDING
 ```
 
-## LAST KNOWN STATE
+## LAST COMPLETED AUDIT
 
 ```yaml
-previous_audit:
-  audited_head: 104c8229f2c0ee4ac377e9081fe807f58683db4e
-  verdict: C
-  report_status: archived_in_workspace
-current_target:
-  expected_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
-  task_id: PR22_FINAL_ACCEPTANCE_603CBCA
-  status: ACTIVE
-notes:
-  - previous_C_is_not_current_verdict
-  - current_task_requires_independent_reverification
-  - production_PR_must_remain_untouched
-  - reports_may_be_written_only_on_audit_branch_under_audits
+last_completed_task_id: PR22_FINAL_ACCEPTANCE_603CBCA
+last_audited_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
+last_verdict: B_ACCEPT_AFTER_MINOR_FIXES
+last_report_path: audits/history/PR22_603cbca03e292ae1d3bf424514fb60da6233bfc6_20260915-1235.md
+blockers_summary:
+  - P1_missing_genuine_EXECUTABLE_INTEGRATION_test_for_Catalog_Margins_save_reload_reapply
+non_blocking_follow_up:
+  - P2_clearing_explicit_Your_Cost_writes_INVALID_FINANCIAL_instead_of_restoring_blank_fallback
 ```
 
-## HANDOFF UPDATE CONTRACT
-
-After each completed audit/review task, update only the state fields needed for the next AI session:
+## CURRENT TASK
 
 ```yaml
-required_update_fields:
-  - last_completed_task_id
-  - last_audited_head
-  - last_verdict
-  - last_report_path
-  - current_target_head
-  - current_task_status
-optional_fields:
-  - blockers_summary
-  - follow_up_task_id
-  - notable_environment_limitations
+current_task_id: PR22_CLOSE_ACCEPTANCE_GAPS_01
+current_task_status: ACTIVE
+current_target_head: 603cbca03e292ae1d3bf424514fb60da6233bfc6
+mode: corrective_implementation
+expected_next_state: focused_acceptance_reaudit
 ```
 
-Do not copy the full report into this file. Keep it compact enough to be read on every new AI session.
+## HANDOFF RULES
+
+```yaml
+rules:
+  - read_WORKSPACE_CONTEXT_HANDOFF_TASK_before_action
+  - production_PR_remains_open_unmerged
+  - implementation_may_modify_only_task_allowed_scope
+  - audit_reports_and_workspace_files_live_only_on_audit_branch
+  - after_implementation_record_new_production_HEAD_here
+  - then_replace_TASK_CURRENT_with_focused_reaudit_task
+  - do_not_copy_full_report_here
+```
