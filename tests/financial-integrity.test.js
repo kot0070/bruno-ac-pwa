@@ -211,7 +211,7 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
   assert(!src.includes('row.unitCost = Number(map[id]) || 0;'), 'catalog price reload must preserve invalid sentinel');
   assert(!src.includes("value=\"' + (Number(c.unitCost) || 0)"), 'catalog customer-price renderer must not show invalid as zero');
   assert(src.includes('setCatalogCustomerPrice(state, cid'), 'catalog edit must use strict lifecycle helper');
-  assert(src.includes("row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes("window.BrunoPricingLifecycle.setCatalogCustomerPrice(state, id, e.target.value)"), "Margins customer price must use strict lifecycle helper");
   assert(!src.includes("mats[mi].unitCost = price"), 'Catalog edit must not mutate historical Job Material');
   assert(!src.includes("mats[mi].unitCost = row.unitCost"), 'Margins Catalog edit must not mutate historical Job Material');
 
@@ -238,7 +238,7 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
     "for (var i = 0; i < cat.length; i++) if (cat[i]) cat[i].yourCost = Number(cat[i].unitCost) || 0;"
   ];
   forbidden.forEach((x) => assert(!src.includes(x), `unsafe direct-cost coercion remains: ${x}`));
-  assert(src.includes("row.yourCost = (isFinite(yc) && yc >= 0) ? yc : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes("window.BrunoPricingLifecycle.setCatalogYourCost(state, id, e.target.value)"), "Margins Your Cost must use blank-aware lifecycle helper");
   assert(src.includes("normalizePersistentFinancial(cat[i].yourCost, 0)"));
   assert(src.includes("normalizePersistentFinancial(map[id], 0)"));
   assert(src.includes("procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? window.BrunoFinancial.normalizePersistentFinancial(c.yourCost, 0) : null)"));

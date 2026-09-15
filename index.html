@@ -2809,29 +2809,75 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
     } catch (e) { return {}; }
   }
-  function saveCatalogCostMapFromState() {
-    try {
-      var cat = (state && state.catalog) || [];
-      var map = {};
-      for (var i = 0; i < cat.length; i++) {
-        if (cat[i] && cat[i].id != null && cat[i].yourCost != null && cat[i].yourCost !== '') {
-          map[String(cat[i].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[i].yourCost, 0);
-        }
-      }
-      localStorage.setItem(catalogCostsKey(), JSON.stringify(map));
-    } catch (e) {}
+  /* PR22_LIFECYCLE_HELPERS_START */
+  function lifecycleCatalogRow(s, cid) {
+    var cat = (s && s.catalog) || [];
+    for (var i = 0; i < cat.length; i++) {
+      if (cat[i] && String(cat[i].id) === String(cid)) return cat[i];
+    }
+    return null;
   }
-  function applyCatalogCostMap(s) {
+  function lifecycleSetCatalogCustomerPrice(s, cid, rawValue) {
+    var raw = String(rawValue == null ? '' : rawValue).trim();
+    var result = window.BrunoFinancial.setCatalogCustomerPrice(
+      s,
+      cid,
+      raw === '' ? window.BrunoFinancial.INVALID_FINANCIAL : raw
+    );
+    result.row = lifecycleCatalogRow(s, cid);
+    return result;
+  }
+  function lifecycleSetCatalogYourCost(s, cid, rawValue) {
+    var row = lifecycleCatalogRow(s, cid);
+    if (!row) return { ok: false, blank: false, value: window.BrunoFinancial.INVALID_FINANCIAL, row: null };
+    var raw = String(rawValue == null ? '' : rawValue).trim();
+    if (raw === '') {
+      delete row.yourCost;
+      return { ok: true, blank: true, value: null, row: row };
+    }
+    var parsed = Number(raw);
+    var value = (isFinite(parsed) && parsed >= 0) ? parsed : window.BrunoFinancial.INVALID_FINANCIAL;
+    row.yourCost = value;
+    return { ok: value !== window.BrunoFinancial.INVALID_FINANCIAL, blank: false, value: value, row: row };
+  }
+  function lifecycleCatalogCostMapFromState(s) {
+    var cat = (s && s.catalog) || [];
+    var map = {};
+    for (var i = 0; i < cat.length; i++) {
+      if (cat[i] && cat[i].id != null && cat[i].yourCost != null && cat[i].yourCost !== '') {
+        map[String(cat[i].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[i].yourCost, 0);
+      }
+    }
+    return map;
+  }
+  function lifecycleApplyCatalogCostMap(s, map) {
     if (!s || !Array.isArray(s.catalog)) return s;
-    var map = loadCatalogCostMap();
+    map = map && typeof map === 'object' && !Array.isArray(map) ? map : {};
     for (var i = 0; i < s.catalog.length; i++) {
       var row = s.catalog[i];
       if (!row || row.id == null) continue;
       var id = String(row.id);
-      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);
-      /* No map entry means Your Cost remains genuinely blank. Effective fallback is resolved at read time so provenance remains customer-price-fallback. */
+      if (Object.prototype.hasOwnProperty.call(map, id)) {
+        row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);
+      }
     }
     return s;
+  }
+  window.BrunoPricingLifecycle = {
+    setCatalogCustomerPrice: lifecycleSetCatalogCustomerPrice,
+    setCatalogYourCost: lifecycleSetCatalogYourCost,
+    catalogCostMapFromState: lifecycleCatalogCostMapFromState,
+    applyCatalogCostMap: lifecycleApplyCatalogCostMap
+  };
+  /* PR22_LIFECYCLE_HELPERS_END */
+
+  function saveCatalogCostMapFromState() {
+    try {
+      localStorage.setItem(catalogCostsKey(), JSON.stringify(window.BrunoPricingLifecycle.catalogCostMapFromState(state)));
+    } catch (e) {}
+  }
+  function applyCatalogCostMap(s) {
+    return window.BrunoPricingLifecycle.applyCatalogCostMap(s, loadCatalogCostMap());
   }
 
 function catalogPricesKey() {
@@ -4772,7 +4818,7 @@ function normalizeState(s) {
       if (!inputEl || !inputEl.classList.contains('cat-cost')) return;
       var cid = inputEl.getAttribute('data-id');
       var rawPrice = String(inputEl.value == null ? '' : inputEl.value).trim();
-      var result = window.BrunoFinancial.setCatalogCustomerPrice(state, cid, rawPrice === '' ? window.BrunoFinancial.INVALID_FINANCIAL : rawPrice);
+      var result = window.BrunoPricingLifecycle.setCatalogCustomerPrice(state, cid, rawPrice);
       var price = result.value;
       inputEl.value = price === window.BrunoFinancial.INVALID_FINANCIAL ? '' : price;
       inputEl.classList.toggle('invalid-financial', price === window.BrunoFinancial.INVALID_FINANCIAL);
@@ -4801,19 +4847,11 @@ function normalizeState(s) {
     function applyCatalogYourCost(inputEl) {
       if (!inputEl || !inputEl.classList.contains('cat-your')) return;
       var cid = inputEl.getAttribute('data-id');
-      var rawYour = String(inputEl.value == null ? '' : inputEl.value).trim();
-      var parsedYour = rawYour === '' ? NaN : Number(rawYour);
-      var price = (isFinite(parsedYour) && parsedYour >= 0) ? parsedYour : window.BrunoFinancial.INVALID_FINANCIAL;
-      inputEl.value = price === window.BrunoFinancial.INVALID_FINANCIAL ? '' : price;
-      inputEl.classList.toggle('invalid-financial', price === window.BrunoFinancial.INVALID_FINANCIAL);
-      inputEl.setAttribute('aria-invalid', price === window.BrunoFinancial.INVALID_FINANCIAL ? 'true' : 'false');
-      var cat = (state && state.catalog) || [];
-      for (var ci = 0; ci < cat.length; ci++) {
-        if (String(cat[ci].id) === String(cid)) {
-          cat[ci].yourCost = price;
-          break;
-        }
-      }
+      var result = window.BrunoPricingLifecycle.setCatalogYourCost(state, cid, inputEl.value);
+      var invalid = !result.blank && result.value === window.BrunoFinancial.INVALID_FINANCIAL;
+      inputEl.value = result.blank || invalid ? '' : result.value;
+      inputEl.classList.toggle('invalid-financial', invalid);
+      inputEl.setAttribute('aria-invalid', invalid ? 'true' : 'false');
       saveCatalogCostMapFromState();
       save();
       if (typeof renderMargins === 'function') renderMargins();
@@ -5394,15 +5432,15 @@ function normalizeState(s) {
       for (var i = 0; i < cat.length; i++) if (String(cat[i].id) === String(id)) { row = cat[i]; break; }
       if (!row) return;
       if (e.target.classList.contains('mrg-cust')) {
-        var cp = parseFloat(e.target.value);
-        row.unitCost = (isFinite(cp) && cp >= 0) ? cp : window.BrunoFinancial.INVALID_FINANCIAL;
+        var cpResult = window.BrunoPricingLifecycle.setCatalogCustomerPrice(state, id, e.target.value);
+        row = cpResult.row || row;
         try {
           var priceMap = {};
           for (var ci = 0; ci < cat.length; ci++) if (cat[ci] && cat[ci].id != null) priceMap[String(cat[ci].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[ci].unitCost, 0);
           localStorage.setItem(catalogPricesKey(), JSON.stringify(priceMap));
         } catch (err1) {}
       } else if (e.target.classList.contains('mrg-your')) {
-        var ycRaw = String(e.target.value == null ? '' : e.target.value).trim(); var yc = ycRaw === '' ? NaN : Number(ycRaw); row.yourCost = (isFinite(yc) && yc >= 0) ? yc : window.BrunoFinancial.INVALID_FINANCIAL;
+        window.BrunoPricingLifecycle.setCatalogYourCost(state, id, e.target.value);
         saveCatalogCostMapFromState();
       } else if (e.target.classList.contains('mrg-pct')) {
         var cust = nonNegativeFinancial(row.unitCost);
