@@ -1,21 +1,19 @@
 name: Apply calculator observer hotfix
 on:
   push:
-    branches:
-      - hotfix/calculator-bom-observer-loop
+    branches: [hotfix/calculator-bom-observer-loop]
 permissions:
   contents: write
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: hotfix/calculator-bom-observer-loop
       - name: Apply targeted runtime fixes
-        shell: python
         run: |
+          python3 <<'PY'
           from pathlib import Path
 
           ux = Path('ac-calculator-ux.js')
@@ -40,7 +38,6 @@ jobs:
           if old not in s:
               raise SystemExit('decorateBomRows target not found')
           s = s.replace(old, new, 1)
-
           old_init = """  var code=$('codeChecks'),bom=$('bomBody');if(code)new MutationObserver(function(){if(calculatedOnce&&!dirty)render()}).observe(code,{childList:true,subtree:true});if(bom){new MutationObserver(function(){decorateBomRows();if(calculatedOnce&&!dirty)render()}).observe(bom,{childList:true,subtree:true});bom.addEventListener('change',function(e){if(e.target.classList.contains('bomsel')&&calculatedOnce&&!dirty)render()})}
   updateGroupStates(true);decorateBomRows();setState('initial');
 """
@@ -82,9 +79,8 @@ jobs:
           if "const CACHE = 'bruno-ac-v27';" not in s:
               raise SystemExit('v27 cache marker not found')
           sw.write_text(s.replace("const CACHE = 'bruno-ac-v27';", "const CACHE = 'bruno-ac-v28';", 1))
-
-          wf = Path('.github/workflows/apply-calculator-observer-hotfix.yml')
-          wf.unlink()
+          Path('.github/workflows/apply-calculator-observer-hotfix.yml').unlink()
+          PY
       - name: Commit hotfix
         run: |
           git config user.name "github-actions[bot]"
