@@ -20,7 +20,10 @@ jobs:
           fetch-depth: 0
 
       - name: Apply corrective implementation
-        run: python3 scripts/pr22-temp-implement.py
+        shell: bash
+        run: |
+          python3 scripts/pr22-temp-implement.py
+          sed -i '1d' tests/pr22-lifecycle-integration.test.js
 
       - name: Validate syntax and required tests
         shell: bash
