@@ -2795,7 +2795,7 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       var map = {};
       for (var i = 0; i < cat.length; i++) {
         if (cat[i] && cat[i].id != null && cat[i].yourCost != null && cat[i].yourCost !== '') {
-          map[String(cat[i].id)] = Number(cat[i].yourCost) || 0;
+          map[String(cat[i].id)] = window.BrunoFinancial.normalizePersistentFinancial(cat[i].yourCost, 0);
         }
       }
       localStorage.setItem(catalogCostsKey(), JSON.stringify(map));
@@ -2808,8 +2808,8 @@ window.BRUNO_SEED = {"company": {"legalName": "Bruno AC Services LLC", "dba": ""
       var row = s.catalog[i];
       if (!row || row.id == null) continue;
       var id = String(row.id);
-      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = Number(map[id]) || 0;
-      else if (row.yourCost == null || row.yourCost === '') row.yourCost = Number(row.unitCost) || 0;
+      if (Object.prototype.hasOwnProperty.call(map, id)) row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(map[id], 0);
+      else if (row.yourCost == null || row.yourCost === '') row.yourCost = window.BrunoFinancial.normalizePersistentFinancial(row.unitCost, 0);
     }
     return s;
   }
@@ -4221,7 +4221,8 @@ function normalizeState(s) {
           html += '<td>' + esc(c.units) + '</td>';
           var catPrice = nonNegativeFinancial(c.unitCost);
           html += '<td class="col-cost"><input type="number" class="num cat-cost' + (catPrice === null ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catPrice === null ? '' : catPrice) + '" title="' + (catPrice === null ? 'Invalid customer price — correct before quoting' : 'Customer / shop price (used in quotes)') + '" aria-label="Customer price"' + (catPrice === null ? ' aria-invalid="true"' : '') + ' /></td>';
-          html += '<td class="col-cost"><input type="number" class="num cat-your" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (c.yourCost != null && c.yourCost !== '' ? (Number(c.yourCost) || 0) : (Number(c.unitCost) || 0)) + '" title="Your cost after supplier discount" aria-label="Your cost" /></td>';
+          var catYour = (c.yourCost != null && c.yourCost !== '') ? nonNegativeFinancial(c.yourCost) : catPrice;
+          html += '<td class="col-cost"><input type="number" class="num cat-your' + (catYour === null ? ' invalid-financial' : '') + '" step="0.01" min="0" data-id="' + esc(c.id) + '" value="' + (catYour === null ? '' : catYour) + '" title="' + (catYour === null ? 'Invalid direct cost — correct before profitability' : 'Your cost after supplier discount') + '" aria-label="Your cost"' + (catYour === null ? ' aria-invalid="true"' : '') + ' /></td>';
           html += '<td class="col-actions"><button type="button" class="btn btn-sm btn-primary cat-add" data-id="' + esc(c.id) + '" title="Add to job">+</button></td>';
           html += '</tr>';
           shown++;
@@ -4739,9 +4740,12 @@ function normalizeState(s) {
     function applyCatalogYourCost(inputEl) {
       if (!inputEl || !inputEl.classList.contains('cat-your')) return;
       var cid = inputEl.getAttribute('data-id');
-      var price = parseFloat(inputEl.value);
-      if (!isFinite(price) || price < 0) price = window.BrunoFinancial.INVALID_FINANCIAL;
-      inputEl.value = price;
+      var rawYour = String(inputEl.value == null ? '' : inputEl.value).trim();
+      var parsedYour = rawYour === '' ? NaN : Number(rawYour);
+      var price = (isFinite(parsedYour) && parsedYour >= 0) ? parsedYour : window.BrunoFinancial.INVALID_FINANCIAL;
+      inputEl.value = price === window.BrunoFinancial.INVALID_FINANCIAL ? '' : price;
+      inputEl.classList.toggle('invalid-financial', price === window.BrunoFinancial.INVALID_FINANCIAL);
+      inputEl.setAttribute('aria-invalid', price === window.BrunoFinancial.INVALID_FINANCIAL ? 'true' : 'false');
       var cat = (state && state.catalog) || [];
       for (var ci = 0; ci < cat.length; ci++) {
         if (String(cat[ci].id) === String(cid)) {
@@ -4772,13 +4776,17 @@ function normalizeState(s) {
         if (state.catalog[i].id === id) { c = state.catalog[i]; break; }
       }
       if (!c) return;
-      var uc = Number(c.unitCost) || 0;
+      var uc = nonNegativeFinancial(c.unitCost);
+      if (uc === null) {
+        alert('Customer price is invalid. Correct it before adding this catalog item to the job.');
+        return;
+      }
       if (uc === 0) {
         if (!confirm('This catalog line is $0. Adding it will understate Material Cost and Method A sales until you set a unit price on Job materials.\n\nAdd anyway?')) return;
       }
       var row = {
         id: c.id || uid('m'), catalogId: c.id, qty: 1, item: c.item, part: c.part, vendor: c.vendor,
-        units: c.units, unitCost: c.unitCost, procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? Number(c.yourCost) : null), procurementCostSource: (c.yourCost != null && c.yourCost !== '' ? 'catalog_yourCost_snapshot' : ''), crew: c.crew || 1, prod: c.prod || 0, prodUnit: c.prodUnit || 'Day',
+        units: c.units, unitCost: c.unitCost, procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? window.BrunoFinancial.normalizePersistentFinancial(c.yourCost, 0) : null), procurementCostSource: (c.yourCost != null && c.yourCost !== '' ? 'catalog_yourCost_snapshot' : ''), crew: c.crew || 1, prod: c.prod || 0, prodUnit: c.prodUnit || 'Day',
         lastPriceUpdate: (state.meta && state.meta.globalPriceUpdate) || todayISO()
       };
       if (c.category) row.category = c.category;
@@ -5243,8 +5251,9 @@ function normalizeState(s) {
 
   
   function catalogDiscPct(c) {
-    var cust = Number(c.unitCost) || 0;
-    var yours = (c.yourCost != null && c.yourCost !== '') ? (Number(c.yourCost) || 0) : cust;
+    var cust = nonNegativeFinancial(c.unitCost);
+    var yours = (c.yourCost != null && c.yourCost !== '') ? nonNegativeFinancial(c.yourCost) : cust;
+    if (cust === null || yours === null) return NaN;
     if (cust <= 0) return 0;
     return ((cust - yours) / cust) * 100;
   }
@@ -5269,8 +5278,8 @@ function normalizeState(s) {
       html += '<tr data-id="' + esc(c.id) + '">';
       html += '<td>' + esc(c.item) + '</td><td>' + esc(c.part) + '</td>';
       html += '<td class="col-cost"><input type="number" class="num mrg-cust' + (cust === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (cust === null ? '' : cust) + '"' + (cust === null ? ' aria-invalid="true" title="Invalid customer price — correct before quoting"' : '') + ' /></td>';
-      html += '<td class="col-cost"><input type="number" class="num mrg-pct" step="0.1" min="0" max="100" value="' + (Math.round(pct * 10) / 10) + '" title="% off customer → your cost" /></td>';
-      html += '<td class="col-cost"><input type="number" class="num mrg-your" step="0.01" min="0" value="' + yours + '" /></td>';
+      html += '<td class="col-cost"><input type="number" class="num mrg-pct' + (!isFinite(pct) ? ' invalid-financial' : '') + '" step="0.1" min="0" max="100" value="' + (isFinite(pct) ? (Math.round(pct * 10) / 10) : '') + '" title="% off customer → your cost"' + (!isFinite(pct) ? ' aria-invalid="true"' : '') + ' /></td>';
+      html += '<td class="col-cost"><input type="number" class="num mrg-your' + (yours === null ? ' invalid-financial' : '') + '" step="0.01" min="0" value="' + (yours === null ? '' : yours) + '"' + (yours === null ? ' aria-invalid="true" title="Invalid direct cost — correct before profitability"' : '') + ' /></td>';
       html += '<td class="num-cell">' + safeMoney(diff) + '</td>';
       html += '<td class="num-cell">' + (isFinite(pct) ? (Math.round(pct * 10) / 10) + '%' : '—') + '</td>';
       html += '</tr>';
@@ -5305,12 +5314,14 @@ function normalizeState(s) {
           localStorage.setItem(catalogPricesKey(), JSON.stringify(priceMap));
         } catch (err1) {}
       } else if (e.target.classList.contains('mrg-your')) {
-        row.yourCost = Math.max(0, parseFloat(e.target.value) || 0);
+        var ycRaw = String(e.target.value == null ? '' : e.target.value).trim(); var yc = ycRaw === '' ? NaN : Number(ycRaw); row.yourCost = (isFinite(yc) && yc >= 0) ? yc : window.BrunoFinancial.INVALID_FINANCIAL;
         saveCatalogCostMapFromState();
       } else if (e.target.classList.contains('mrg-pct')) {
-        var cust = Number(row.unitCost) || 0;
-        var pct = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
-        row.yourCost = Math.round(cust * (1 - pct / 100) * 100) / 100;
+        var cust = nonNegativeFinancial(row.unitCost);
+        var pctRaw = String(e.target.value == null ? '' : e.target.value).trim();
+        var pct = pctRaw === '' ? NaN : Number(pctRaw);
+        if (cust === null || !isFinite(pct) || pct < 0 || pct > 100) row.yourCost = window.BrunoFinancial.INVALID_FINANCIAL;
+        else row.yourCost = Math.round(cust * (1 - pct / 100) * 100) / 100;
         saveCatalogCostMapFromState();
       }
       // sync job materials customer price if same id
@@ -5343,8 +5354,8 @@ function normalizeState(s) {
         if (!c) continue;
         var hay = ((c.item || '') + ' ' + (c.part || '')).toLowerCase();
         if (q && hay.indexOf(q) < 0) continue;
-        var cust = Number(c.unitCost) || 0;
-        c.yourCost = Math.round(cust * (1 - pct / 100) * 100) / 100;
+        var cust = nonNegativeFinancial(c.unitCost);
+        c.yourCost = cust === null ? window.BrunoFinancial.INVALID_FINANCIAL : Math.round(cust * (1 - pct / 100) * 100) / 100;
       }
       saveCatalogCostMapFromState();
       save();
@@ -5354,7 +5365,7 @@ function normalizeState(s) {
     var z = document.getElementById('mrg-cost-eq-cust');
     if (z) z.addEventListener('click', function () {
       var cat = (state && state.catalog) || [];
-      for (var i = 0; i < cat.length; i++) if (cat[i]) cat[i].yourCost = Number(cat[i].unitCost) || 0;
+      for (var i = 0; i < cat.length; i++) if (cat[i]) cat[i].yourCost = window.BrunoFinancial.normalizePersistentFinancial(cat[i].unitCost, 0);
       saveCatalogCostMapFromState();
       save();
       renderMargins((document.getElementById('mrg-search') || {}).value || '');

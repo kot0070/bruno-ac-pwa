@@ -223,3 +223,35 @@ assert.ok(source.includes("Base quote: ' + (calc.quoteValid ? money0(calc.quoteB
   assert.strictEqual(F.normalizePersistentFinancial(persisted.unitCost, 0), inv);
   assert.strictEqual(F.methodASales(persisted.unitCost, 0.25, 0.15).ok, false, 'invalid persisted customer price must not become a valid Method A zero-cost input');
 }
+
+
+// Catalog direct-cost / Your Cost end-to-end integrity guards.
+{
+  const src = source;
+  const forbidden = [
+    "row.yourCost = Math.max(0, parseFloat(e.target.value) || 0);",
+    "map[String(cat[i].id)] = Number(cat[i].yourCost) || 0;",
+    "row.yourCost = Number(map[id]) || 0;",
+    "value=\"' + (c.yourCost != null && c.yourCost !== '' ? (Number(c.yourCost) || 0)",
+    "procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? Number(c.yourCost) : null)",
+    "var uc = Number(c.unitCost) || 0;",
+    "for (var i = 0; i < cat.length; i++) if (cat[i]) cat[i].yourCost = Number(cat[i].unitCost) || 0;"
+  ];
+  forbidden.forEach((x) => assert(!src.includes(x), `unsafe direct-cost coercion remains: ${x}`));
+  assert(src.includes("row.yourCost = (isFinite(yc) && yc >= 0) ? yc : window.BrunoFinancial.INVALID_FINANCIAL"));
+  assert(src.includes("normalizePersistentFinancial(cat[i].yourCost, 0)"));
+  assert(src.includes("normalizePersistentFinancial(map[id], 0)"));
+  assert(src.includes("procurementCostSnapshot: (c.yourCost != null && c.yourCost !== '' ? window.BrunoFinancial.normalizePersistentFinancial(c.yourCost, 0) : null)"));
+
+  const inv = F.INVALID_FINANCIAL;
+  for (const bad of ['abc', 'Infinity', Infinity, NaN, -1]) {
+    const normalized = F.normalizePersistentFinancial(bad, 0);
+    assert.strictEqual(normalized, inv);
+    const roundTrip = JSON.parse(JSON.stringify({ yourCost: normalized, procurementCostSnapshot: normalized }));
+    assert.strictEqual(roundTrip.yourCost, inv);
+    assert.strictEqual(roundTrip.procurementCostSnapshot, inv);
+    assert.strictEqual(F.normalizePersistentFinancial(roundTrip.yourCost, 0), inv);
+  }
+  assert.strictEqual(F.normalizePersistentFinancial(0, 0), 0, 'legitimate zero direct cost must remain valid zero');
+  assert.strictEqual(F.normalizePersistentFinancial('75.50', 0), 75.5);
+}
