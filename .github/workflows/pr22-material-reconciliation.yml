@@ -16,7 +16,9 @@ jobs:
         with:
           ref: feature/financial-integrity-texas-acr-docs
       - name: Apply material reconciliation implementation
-        run: python scripts/pr22_material_reconciliation.py
+        run: |
+          python scripts/pr22_material_reconciliation.py
+          python scripts/pr22_material_reconciliation_testfix.py
       - name: Run financial integrity tests
         run: node tests/financial-integrity.test.js
       - name: Syntax check core
@@ -38,6 +40,7 @@ jobs:
           from pathlib import Path
           s=Path('index.html').read_text()
           c=Path('financial-integrity-core.js').read_text()
+          t=Path('tests/financial-integrity.test.js').read_text()
           forbidden=[
             "row.yourCost = Math.max(0, parseFloat(e.target.value) || 0)",
             "map[String(cat[i].id)] = Number(cat[i].yourCost) || 0",
@@ -60,12 +63,14 @@ jobs:
             assert x in s, x
           assert 'function reconcileMaterialCosts(rows)' in c
           assert 'reconcileMaterialCosts: reconcileMaterialCosts' in c
+          assert "typeof F.resolveMaterialCost === 'function'" in t
+          assert 'Material Cost Reconciliation — executable next-phase coverage.' in t
           PY
       - name: Commit production implementation and remove temporary runners
         run: |
-          rm -f scripts/pr22_material_reconciliation.py .github/workflows/pr22-material-reconciliation.yml
+          rm -f scripts/pr22_material_reconciliation.py scripts/pr22_material_reconciliation_testfix.py .github/workflows/pr22-material-reconciliation.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add financial-integrity-core.js index.html tests/financial-integrity.test.js scripts/pr22_material_reconciliation.py .github/workflows/pr22-material-reconciliation.yml
+          git add financial-integrity-core.js index.html tests/financial-integrity.test.js scripts/pr22_material_reconciliation.py scripts/pr22_material_reconciliation_testfix.py .github/workflows/pr22-material-reconciliation.yml
           git commit -m "Add material cost reconciliation and provenance"
           git push origin HEAD:feature/financial-integrity-texas-acr-docs
