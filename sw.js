@@ -1,5 +1,5 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v34';
+const CACHE = 'bruno-ac-v35';
 const SHELL = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const SHELL = [
   './navigation-v2.css',
   './workspace-v5.js',
   './workspace-v5.css',
+  './service-journal-ux.js',
   './catalog-v6.js',
   './ac-calculator.html',
   './ac-calculator.js',
