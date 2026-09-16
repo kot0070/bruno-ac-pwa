@@ -15,14 +15,17 @@ assert.strictEqual(lib.jurisdiction.effectiveDate,'2026-09-01');
 
 const matrixValidation=core.validateSourceMatrix(matrix);
 assert.strictEqual(matrixValidation.ok,true,matrixValidation.errors.join(', '));
-assert(matrixValidation.count>=13);
+assert(matrixValidation.count>=16);
 assert.strictEqual(matrix.copyrightPolicy.includes('Copyrighted standards/manuals are not reproduced'),true);
 
 const requiredFutureSources=[
   'TX_ACR_2026_BASELINE',
   'ELECTRICAL_2026_NEC_01',
+  'TX_ENERGY_SINGLE_FAMILY_2015_IRC_CH11',
+  'TX_ENERGY_COMMERCIAL_2015_IECC',
   'AUSTIN_TECHNICAL_CODES_2026',
   'LOCAL_AHJ_01',
+  'BRUNO_TRANSPARENT_LOAD_V1',
   'RESIDENTIAL_LOAD_MANUAL_J_01',
   'COMMERCIAL_LOAD_AUSTIN_IECC_C403_2_1',
   'EQUIPMENT_SELECTION_MANUAL_S_01',
@@ -33,10 +36,16 @@ const sourceGate=core.validateRequiredSourceIds(matrix,requiredFutureSources);
 assert.strictEqual(sourceGate.ok,true,JSON.stringify(sourceGate.missing));
 assert.strictEqual(core.sourceById(matrix,'ELECTRICAL_2026_NEC_01').calculation_domain,'electrical');
 assert.strictEqual(core.sourceById(matrix,'COMMERCIAL_LOAD_AUSTIN_IECC_C403_2_1').calculation_effect,'hard_minimum');
+assert.strictEqual(core.sourceById(matrix,'BRUNO_TRANSPARENT_LOAD_V1').calculation_domain,'load');
+assert.strictEqual(core.sourceById(matrix,'TX_ENERGY_COMMERCIAL_2015_IECC').jurisdiction,'TX statewide minimum');
 assert.strictEqual(core.sourceById(matrix,'EQUIPMENT_OEM_01').source_url,null);
 assert.strictEqual(core.sourceById(matrix,'EQUIPMENT_OEM_01').source_url_required_before_calculation,true);
-assert.strictEqual(core.unresolvedSourceSlots(matrix).length,1,'only project-specific OEM source slot should remain unresolved by design');
-assert(core.sourcesForDomain(matrix,'load').length>=2,'residential and commercial load paths must both exist');
+assert.strictEqual(core.sourceById(matrix,'LOCAL_AHJ_01').source_url,null,'generic project AHJ source must not point to Austin');
+assert.strictEqual(core.sourceById(matrix,'LOCAL_AHJ_01').source_url_required_before_calculation,true);
+assert.strictEqual(core.unresolvedSourceSlots(matrix).length,2,'only project-specific AHJ and OEM source slots should remain unresolved by design');
+assert(core.sourcesForDomain(matrix,'load').length>=3,'internal, residential methodology, and Austin commercial load sources must exist');
+assert(core.sourcesForDomain(matrix,'energy').some(x=>x.rule_id==='TX_ENERGY_SINGLE_FAMILY_2015_IRC_CH11'));
+assert(core.sourcesForDomain(matrix,'energy').some(x=>x.rule_id==='TX_ENERGY_COMMERCIAL_2015_IECC'));
 assert(core.sourcesForDomain(matrix,'electrical').some(x=>x.rule_id==='ELECTRICAL_2026_NEC_01'));
 assert(core.sourcesForDomain(matrix,'ventilation').some(x=>x.rule_id==='COMMERCIAL_OUTSIDE_AIR_AUSTIN_UMC_402'));
 
@@ -76,6 +85,6 @@ assert.strictEqual(summary.effectiveDate,'2026-09-01');
 const mxSummary=ux.summarizeMatrix(matrix,core);
 assert.strictEqual(mxSummary.valid,true,mxSummary.errors.join(', '));
 assert.strictEqual(mxSummary.sources,matrix.sources.length);
-assert.strictEqual(mxSummary.unresolvedSlots,1);
+assert.strictEqual(mxSummary.unresolvedSlots,2);
 
 console.log('code-rule-registry tests passed');
