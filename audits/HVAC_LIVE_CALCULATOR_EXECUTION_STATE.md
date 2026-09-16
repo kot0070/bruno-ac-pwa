@@ -7,7 +7,8 @@ execution_mode: STRICT_SEQUENTIAL
 current_stage: S13
 last_completed_stage: S12
 next_stage_after_current: NONE
-main_head: 459c497b60cc77c511e9337a888bdff7508c2fef
+main_head: 7c89b706546e4d2e465405544dc398220e664db9
+s13_state: REAUDIT_READY
 ```
 
 ## HARD RULE
@@ -31,42 +32,45 @@ Read the master plan first, then this file before every stage. Execute only `cur
 | S11 History/templates/export/import | DONE | 256471e0 | 35121613789 SUCCESS | 87daa47afa23d276b6c69484bb3d38f055c7dcb3 | v56 |
 | S12 Mobile UX/PWA/E2E | DONE | 43dbd145 | 35122703196 SUCCESS | 459c497b60cc77c511e9337a888bdff7508c2fef | v58 |
 
-## S12 EVIDENCE
+## S13 AUDIT LOOP
 
-Implemented:
-- sticky same-surface runtime result strip for Cooling Load / Selected Capacity / System Count / Customer Materials / Your Cost / blockers;
-- grouped actionable blocker panel driven by the live compliance gate;
-- major Building / Load / Equipment / Electrical / Mechanical BOM / Pricing / Review sections can collapse/expand without navigating to a second calculator;
-- mobile dark-control hardening and safe-area spacing added;
-- executable JSDOM runtime test covers live strip values, blockers, READY transition and collapsible sections;
-- end-to-end dependency-chain fixture verifies 2,000 ft² vs 20,000 ft² materially changes load, envelope changes affect load, incomplete inputs block, and a fully resolved load -> OEM equipment -> electrical -> mechanical BOM -> Catalog pricing -> compliance chain reaches READY;
-- all history, financial, Apply lifecycle, Journal, secondary-drain, source registry and syntax regression tests passed;
-- exact final HEAD GitHub Pages deployment succeeded.
+Initial independent audit against `459c497b60cc77c511e9337a888bdff7508c2fef` produced `B_ACCEPT_AFTER_MINOR_FIXES` with three P1 findings and one P2 finding. Full report:
+`audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_459c497b60cc77c511e9337a888bdff7508c2fef_20260916-1323.md`.
+
+Correction cycle completed on `main`:
 
 ```yaml
-validated_commit: 43dbd14524ce192659738e3a1d611aab46112094
-ci_run: 35122703196
-ci_result: SUCCESS
-pages_run: 35122795091
+started_from_main_HEAD: 459c497b60cc77c511e9337a888bdff7508c2fef
+validated_commit: 7ed3238ed4409fd7d6137848081f287196adb589
+validation_run: 35134969943
+validation_result: SUCCESS
+temporary_validation_workflow_removed: true
+completed_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
+pages_run_exact_final_head: 35135027447
 pages_result: SUCCESS
-final_main_head: 459c497b60cc77c511e9337a888bdff7508c2fef
-pwa_cache: bruno-ac-v58
+pwa_cache: bruno-ac-v59
 browser_mobile_runtime: NOT_PERFORMED
-executable_dom_runtime: PASS_jsdom
-end_to_end_chain: PASS
+implementation_report: audits/implementation/MAIN_HVAC_LIVE_CALCULATOR_M01_AUDIT_FIX_7C89B706.md
 ```
+
+Corrected findings:
+- P1-01 Catalog hard-coded fallback removed; exact/binding/unique-compatible resolution only.
+- P1-02 impossible envelope opening geometry now blocks instead of clamping.
+- P1-03 extended history/import validation now validates nested chain structure.
+- P2-01 load provenance now separates residential/commercial source applicability.
 
 ## KNOWN LIMITATION TO AUDIT EXPLICITLY
 Automatic equipment candidate selection currently selects one exact OEM/Catalog candidate when it satisfies the verified range. Operator override supports `systemCount > 1`, but automatic optimization/splitting into multiple smaller systems is not claimed as implemented. Auditor must treat any product/UI implication otherwise as a finding.
 
-## S13 ENTRY GATE
-S01-S12 are DONE with recorded evidence. S13 independent AUDIT ONLY is authorized against exact `main` HEAD `459c497b60cc77c511e9337a888bdff7508c2fef`.
+## S13 RE-AUDIT ENTRY GATE
+S01-S12 remain DONE. Targeted B-audit findings were corrected and full regression CI succeeded. Temporary validation workflow is removed. Exact final `main` HEAD is `7c89b706546e4d2e465405544dc398220e664db9`; exact Pages deployment run `35135027447` is SUCCESS.
 
-S13 requirements:
-- independent audit of full source/load/equipment/electrical/mechanical/pricing/compliance/history/mobile/PWA chain;
-- exact target HEAD required;
-- production writes forbidden;
-- browser/mobile runtime strongly preferred; if unavailable, record `NOT_PERFORMED` and do not claim it;
-- full report MUST be persisted to audit workspace before chat response;
-- `LATEST_AUDIT.md` and `HANDOFF.md` MUST be updated before chat response;
-- chat response only after successful persistence: `VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT`.
+S13 independent re-audit is authorized against exact `main` HEAD `7c89b706546e4d2e465405544dc398220e664db9`.
+
+Requirements:
+- AUDIT ONLY during re-audit; production writes forbidden;
+- verify corrected findings and regressions on exact target HEAD;
+- browser/mobile runtime: if unavailable, record exactly `NOT_PERFORMED`;
+- persist full report to `audits/history/` before final chat;
+- update `LATEST_AUDIT.md` and `HANDOFF.md` before final chat;
+- M01 closes only if persisted verdict is A.
