@@ -3,7 +3,7 @@ const assert=require('assert');
 const H=require('../project-history-core.js');
 
 function snap(id,sqft){return {schemaVersion:1,id:id,createdAt:'2026-09-15T20:00:00.000Z',projectPlan:{schemaVersion:2,projectType:'residential',sqft:sqft,rooms:[{id:'r1',type:'bedroom',count:3,area:100}],quantities:[{key:'q',final:3}],extras:[{id:'e1',catalogId:'cat-1',label:'Item',qty:2,customerUnitPrice:100,yourUnitCost:70}]},calculatorInputs:{sqft:String(sqft)},bom:[{label:'Item',qty:2}],totals:{customerMaterials:200,yourCost:140,marginDollar:60,marginPct:30},pricingFrozen:true};}
-function extended(){return {buildingEnvelope:{schemaVersion:4,project:{conditionedFloorArea:2000}},loadResult:{status:'complete',sources:['LOAD_SOURCE']},equipmentResult:{status:'ready',sources:['EQUIPMENT_SOURCE']},electricalResult:{status:'ready',sources:['ELECTRICAL_SOURCE']},mechanicalBOM:{status:'ready',rows:[{key:'x'}],sources:['MECH_SOURCE']},pricedBOM:{status:'ready',rows:[{key:'x',catalogId:'cat-1'}],totals:{customerMaterials:200,yourCost:140,marginDollar:60,marginPct:30}},complianceGate:{status:'ready'},catalogBindings:{x:'cat-1'},quantityOverrides:{},complianceMetadata:{},sourceRefs:['LOAD_SOURCE','EQUIPMENT_SOURCE','ELECTRICAL_SOURCE','MECH_SOURCE'],chainVersion:1,frozenAt:'2026-09-16T13:00:00.000Z'};}
+function extended(){return {buildingEnvelope:{schemaVersion:4,project:{conditionedFloorArea:2000},zones:[{id:'z1',area:2000}]},loadResult:{input_completeness:'complete',calculation_method:'Bruno transparent envelope load v1',sources:['LOAD_SOURCE']},equipmentResult:{status:'ready',final:{mode:'catalog_oem',capacityBtuh:36000,systemCount:1},sources:['EQUIPMENT_SOURCE']},electricalResult:{status:'ready',bom:[],sources:['ELECTRICAL_SOURCE']},mechanicalBOM:{status:'ready',rows:[{key:'x'}],sources:['MECH_SOURCE']},pricedBOM:{status:'ready',rows:[{key:'x',catalogId:'cat-1'}],totals:{customerMaterials:200,yourCost:140,marginDollar:60,marginPct:30}},complianceGate:{status:'ready',blockers:[],sources:['LOAD_SOURCE','EQUIPMENT_SOURCE']},catalogBindings:{x:'cat-1'},quantityOverrides:{},complianceMetadata:{},sourceRefs:['LOAD_SOURCE','EQUIPMENT_SOURCE','ELECTRICAL_SOURCE','MECH_SOURCE'],chainVersion:1,frozenAt:'2026-09-16T13:00:00.000Z'};}
 
 let store=H.normalizeStore(null);
 let a=H.add(store,snap('',2000));
@@ -39,6 +39,15 @@ assert.strictEqual(H.validateSnapshot(malformedExtended).error,'missing_extended
 const malformedRefs=JSON.parse(JSON.stringify(full));malformedRefs.extended.sourceRefs='LOAD_SOURCE';
 assert.strictEqual(H.validateSnapshot(malformedRefs).ok,false);
 assert.strictEqual(H.validateSnapshot(malformedRefs).error,'invalid_extended_sourceRefs');
+const emptyNested=JSON.parse(JSON.stringify(full));emptyNested.extended.equipmentResult={};
+assert.strictEqual(H.validateSnapshot(emptyNested).ok,false);
+assert.strictEqual(H.validateSnapshot(emptyNested).error,'invalid_extended_equipmentResult');
+const malformedPricedRows=JSON.parse(JSON.stringify(full));delete malformedPricedRows.extended.pricedBOM.rows;
+assert.strictEqual(H.validateSnapshot(malformedPricedRows).ok,false);
+assert.strictEqual(H.validateSnapshot(malformedPricedRows).error,'invalid_extended_pricedBOM');
+const malformedCompliance=JSON.parse(JSON.stringify(full));malformedCompliance.extended.complianceGate={status:'ready'};
+assert.strictEqual(H.validateSnapshot(malformedCompliance).ok,false);
+assert.strictEqual(H.validateSnapshot(malformedCompliance).error,'invalid_extended_complianceGate');
 
 let one=H.exportOne(b.store.items[0]);
 assert.strictEqual(one.ok,true);
@@ -71,6 +80,11 @@ const atomic=H.importPayload(mixed,target);
 assert.strictEqual(atomic.ok,false);
 assert.strictEqual(atomic.added,0);
 assert.deepStrictEqual(atomic.store,target);
+const badExtendedImport=H.exportOne(full);badExtendedImport.payload.snapshot.extended.electricalResult={};
+const atomicExtended=H.importPayload(badExtendedImport,target);
+assert.strictEqual(atomicExtended.ok,false);
+assert.strictEqual(atomicExtended.added,0);
+assert.deepStrictEqual(atomicExtended.store,target);
 
 // totals are required and strictly number|null; no missing/coercible values.
 const missingTotal=snap('missing',2000);delete missingTotal.totals.marginPct;
