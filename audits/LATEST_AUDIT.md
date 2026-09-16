@@ -1,27 +1,21 @@
 # LATEST AUDIT
 
 ```yaml
-task_id: PR26_BLOCKER_FIX_REAUDIT_04
+task_id: MAIN_SERVICE_JOURNAL_V2_AUDIT_01
 repository: kot0070/bruno-ac-pwa
-production_pr: 26
-audited_head: 116404b13313af0f966695777cf55a807b27fbb5
+production_mode: DIRECT_MAIN
+production_pr: NONE
+audited_head: 5d5506da031e933773614a11e8e5377a478870f6
 verdict: C_REJECT_REWORK_REQUIRED
 blockers:
-  - F04_P1_click_only_blocked_plan_mutations_bypass_fail_closed_live_invalidation
+  - F01_P1_employee_FICA_7_65_percent_applied_to_service_call_revenue
+  - F02_P1_full_app_backup_omits_bruno_ac_service_journal_v2
 findings:
   P0: 0
-  P1: 1
-  P2: 1
-closed_prior_findings:
-  - F01_live_wrapper_shape
-  - F02_confirm_save_invalid_room_plan
-  - F03_reload_room_plan_restore
-  - F05_false_compliance_ready_with_required_input
-  - F06_duplicate_provenance
-partially_open:
-  - F07_import_pricing_validation
+  P1: 2
+  P2: 0
 browser_runtime: NOT_PERFORMED
-full_report: audits/history/PR26_116404b13313af0f966695777cf55a807b27fbb5_20260915-1821.md
+full_report: audits/history/MAIN_SERVICE_JOURNAL_V2_5d5506da031e933773614a11e8e5377a478870f6_20260915-1908.md
 ```
 
-Canonical full report: `audits/history/PR26_116404b13313af0f966695777cf55a807b27fbb5_20260915-1821.md`.
+Canonical full report: `audits/history/MAIN_SERVICE_JOURNAL_V2_5d5506da031e933773614a11e8e5377a478870f6_20260915-1908.md`.
