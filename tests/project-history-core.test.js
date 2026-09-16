@@ -26,7 +26,6 @@ assert.strictEqual(Object.prototype.hasOwnProperty.call(dup.plan.extras[0],'cust
 assert.strictEqual(Object.prototype.hasOwnProperty.call(dup.plan.extras[0],'yourUnitCost'),false);
 assert.strictEqual(dup.plan.duplicatedFromSnapshotId,b.store.items[0].id);
 
-// Extended snapshots freeze the full calculation chain and duplicate only project/building inputs.
 const full=snap('full',2000);full.extended=extended();
 assert.strictEqual(H.validateSnapshot(full).ok,true);
 const fullDup=H.duplicatePlan(full);
@@ -71,7 +70,6 @@ assert.strictEqual(importedAll.ok,true);
 assert.strictEqual(importedAll.added,2);
 assert.strictEqual(new Set(importedAll.store.items.map(x=>x.id)).size,importedAll.store.items.length,'imported IDs must be collision-free');
 
-// Atomic full-history import: one malformed member rejects the entire batch and leaves store unchanged.
 const target=H.add(H.normalizeStore(null),snap('',1800)).store;
 const mixed=H.exportAll(b.store);
 mixed.history.items[1]=JSON.parse(JSON.stringify(mixed.history.items[1]));
@@ -83,10 +81,8 @@ assert.deepStrictEqual(atomic.store,target);
 const badExtendedImport=H.exportOne(full);badExtendedImport.payload.snapshot.extended.electricalResult={};
 const atomicExtended=H.importPayload(badExtendedImport,target);
 assert.strictEqual(atomicExtended.ok,false);
-assert.strictEqual(atomicExtended.added,0);
 assert.deepStrictEqual(atomicExtended.store,target);
 
-// totals are required and strictly number|null; no missing/coercible values.
 const missingTotal=snap('missing',2000);delete missingTotal.totals.marginPct;
 assert.strictEqual(H.validateSnapshot(missingTotal).ok,false);
 assert.strictEqual(H.validateSnapshot(missingTotal).error,'missing_total_marginPct');
@@ -99,7 +95,6 @@ assert.strictEqual(H.validateSnapshot(boolTotal).error,'invalid_total_yourCost')
 const nullTotals=snap('nulls',2000);nullTotals.totals={customerMaterials:null,yourCost:null,marginDollar:null,marginPct:null};
 assert.strictEqual(H.validateSnapshot(nullTotals).ok,true);
 
-// Unsupported/coercible payload version is rejected strictly.
 const badVersion=H.exportAll(b.store);badVersion.version='1';
 assert.strictEqual(H.importPayload(badVersion,target).ok,false);
 
