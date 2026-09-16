@@ -83,4 +83,20 @@ assert.strictEqual(migrated.schemaVersion,4);
 assert.strictEqual(migrated.settings.ownerReserveEnabled,false);
 assert.strictEqual(migrated.settings.ownerReservePct,0);
 
+function storage(raw){let writes=0,o={};if(raw!==undefined)o[UX.STORAGE_KEY]=raw;return {get length(){return Object.keys(o).length},key(i){return Object.keys(o)[i]||null},getItem(k){return Object.prototype.hasOwnProperty.call(o,k)?o[k]:null},setItem(k,v){writes++;o[k]=String(v)},writes(){return writes},dump(){return Object.assign({},o)}}}
+const corrupt=storage('{bad json');
+const corruptRead=UX.loadFromStorage(corrupt);
+assert.strictEqual(corruptRead.status,'invalid');
+assert.strictEqual(UX.storageStatus().locked,true);
+assert.strictEqual(corrupt.writes(),0,'corrupt current Journal must never be overwritten during load');
+assert.strictEqual(corrupt.getItem(UX.STORAGE_KEY),'{bad json');
+assert.strictEqual(UX.save(UX.defaultState(),corrupt),false,'locked Journal storage must reject normal saves');
+assert.strictEqual(corrupt.getItem(UX.STORAGE_KEY),'{bad json');
+const missing=storage(undefined);
+const missingRead=UX.loadFromStorage(missing);
+assert.strictEqual(missingRead.status,'missing');
+assert.strictEqual(UX.storageStatus().locked,false);
+assert.strictEqual(UX.save(missingRead.state,missing),true);
+assert.strictEqual(UX.parseStoredJournal(missing.getItem(UX.STORAGE_KEY)).status,'valid');
+
 console.log('service-journal-ux tests passed');
