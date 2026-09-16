@@ -2,16 +2,15 @@
 
 ```yaml
 chain_id: BRUNO_AC_MASTER_CHAIN_01
-chain_version: 2
+chain_version: 3
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
 audit_branch: audit/pr22-603cbca
 mode: STRICT_CHAINED_MASTER_PLANS
-active_executable_master: NONE
-proposed_next_master: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
-proposed_next_master_id: PROJECT_FULL_AUDIT_MASTER_01
-user_approval_required: true
-execution_authorized: false
+active_executable_master: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
+active_master_id: PROJECT_FULL_AUDIT_MASTER_01
+user_approval_required: false
+execution_authorized: true
 free_work_mode_allowed: false
 ```
 
@@ -19,10 +18,9 @@ free_work_mode_allowed: false
 
 - Finish and independently audit each active master before closing it.
 - Verdict A closes a master; B/C remains in that master’s fix/re-audit loop.
-- Create and persist the next large master before new major work.
-- A newly created large master is not executable until any required user-approval gate is satisfied.
 - Every executable master uses strict sequential stages, exact `main` HEAD tracking, executable regressions and one final independent audit.
 - Final audit reports must be persisted before chat response.
+- Do not begin a new large master after this one until it is created, persisted, and approved when required.
 
 ## CLOSED MASTERS
 
@@ -38,27 +36,19 @@ final_report: audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_7c89b706546e4d2e46540
 final_verdict: A_ACCEPT
 ```
 
-M01 delivered and audited the live HVAC dependency chain through load, equipment, electrical, mechanical BOM, Catalog pricing, compliance, history, one-surface mobile UX and PWA integration. Actual physical browser/mobile runtime remains recorded as `NOT_PERFORMED` rather than inferred.
-
-## PROPOSED NEXT MASTER — USER APPROVAL REQUIRED
-
-### M02 — PROJECT FULL AUDIT
+## ACTIVE MASTER — M02 PROJECT FULL AUDIT
 
 ```yaml
 master_id: PROJECT_FULL_AUDIT_MASTER_01
-status: PROPOSED_AWAITING_USER_APPROVAL
+status: ACTIVE_AUTHORIZED
 file: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
+execution_state: audits/PROJECT_FULL_AUDIT_EXECUTION_STATE.md
 starting_accepted_head: 7c89b706546e4d2e465405544dc398220e664db9
-execution_authorized: false
-supersedes_previous_queue:
-  - CODEBASE_FULL_AUDIT_MASTER_PLAN
-  - CALCULATION_MATH_FULL_AUDIT_MASTER_PLAN
-  - REGULATORY_STANDARDS_FULL_AUDIT_MASTER_PLAN
+execution_authorized: true
+current_stage: P00
 ```
 
-This consolidated master contains the previously queued architecture, mathematics and regulatory audits plus dedicated hidden-defect/ghost and test-quality stages, remediation gates, cross-domain regression and one final independent audit.
-
-High-level sequence:
+Sequence:
 
 ```text
 P00 baseline/inventory
@@ -79,9 +69,8 @@ P00 baseline/inventory
 
 ```yaml
 LAST_CLOSED_MASTER: HVAC_LIVE_CALCULATOR_MASTER_01
-LAST_ACCEPTED_MAIN_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-NEXT_MASTER: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
-NEXT_MASTER_ID: PROJECT_FULL_AUDIT_MASTER_01
-NEXT_MASTER_STATUS: PROPOSED_AWAITING_USER_APPROVAL
-DO_NOT_EXECUTE_NEXT_MASTER_YET: true
+ACTIVE_MASTER: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
+ACTIVE_MASTER_ID: PROJECT_FULL_AUDIT_MASTER_01
+CURRENT_STAGE: P00
+EXECUTION_AUTHORIZED: true
 ```
