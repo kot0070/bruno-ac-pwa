@@ -5,11 +5,11 @@ master_plan: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
 master_id: PROJECT_FULL_AUDIT_MASTER_01
 execution_mode: DIRECT_MAIN + STRICT_SEQUENTIAL + AUTONOMOUS
 status: ACTIVE
-current_stage: P02
-last_completed_stage: P01
-next_stage_after_current: P03
+current_stage: P03
+last_completed_stage: P02
+next_stage_after_current: P04
 starting_accepted_main_head: 7c89b706546e4d2e465405544dc398220e664db9
-main_head: f0969e0e741912919da9342a098762131d239594
+main_head: 867eeed47d8e2ea106922b2455a432da9ee8a217
 browser_mobile_runtime: NOT_PERFORMED
 ```
 
@@ -19,8 +19,8 @@ browser_mobile_runtime: NOT_PERFORMED
 |---|---|---|---|---|
 | P00 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 7c89b706546e4d2e465405544dc398220e664db9 | `audits/PROJECT_FULL_AUDIT_P00_INVENTORY.md` |
 | P01 | DONE_WITH_FINDINGS | 7c89b706546e4d2e465405544dc398220e664db9 | 7c89b706546e4d2e465405544dc398220e664db9 | `audits/PROJECT_FULL_AUDIT_P01_ARCHITECTURE.md`; P0=0/P1=3/P2=2 |
-| P02 | ACTIVE | 7c89b706546e4d2e465405544dc398220e664db9 | — | first remediation commit `f0969e0e741912919da9342a098762131d239594`; state pointer corrected before further remediation |
-| P03 | NOT_STARTED | — | — | — |
+| P02 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 867eeed47d8e2ea106922b2455a432da9ee8a217 | CI `35137010234` SUCCESS; Pages `35137121048` SUCCESS; PWA v60; temp workflow removed |
+| P03 | ACTIVE | 867eeed47d8e2ea106922b2455a432da9ee8a217 | — | formula/math audit in progress |
 | P04 | NOT_STARTED | — | — | — |
 | P05 | NOT_STARTED | — | — | — |
 | P06 | NOT_STARTED | — | — | — |
@@ -30,37 +30,35 @@ browser_mobile_runtime: NOT_PERFORMED
 | P10 | NOT_STARTED | — | — | — |
 | P11 | NOT_STARTED | — | — | — |
 
-## P00 RECORD
+## P02 RECORD
 
 ```yaml
 status: DONE
 started_from_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-completed_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-changed_files: []
-implementation_summary: repository/runtime/state/test/PWA inventory persisted
-executable_tests_CI: not_required_audit_only_inventory
+validated_commit: 8381934f38e1e5578e55e8f015a7f855f2b86bd9
+completed_main_HEAD: 867eeed47d8e2ea106922b2455a432da9ee8a217
+changed_files:
+  - financial-integrity-core.js
+  - service-journal-ux.js
+  - app-backup-bridge.js
+  - sw.js
+  - tests/storage-safety.test.js
+  - tests/service-journal-ux.test.js
+  - tests/app-backup-bridge.test.js
+  - tests/project-estimator-integration.test.js
+implementation_summary: fail-closed corrupt primary Job and Journal handling; rescue/lock semantics; exact transactional full-app restore with rollback and known-key validation; visible Journal persistence failure; PWA v60
+ci_run: 35137010234
+ci_result: SUCCESS
+pages_run: 35137121048
+pages_result: SUCCESS
+temporary_validation_workflow: REMOVED
 browser_mobile_runtime: NOT_PERFORMED
-known_limitations: runtime visual acceptance not performed
-regressions_checked: no production mutation
-next_stage_authorized: P01
+known_limitations:
+  - dynamic enhancement-loader failure banner remains P2 debt for later ghost/runtime stages
+  - main inline monolith remains a maintainability risk, not rewritten in this remediation
+regressions_checked: financial, Apply/Re-Apply lifecycle, HVAC E2E, history/import, Journal logic+DOM, backup transaction, project one-surface DOM, syntax
+next_stage_authorized: P03
 ```
-
-## P01 RECORD
-
-```yaml
-status: DONE_WITH_FINDINGS
-started_from_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-completed_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-changed_files: []
-findings: P0_0_P1_3_P2_2
-report: audits/PROJECT_FULL_AUDIT_P01_ARCHITECTURE.md
-browser_mobile_runtime: NOT_PERFORMED
-next_stage_authorized: P02
-```
-
-## P02 ACTIVE NOTE
-
-The first P02 production commit was created immediately after the P01 report but before this execution-state pointer was persisted. This sequencing lag is explicitly recorded here; no later stage was started. The current stage is now formally P02 before any further production remediation.
 
 ## HARD RULE
 
