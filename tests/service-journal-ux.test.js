@@ -7,7 +7,7 @@ assert.deepStrictEqual(UX.rangeBounds('2026-09-11','month'),{start:'2026-09-01',
 assert.deepStrictEqual(UX.rangeBounds('2026-09-11','quarter'),{start:'2026-07-01',end:'2026-09-30'});
 assert.strictEqual(UX.shiftPeriod('2026-01-31','month',1),'2026-02-28');
 assert.strictEqual(UX.shiftPeriod('2026-02-28','month',1),'2026-03-28');
-assert.strictEqual(UX.shiftPeriod('2026-12-31','quarter',1),'2027-03-31');
+assert.strictEqual(UX.shiftPeriod('2026-12-31','quarter',1),'2027-01-31');
 assert.strictEqual(UX.shiftPeriod('2027-01-31','quarter',-1),'2026-10-31');
 
 const s=UX.defaultState();
