@@ -2,15 +2,15 @@
 
 ```yaml
 chain_id: BRUNO_AC_MASTER_CHAIN_01
-chain_version: 3
+chain_version: 4
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
 audit_branch: audit/pr22-603cbca
 mode: STRICT_CHAINED_MASTER_PLANS
-active_executable_master: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
-active_master_id: PROJECT_FULL_AUDIT_MASTER_01
-user_approval_required: false
-execution_authorized: true
+active_executable_master: NONE
+active_master_id: NONE
+user_approval_required: true
+execution_authorized: false
 free_work_mode_allowed: false
 ```
 
@@ -20,7 +20,7 @@ free_work_mode_allowed: false
 - Verdict A closes a master; B/C remains in that master’s fix/re-audit loop.
 - Every executable master uses strict sequential stages, exact `main` HEAD tracking, executable regressions and one final independent audit.
 - Final audit reports must be persisted before chat response.
-- Do not begin a new large master after this one until it is created, persisted, and approved when required.
+- Do not begin a new large master until it is created, persisted and explicitly approved when required.
 
 ## CLOSED MASTERS
 
@@ -36,19 +36,25 @@ final_report: audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_7c89b706546e4d2e46540
 final_verdict: A_ACCEPT
 ```
 
-## ACTIVE MASTER — M02 PROJECT FULL AUDIT
+### M02 — PROJECT FULL AUDIT
 
 ```yaml
 master_id: PROJECT_FULL_AUDIT_MASTER_01
-status: ACTIVE_AUTHORIZED
-file: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
+status: CLOSED_A_ACCEPT
+plan: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
 execution_state: audits/PROJECT_FULL_AUDIT_EXECUTION_STATE.md
 starting_accepted_head: 7c89b706546e4d2e465405544dc398220e664db9
-execution_authorized: true
-current_stage: P00
+accepted_main_head: d8df33f2e58f48062f299daa276492e0b9b4c6e3
+final_report: audits/PROJECT_FULL_AUDIT_P11_FINAL.md
+implementation_closure: audits/implementation/PROJECT_FULL_AUDIT_P11_D8DF33F2.md
+final_verdict: A_ACCEPT
+corrective_regression_run: 35151667486
+final_pages_run: 35151736138
+pwa_cache: bruno-ac-v64
+browser_mobile_runtime: NOT_PERFORMED
 ```
 
-Sequence:
+M02 sequence completed:
 
 ```text
 P00 baseline/inventory
@@ -62,15 +68,18 @@ P00 baseline/inventory
 -> P08 ghost/PWA/runtime remediation
 -> P09 test-quality audit/hardening
 -> P10 final cross-domain regression
--> P11 independent final audit
+-> P11 independent final audit + corrective/re-audit loop
+-> A_ACCEPT
 ```
 
 ## CURRENT POINTER
 
 ```yaml
-LAST_CLOSED_MASTER: HVAC_LIVE_CALCULATOR_MASTER_01
-ACTIVE_MASTER: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
-ACTIVE_MASTER_ID: PROJECT_FULL_AUDIT_MASTER_01
-CURRENT_STAGE: P00
-EXECUTION_AUTHORIZED: true
+LAST_CLOSED_MASTER: PROJECT_FULL_AUDIT_MASTER_01
+ACTIVE_MASTER: NONE
+ACTIVE_MASTER_ID: NONE
+CURRENT_STAGE: NONE
+EXECUTION_AUTHORIZED: false
+NEXT_MASTER_REQUIRES_USER_APPROVAL: true
+ACCEPTED_PRODUCTION_BASELINE: d8df33f2e58f48062f299daa276492e0b9b4c6e3
 ```
