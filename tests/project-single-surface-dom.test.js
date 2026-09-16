@@ -4,9 +4,8 @@ const fs=require('fs');
 const {JSDOM}=require('jsdom');
 
 const html='<!doctype html><html><head></head><body>'+ 
-'<div class="notice">old workflow</div>'+ 
 '<div id="jobbar"><span class="pill">split heat pump</span><span class="pill">3 ton / 36,000 BTU</span></div>'+ 
-'<main class="wrap"><section id="projectEstimatorWizard" class="pew"><div class="pew-sub">old steps</div>'+ 
+'<main class="wrap"><div class="notice">old workflow</div><section id="projectEstimatorWizard" class="pew"><div class="pew-sub">old steps</div>'+ 
 '<section id="pew-finish-step"><div class="pew-step-title"><strong>Full technical calculation</strong><small>old</small></div><button id="pew-open-full">Open live technical calculator</button></section></section>'+ 
 '<div class="grid" hidden><section class="card"><h2>Full calculation · system / field inputs</h2>'+ 
 '<div class="field"><input id="sqft" value="20000"></div><div class="field"><select id="systemType"><option selected>split-heat-pump</option></select></div>'+ 
@@ -33,12 +32,11 @@ for(const id of ['sqft','systemType','indoorLocation','tonnage']){
 const tons=w.document.getElementById('tonnage');
 assert.strictEqual(tons.value,'','legacy demo capacity must not remain active');
 assert.strictEqual(tons.dataset.legacyCapacity,'3 ton / 36,000 BTU','legacy capacity may survive only as metadata');
-assert(w.document.querySelector('.notice').textContent.includes('same calculator surface'));
+assert(w.document.querySelector('main.wrap>.notice').textContent.includes('same calculator surface'));
 assert(w.document.getElementById('pew-finish-step').textContent.includes('No second calculator is required'));
 const oldPill=[...w.document.querySelectorAll('#jobbar .pill')].find(x=>x.textContent.includes('3 ton'));
 assert(oldPill.classList.contains('bruno-single-source-hidden'),'legacy tonnage pill must not remain visible');
 
-/* Wizard reset used to set grid.hidden=true. Bridge must immediately restore one-surface architecture. */
 grid.hidden=true;
 w.BrunoProjectModeBridge.enforceOneSurface(w.document);
 assert.strictEqual(grid.hidden,false);
