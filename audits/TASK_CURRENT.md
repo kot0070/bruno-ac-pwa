@@ -7,9 +7,8 @@ context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
 roadmap: audits/ROADMAP_NEXT.md
 implementation_reports:
-  - audits/implementation/MAIN_SERVICE_JOURNAL_V2_5d5506da.md
-  - audits/implementation/MAIN_NAV_JOURNAL_V3_84b0da0d.md
-previous_reject_report: audits/history/MAIN_SERVICE_JOURNAL_V2_5d5506da031e933773614a11e8e5377a478870f6_20260915-1908.md
+  - audits/implementation/PR27_PROJECT_ESTIMATOR_WIZARD_cf856a30.md
+previous_reject_report: audits/history/MAIN_NAV_JOURNAL_V3_84b0da0de9029fb5f6182580dcd6b8185fda9fae_20260915-1935.md
 protocol_required: true
 ```
 
@@ -25,141 +24,204 @@ audit_exact_head_required: true
 ```
 
 ```yaml
-task_id: MAIN_NAV_JOURNAL_V3_REAUDIT_02
+task_id: PR27_PROJECT_ESTIMATOR_WIZARD_AUDIT_01
 repository: kot0070/bruno-ac-pwa
-production_mode: DIRECT_MAIN
-production_branch: main
-base_rejected_head: 5d5506da031e933773614a11e8e5377a478870f6
-target_head: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
+production_mode: FEATURE_PR
+production_pr: 27
+production_branch: feature/project-estimator-wizard-v1
+base_main: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
+target_head: cf856a30b2f9cdcb9d61373d3472fef31b9e7343
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Perform an independent adversarial audit of exact `main` HEAD `84b0da0de9029fb5f6182580dcd6b8185fda9fae`.
+Perform an independent adversarial audit of PR #27 exact HEAD `cf856a30b2f9cdcb9d61373d3472fef31b9e7343`.
 
-Do not limit review to previous blockers. Re-check the full Service Journal, navigation, backup, project-mode boundary, PWA and accepted financial/calculator regressions.
+Do not limit review to the previous four blockers. Re-check the complete staged estimator, Job financial lifecycle, Journal corrections, backup restore boundary, Commercial fail-closed behavior, PWA and regressions.
 
-## PRIOR P1 BLOCKERS — MUST CLOSE
+## REQUIRED PROJECT-ESTIMATOR FLOW
 
-### F01 — revenue/FICA semantic defect
-
-Previously employee FICA 7.65% was subtracted directly from service-call revenue.
-
-Required now:
-- service-call Gross is not reduced by employee FICA;
-- optional owner tax reserve is separately named, default OFF, and not represented as payroll tax;
-- employee payroll deductions affect helper take-home;
-- employer payroll taxes add to employer crew cost;
-- Cash After Crew uses gross revenue minus optional owner reserve minus employer crew cost;
-- no-call day with paid helper remains negative.
-
-Independently verify current 2026 primary sources and implementation semantics for:
-- employee/employer Social Security 6.2%;
-- employee/employer Medicare 1.45%;
-- 2026 SS wage base $184,500;
-- 0.9% Additional Medicare employee withholding threshold behavior;
-- FUTA first $7,000 and 0.6% effective estimate only when full state credit applies;
-- Texas UI first $9,000 and new-employer 2.70% estimate; actual assigned rate may differ.
-
-Primary source families to verify independently: IRS Topic 751 / Pub 15 (2026), Texas Workforce Commission.
-
-### F02 — full app backup omitted Journal
-
-Required now:
-- Export App actually includes `bruno-ac-service-journal-v2`;
-- full backup captures all `bruno-ac-*` local stores without unrelated keys;
-- Import App validates and restores Journal data;
-- executable export -> clear/new storage -> import/restore round trip preserves Journal payload;
-- legacy Export App / Import App handlers cannot bypass the new full-backup bridge in normal UI use.
-
-## NAVIGATION / PRODUCT FLOW
-
-Verify mobile and desktop information architecture:
+Verify the actual product architecture is:
 
 ```text
-Journal
-Calculator
-Job
-Catalog
-More
+1 Compact Project Setup
+-> 2 Rooms / Zones
+-> 3 Code / Design Baseline
+-> 4 Live Materials / Final overrides / Catalog extras
+-> 5 Full Technical Calculator
+-> explicit Apply to Job
 ```
 
 Required behavior:
-- Journal opens as fresh-load home;
-- Calculator opens project workspace;
-- Job exposes distinct Proposal and Invoice destinations plus Summary / Change Orders / P&L;
-- Proposal uses Quote path and Invoice uses T&M Invoice path; they remain separate customer-document flows;
-- Catalog exposes Materials Catalog / Job Materials / Labor & Equip / Margins;
-- More opens a hierarchical drawer/tree rather than navigating immediately;
-- More tree includes Workers / Company / Code Reference / Help;
-- `Aa`, compact header Print / Reset / Other, and contextual totals do not regress.
 
-## RESIDENTIAL / COMMERCIAL PROJECT MODE
+- the old long technical form is hidden on initial Calculator entry;
+- first screen is compact and supports Residential/Commercial, total square footage, system and minimum project context;
+- room/zone rows support type, quantity and optional area;
+- Residential and Commercial room catalogs are appropriate and independently switchable;
+- initial calculation clearly distinguishes real/represented minimums from design recommendations and required field measurements;
+- no universal code minimum is invented for supply-register or return-grille counts;
+- line-set and condensate lengths are not inferred from square footage;
+- rule/source identifiers are visible for code/design traceability;
+- Full Technical Calculator opens only after the project baseline stage exists;
+- full calculator is prefilled from project Final quantities where mapped.
 
-Verify:
-- persistent selector exists in Project Calculator header;
-- Residential retains existing calculator behavior;
-- Commercial selection persists;
-- Commercial mode clearly states current residential IRC-oriented references are not commercial compliance authority;
-- Commercial mode blocks applying the residential-derived BOM to Job;
-- no UI text claims a complete commercial code engine exists;
-- local AHJ / adopted commercial mechanical / energy / fire / OEM verification boundary remains explicit.
+## LIVE OVERRIDE / COMPLIANCE
 
-Commercial-mode fail-closed behavior is acceptance scope; a complete commercial rules engine is NOT required in this cycle.
+Independently verify:
 
-## SERVICE JOURNAL V3
+- material rows expose Minimum / Calculated / Final;
+- Final edits recalculate project state live;
+- Final below a represented hard minimum becomes danger/red and blocks readiness;
+- missing required field input blocks readiness;
+- changes propagate into the full calculator inputs/BOM instead of leaving a stale Apply state;
+- full calculator Apply cannot proceed while the staged project is blocked;
+- no blocked edit leaves an older valid BOM silently applicable.
 
-Re-check end-to-end:
-- calendar top layout;
-- Day / Week / Month / Quarter archive;
-- Add/Edit/Delete calls;
-- compact saved call rows retain time/date/address/hours/status/description/price information;
-- cancelled calls do not count as revenue;
-- helpers hourly and fixed/day;
-- payroll settings persist;
-- employee take-home vs employer cost is distinct;
-- TWC/FUTA/employee/employer FICA rates can be changed/disabled;
-- V2 -> V3 migration does not carry old revenue FICA semantics forward;
-- reload persistence and legacy migration are non-destructive.
+## CATALOG / PRICING / JOB LIFECYCLE
 
-## FINANCIAL / CALCULATOR REGRESSION GATES
+Verify Add from Catalog end-to-end:
 
-Independently verify no regression to:
-- Method A;
-- Customer Price -> Job unitCost -> Quote;
-- Your Cost -> procurementCostSnapshot -> P&L;
-- actualCost override only;
-- blank Your Cost fallback provenance;
-- malformed financial values fail closed;
-- zero remains valid/reviewable;
-- calculator review UX;
-- Code Rule Registry / Code Library;
-- explicit Apply/Re-Apply snapshot semantics.
-
-PR #26 remains separate/unmerged and must not be mutated as part of this audit.
-
-## PWA / FINAL DIFF
-
-```yaml
-expected_cache: bruno-ac-v39
-validated_run: 35040092200
-validated_commit: 5ea77335613929d19f84dad41afe1dd8dbb93bc6
-expected_ci_conclusion: SUCCESS
-expected_post_ci_delta_to_target:
-  - DELETE .github/workflows/main-nav-journal-v3-validation.yml
+```text
+Catalog item
+-> project extra + quantity
+-> full calculator resolved BOM
+-> Customer Price / Your Cost
+-> explicit Apply
+-> Job snapshot
 ```
 
-Independently verify exact final diff from rejected head `5d5506da...` and confirm temporary workflow is absent from final HEAD.
+Re-check accepted invariants:
+
+- Catalog `unitCost` -> Calculator `customerUnitPrice` -> Job `unitCost` -> Quote;
+- Catalog `yourCost` -> Calculator `yourUnitCost` -> Job `procurementCostSnapshot` -> P&L;
+- blank Your Cost fallback remains `customer-price-fallback`;
+- malformed financial values fail closed;
+- zero remains valid/reviewable;
+- Catalog edits do not retroactively change Job snapshots until explicit Apply/Re-Apply;
+- Actual Cost precedence remains P&L-only;
+- Method A does not regress;
+- manually added Job Materials are not unintentionally deleted.
+
+## RESIDENTIAL / COMMERCIAL BOUNDARY
+
+Commercial mode is intentionally NOT a complete commercial rules engine in this cycle.
+
+Verify:
+
+- Commercial mode clearly identifies the commercial mechanical/energy/fire/AHJ/OEM design boundary;
+- residential IRC-oriented checks are not presented as complete commercial compliance;
+- Commercial Apply is blocked inside the authoritative `ac-calculator.js` Apply path;
+- opening `ac-calculator.html` standalone cannot bypass the Commercial block;
+- iframe/project-mode bridge does not become the only enforcement layer;
+- switching back to Residential restores normal eligible behavior only when the project is otherwise ready.
+
+## PREVIOUS P1 BLOCKERS — MUST RECHECK
+
+### F02 — full-app Journal restore validation
+
+Before any restore writes:
+
+- Journal JSON must parse;
+- supported Journal schema/version must be enforced;
+- expected settings/calls/crew shape must be validated;
+- schema 4 stable-worker shape must be validated;
+- malformed/unsupported Journal payload must fail closed;
+- valid full backup export -> empty/new storage -> import preserves Journal data and other Bruno stores;
+- unrelated localStorage keys remain excluded/not overwritten.
+
+### F03 — Commercial standalone bypass
+
+Verify exact standalone path cannot Apply a residential-derived BOM when current project type is Commercial.
+
+### F04 — Month / Quarter archive navigation
+
+Verify calendar-period movement rather than fixed-day stepping, including:
+
+- Jan 31 -> February without skipping March;
+- leap/non-leap February handling;
+- Q4 -> next Q1 across year boundary;
+- Q1 -> previous Q4;
+- Day/Week behavior remains correct.
+
+### F05 — payroll stable employee identity
+
+Verify:
+
+- schema 4 has stable `workers[].id`;
+- crew entries reference `workerId`;
+- payroll YTD SS/TWC/FUTA ledger is keyed by year + stable workerId, not display name;
+- two same-name workers do not share wage bases;
+- renaming a worker does not reset wage bases;
+- new worker creation remains stable across multiple daily crew entries;
+- legacy migration is non-destructive and any unavoidable ambiguity is documented rather than silently treated as exact historical identity.
+
+## JOURNAL FINANCIAL SEMANTICS
+
+Re-check that employee FICA is not a tax on service-call revenue.
+
+Required model:
+
+```text
+Gross service revenue
+- optional owner reserve (default OFF)
+- employer crew cost (gross wages + employer payroll estimates)
+= Cash After Crew
+```
+
+Employee deductions affect take-home separately.
+
+## PWA / OFFLINE
+
+Expected cache:
+
+```text
+bruno-ac-v40
+```
+
+Verify estimator JS/CSS/core, project-mode bridge, Journal, backup bridge, Code Library and calculator assets are coherent in the app shell. Actual offline runtime is preferred; if unavailable do not infer success from static source.
+
+## CI / FINAL HEAD EVIDENCE
+
+```yaml
+validated_run: 35042103577
+validated_commit: ad1cb2ff96bf1eee78e79e84804afe7c0f4a118c
+expected_conclusion: SUCCESS
+final_target: cf856a30b2f9cdcb9d61373d3472fef31b9e7343
+expected_post_ci_delta:
+  - DELETE .github/workflows/pr27-project-estimator-validation.yml
+```
+
+Independently verify run steps and compare validated commit to final target.
 
 ## BROWSER RUNTIME
 
-Actual mobile/browser runtime is strongly preferred for navigation, More tree, backup event interception, project selector/commercial block, compact rows and persistence. If unavailable, report exactly `NOT_PERFORMED` and do not infer browser success from CI/static source.
+Actual mobile/browser runtime is strongly preferred because this task is primarily staged UX + live-state integration. Test at least:
+
+- initial compact screen;
+- add/remove room;
+- switch Residential/Commercial;
+- calculate baseline;
+- Final edit below minimum and back above minimum;
+- required field input;
+- Catalog search/add extra;
+- open full calculator;
+- Commercial standalone Apply guard;
+- reload persistence;
+- Journal month/quarter navigation and worker selection.
+
+If browser runtime is unavailable, report exactly:
+
+```text
+NOT_PERFORMED
+```
+
+Do not infer browser success from CI/static inspection.
 
 ## REQUIRED REPORT
 
 ```yaml
-report_path_template: audits/history/MAIN_NAV_JOURNAL_V3_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+report_path_template: audits/history/PR27_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
 latest_alias: audits/LATEST_AUDIT.md
 required_return:
   - VERDICT
@@ -168,6 +230,6 @@ required_return:
   - FULL REPORT
 ```
 
-Write full report in audit workspace, update `LATEST_AUDIT.md` and `HANDOFF.md` per protocol.
+Write the full report in the audit workspace and update `LATEST_AUDIT.md` / `HANDOFF.md` per protocol.
 
-AUDIT ONLY. Do not modify `main`, production code, PRs, or merge anything.
+AUDIT ONLY. Do not modify production branch, PR #27, `main`, production code, or merge anything.
