@@ -6,8 +6,8 @@ protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
 roadmap: audits/ROADMAP_NEXT.md
-implementation_report: audits/implementation/MAIN_PROJECT_ESTIMATOR_E5DA455E.md
-previous_report: audits/history/PR27_cf856a30b2f9cdcb9d61373d3472fef31b9e7343_20260915-2005.md
+implementation_report: audits/implementation/MAIN_SECONDARY_DRAIN_FAIL_CLOSED_5c7884b3.md
+previous_report: audits/history/MAIN_PROJECT_ESTIMATOR_e5da455e38f36a4226ec407894efe2c84b301eda_20260915-2052.md
 protocol_required: true
 ```
 
@@ -23,91 +23,80 @@ audit_exact_head_required: true
 ```
 
 ```yaml
-task_id: MAIN_PROJECT_ESTIMATOR_ACCEPTANCE_01
+task_id: MAIN_SECONDARY_DRAIN_FAIL_CLOSED_REAUDIT_01
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
 production_branch: main
-target_head: e5da455e38f36a4226ec407894efe2c84b301eda
+base_rejected_head: e5da455e38f36a4226ec407894efe2c84b301eda
+target_head: 5c7884b32f9e48adb0d3c81f9b8c70fb18f921db
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Perform an independent adversarial end-to-end audit of exact `main` HEAD `e5da455e38f36a4226ec407894efe2c84b301eda`.
+Independently re-audit exact `main` HEAD `5c7884b32f9e48adb0d3c81f9b8c70fb18f921db` after the single P1 found in the previous Project Estimator acceptance audit.
 
-Do not limit review to the two previous PR27 blockers. Verify the production calculator/operator flow as a whole.
+Do not limit review to the previous blocker; re-check relevant calculator/Apply/PWA/financial regressions around the fix.
 
-## REQUIRED FLOW
+## PRIOR P1 — MUST CLOSE
+
+Previous defect:
 
 ```text
-Compact Project Setup
--> Residential / Commercial
--> total building area
--> Rooms / Zones (+ quantity, optional area where needed)
--> Code / Design baseline
--> Minimum / Calculated / Final
--> Catalog additions / repricing
--> Full technical live calculator
--> explicit Apply to Job
+Full technical calculator allowed pan-drain / overflow-drain with missing secondaryDrainFt to remain warning-only instead of fail-closed before Apply.
 ```
 
-The first operator view must be the compact staged estimator, not the legacy full technical form. The full form is a second-stage detail/live-calculation view after initial baseline creation.
-
-## PRIOR BLOCKERS — MUST CLOSE
-
-### Journal v4 restore
-- validate workers[] object shape;
-- stable non-empty unique worker IDs;
-- crew.workerId required and resolves to an existing worker;
-- malformed/dangling worker fixtures fail before any storage write.
-
-### Commercial -> Residential Apply
-- bridge must never force-enable Apply;
-- returning to Residential restores eligibility only through authoritative calculator/project gating;
-- unresolved project/BOM/financial blockers must remain disabled.
-
-## PROJECT ESTIMATOR
-
-Verify:
-- Residential and Commercial room/zone catalogs are distinct;
-- square footage does not fabricate Manual J/S/D or tonnage;
-- code minimum is shown only where an actual represented minimum exists;
-- design recommendations are not mislabeled as code minimums;
-- field-required lengths/values remain required rather than inferred;
-- below represented minimum is visibly noncompliant/fail-closed;
-- Final quantity/override updates downstream BOM;
-- Catalog additions flow into the BOM with current Catalog pricing;
-- Customer Price / Your Cost remain separate;
-- explicit Apply/Re-Apply snapshot semantics remain authoritative.
+Required now:
+- when installation scope is active, overflow damage risk is selected, overflow method is `pan-drain` or `overflow-drain`, and `secondaryDrainFt` is blank/0, Apply must be fail-closed;
+- blocker must be operator-visible and field marked invalid;
+- direct/click Apply must not mutate Job while blocked;
+- correcting the measured run must clear only this blocker and must NOT force-enable Apply if project/BOM/financial/Commercial blockers remain;
+- switching to `pan-switch` or `switch-only` removes this specific drain-length requirement without bypassing other gates;
+- repair mode with installation-material scope disabled should not create a false blocker.
 
 ## REGRESSION
 
-Re-check Journal, payroll, calendar Day/Week/Month/Quarter, app backup/restore, navigation, PWA/offline, Code Library/Rule Registry, Method A, financial integrity, calculator pricing/review/lifecycle and customer/procurement price separation.
+Re-check:
+- staged Project Setup -> Rooms/Zones -> baseline -> Minimum/Calculated/Final -> full calculator;
+- Commercial authoritative Apply fail-closed;
+- unresolved/invalid BOM gating;
+- Customer Price / Your Cost separation and explicit Apply/Re-Apply snapshots;
+- Method A / financial integrity / Actual Cost precedence;
+- Journal restore/worker identity, payroll/calendar, full backup;
+- Code Library / Rule Registry;
+- PWA/offline shell coherence.
 
 ## VALIDATION EVIDENCE TO VERIFY
 
 ```yaml
-feature_validation_run: 35043250401
-feature_validated_commit: a4204fd145853d2663ed40ef8ec42c30ddd1ac43
-feature_ci_result: SUCCESS
-post_validation_feature_delta:
-  - DELETE .github/workflows/pr27-blocker-fix-validation.yml
-main_merge_head: e5da455e38f36a4226ec407894efe2c84b301eda
-pages_run: 35043470123
-pages_result: SUCCESS
-expected_cache: bruno-ac-v41
+validated_run: 35046565626
+validated_commit: f53c01a947b278eefa2a3e8b16ed1f55eba131fe
+expected_ci_result: SUCCESS
+final_target: 5c7884b32f9e48adb0d3c81f9b8c70fb18f921db
+expected_post_ci_delta:
+  - DELETE .github/workflows/main-secondary-drain-validation.yml
+expected_cache: bruno-ac-v42
+pages_run: 35046601027
 ```
 
-Independently verify that merged main contains the intended final production content and excludes temporary workflow files.
+Independently verify the final delta and Pages result. Do not infer browser behavior from CI.
 
 ## BROWSER RUNTIME
 
-Mobile/browser runtime is strongly preferred, especially to prove the staged calculator is the first visible calculator UI and the full technical form is second-stage. If unavailable, report exactly `NOT_PERFORMED` and do not infer runtime success from CI/static source.
+Strongly preferred. Test at minimum:
+- `pan-drain` + 0 ft;
+- `overflow-drain` + blank;
+- valid measured secondary run;
+- switch back to `pan-switch`;
+- interaction with another existing blocker;
+- Apply remains unable to mutate Job while drain blocker is active.
+
+If browser runtime is unavailable, report exactly `NOT_PERFORMED`.
 
 ## REQUIRED REPORT
 
 ```yaml
-report_path_template: audits/history/MAIN_PROJECT_ESTIMATOR_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+report_path_template: audits/history/MAIN_SECONDARY_DRAIN_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
 latest_alias: audits/LATEST_AUDIT.md
 required_return:
   - VERDICT
