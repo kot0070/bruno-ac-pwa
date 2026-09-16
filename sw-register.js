@@ -9,8 +9,12 @@
   }
   function loadGroupedNavigation() {
     var path=window.location.pathname||'',isMain=/\/$/.test(path)||/\/index\.html$/i.test(path);if(!isMain)return;
-    /* Service Journal is a primary runtime surface and must not depend on the optional workspace enhancement chain. */
-    loadScript('service-journal-ux-js','./service-journal-ux.js');
+    /* Validate explicit persisted Journal numerics before the Journal normalizer can apply migration defaults. */
+    loadScript('service-journal-storage-guard-js','./service-journal-storage-guard.js',function(){
+      loadScript('service-journal-ux-js','./service-journal-ux.js',function(){
+        if(window.BrunoServiceJournalStorageGuard&&typeof window.BrunoServiceJournalStorageGuard.restore==='function')window.BrunoServiceJournalStorageGuard.restore();
+      });
+    });
     if(document.getElementById('phase2-nav-js'))return;
     loadScript('catalog-v6-js','./catalog-v6.js');
     loadScript('full-backup-js','./app-backup-bridge.js');
