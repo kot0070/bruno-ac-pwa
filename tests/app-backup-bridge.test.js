@@ -1,18 +1,21 @@
 'use strict';
 const assert=require('assert');
 const B=require('../app-backup-bridge.js');
-function mem(seed){let o=Object.assign({},seed||{});return {get length(){return Object.keys(o).length},key(i){return Object.keys(o)[i]||null},getItem(k){return Object.prototype.hasOwnProperty.call(o,k)?o[k]:null},setItem(k,v){o[k]=String(v)},dump(){return o}}}
+function mem(seed,fail){let o=Object.assign({},seed||{});return {get length(){return Object.keys(o).length},key(i){return Object.keys(o)[i]||null},getItem(k){return Object.prototype.hasOwnProperty.call(o,k)?o[k]:null},setItem(k,v){if(fail&&fail('set',k,v))throw new Error('simulated set failure');o[k]=String(v)},removeItem(k){if(fail&&fail('remove',k))throw new Error('simulated remove failure');delete o[k]},dump(){return Object.assign({},o)}}}
 const journal=JSON.stringify({schemaVersion:4,settings:{},workers:[{id:'w',name:'Helper'}],calls:[{id:'c',date:'2026-09-15'}],crew:[{id:'p',workerId:'w',date:'2026-09-15'}]});
-const s=mem({'bruno-ac-v1':'JOB','bruno-ac-service-journal-v2':journal,'bruno-ac-room-plan-v1':'ROOM','other-app':'NO'});
+const job=JSON.stringify({quote:{},materialsUsed:[],catalog:[]});
+const s=mem({'bruno-ac-v1':job,'bruno-ac-service-journal-v2':journal,'bruno-ac-room-plan-v1':'ROOM','other-app':'NO'});
 const b=B.buildBackup(s);
 assert.strictEqual(b.type,'bruno-ac-full-app-backup');
 assert.strictEqual(b.storage['bruno-ac-service-journal-v2'],journal);
 assert.strictEqual(b.storage['bruno-ac-room-plan-v1'],'ROOM');
 assert.strictEqual(b.storage['other-app'],undefined);
 assert.strictEqual(B.validateBackup(b),true);
-const target=mem();const written=B.restoreBackup(b,target);
+const target=mem({'bruno-ac-stale-v1':'STALE','other-app':'KEEP'});const written=B.restoreBackup(b,target);
 assert(written.includes('bruno-ac-service-journal-v2'));
 assert.strictEqual(target.getItem('bruno-ac-service-journal-v2'),journal);
+assert.strictEqual(target.getItem('bruno-ac-stale-v1'),null,'full restore must remove stale Bruno namespace keys');
+assert.strictEqual(target.getItem('other-app'),'KEEP','full restore must not touch other apps');
 assert.strictEqual(B.validateJournalRaw('not-json'),false);
 assert.strictEqual(B.validateJournalRaw(JSON.stringify({schemaVersion:99,settings:{},calls:[],crew:[],workers:[]})),false);
 assert.strictEqual(B.validateJournalRaw(JSON.stringify({schemaVersion:4,settings:{},workers:[null],calls:[],crew:[]})),false);
@@ -23,5 +26,13 @@ const before=target.dump();
 assert.throws(()=>B.restoreBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'bruno-ac-service-journal-v2':JSON.stringify({schemaVersion:4,settings:{},workers:[null],calls:[],crew:[]})}},target));
 assert.deepStrictEqual(target.dump(),before,'invalid Journal must fail before any restore writes');
 assert.strictEqual(B.validateBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'bruno-ac-service-journal-v2':'not-json'}}),false);
+assert.strictEqual(B.validateBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'bruno-ac-project-plan-v1':'not-json'}}),false,'known JSON authorities must be validated before restore');
 assert.throws(()=>B.restoreBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'other':'x'}},target));
+
+let failures=0;
+const rollbackTarget=mem({'bruno-ac-v1':job,'bruno-ac-old-v1':'OLD','other-app':'SAFE'},(op,key)=>op==='set'&&key==='bruno-ac-project-context-v1'&&failures++===0);
+const rollbackBefore=rollbackTarget.dump();
+const tx={product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'bruno-ac-v1':job,'bruno-ac-project-context-v1':JSON.stringify({type:'residential'})}};
+assert.throws(()=>B.restoreBackup(tx,rollbackTarget),/previous Bruno data was restored/);
+assert.deepStrictEqual(rollbackTarget.dump(),rollbackBefore,'partial restore failure must rollback exact pre-restore Bruno namespace');
 console.log('app-backup-bridge tests passed');
