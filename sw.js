@@ -1,9 +1,9 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v43';
+const CACHE = 'bruno-ac-v44';
 const SHELL = [
   './','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png',
   './sw-register.js','./financial-integrity-core.js','./navigation-v2.js','./navigation-v2.css','./navigation-tree.css','./workspace-v5.js','./workspace-v5.css',
-  './service-journal-ux.js','./app-backup-bridge.js','./project-mode-bridge.js','./project-estimator-core.js','./project-estimator-wizard.js','./project-estimator-wizard.css',
+  './service-journal-ux.js','./app-backup-bridge.js','./project-mode-bridge.js','./project-estimator-core.js','./project-history-core.js','./project-estimator-wizard.js','./project-estimator-wizard.css',
   './code-rule-registry.js','./code-library-ux.js','./code-library/texas-hvac-2026.json','./catalog-v6.js',
   './ac-calculator.html','./ac-calculator.js','./ac-calculator-engine.js','./ac-calculator-ux.js','./ac-calculator-review-ux.js','./secondary-drain-guard.js','./ac-calculator.css'
 ];
