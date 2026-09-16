@@ -87,7 +87,7 @@
       if(!text(s&&s.source_authority))errors.push(p+'missing_source_authority');
       if(!text(s&&s.summary))errors.push(p+'missing_summary');
       if(url&&!/^https:\/\//.test(url))errors.push(p+'invalid_source_url');
-      if(!url&&!(effect==='OEM_dependent'&&status==='OEM_REQUIRED'&&s&&s.source_url_required_before_calculation===true))errors.push(p+'missing_source_url');
+      if(!url&&!(s&&s.source_url_required_before_calculation===true&&(status==='OEM_REQUIRED'||status==='PROJECT_SPECIFIC_VERIFY'||status==='FIELD_REQUIRED')))errors.push(p+'missing_source_url');
     });
     return {ok:errors.length===0,errors:errors,count:arr(matrix&&matrix.sources).length};
   }
