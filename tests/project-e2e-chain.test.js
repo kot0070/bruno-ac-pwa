@@ -26,7 +26,6 @@ const incomplete=Load.calculate({project:{conditionedFloorArea:2000},envelope:{}
 assert.strictEqual(incomplete.input_completeness,'blocked');
 assert.strictEqual(incomplete.cooling_total_Btuh,null);
 
-// Build a fully-resolved 2,000 ft² chain with exact OEM/nameplate + Catalog data.
 const capacity=Math.ceil(l2.cooling_total_Btuh/1000)*1000;
 const equipCatalog=[{id:'eq-main',equipment:{manufacturer:'TestCo',model:'A-'+capacity,nominalBtuh:capacity,ratedCoolingBtuh:capacity,ratedHeatingBtuh:Math.max(capacity,l2.heating_Btuh),voltage:'208/230',phase:'1',mca:24,mocp:35,refrigerant:'R-454B',lineSet:'OEM table',accessories:['filter-drier'],oemSource:'TEST_OEM_SOURCE'}}];
 const eq=Equipment.select(l2,{selectionPolicy:{maxOversizeFraction:.5,sourceId:'TEST_VERIFIED_SELECTION_POLICY'},catalogEquipment:equipCatalog});
@@ -38,7 +37,6 @@ const mech=Mechanical.build({equipmentResult:eq,electricalResult:el,project:{sys
 assert.strictEqual(mech.status,'ready');
 assert(mech.rows.length>5);
 
-// Resolve every generated row through explicit stable bindings to a synthetic Catalog.
 const bindings={},catalog=[];
 mech.rows.forEach((r,i)=>{const id='cat-'+i;bindings[r.key]=id;catalog.push({id,item:r.label,unitCost:10+i,yourCost:7+i});});
 const priced=Pricing.resolve(mech.rows,catalog,bindings,{});
@@ -46,14 +44,16 @@ assert.strictEqual(priced.status,'ready');
 assert.strictEqual(priced.resolved,priced.total);
 assert(priced.totals.customerMaterials>0);
 assert(priced.totals.yourCost>0);
-const gate=Compliance.evaluate({buildingValidation:Building.validate(b2),loadResult:l2,equipmentResult:eq,electricalResult:el,mechanicalResult:mech,pricingResult:priced,projectClass:'residential',jurisdictionVerified:true,commercialDesignSource:''});
+const gate=Compliance.evaluate({buildingValidation:Building.validate(b2),loadResult:l2,equipmentResult:eq,electricalResult:el,mechanicalResult:mech,pricingResult:priced,projectClass:'residential',projectJurisdiction:'Austin, TX',jurisdictionVerified:true,ahjSource:'https://www.austintexas.gov/development-services/building-technical-codes',commercialDesignSource:''});
 assert.strictEqual(gate.status,'ready');
 assert.deepStrictEqual(gate.blockers,[]);
 
-// Commercial incomplete chain remains fail-closed until AHJ/design source and downstream dependencies resolve.
-const commercialGate=Compliance.evaluate({buildingValidation:{ok:true},loadResult:l20,equipmentResult:null,electricalResult:null,mechanicalResult:null,pricingResult:null,projectClass:'commercial',jurisdictionVerified:false,commercialDesignSource:''});
+const commercialGate=Compliance.evaluate({buildingValidation:{ok:true},loadResult:l20,equipmentResult:null,electricalResult:null,mechanicalResult:null,pricingResult:null,projectClass:'commercial',projectJurisdiction:'Hays County, TX',jurisdictionVerified:false,ahjSource:'',commercialDesignSource:''});
 assert.strictEqual(commercialGate.status,'blocked');
 assert(commercialGate.blockers.includes('commercial_jurisdiction_AHJ_not_verified'));
+assert(commercialGate.blockers.includes('commercial_AHJ_source_required'));
 assert(commercialGate.blockers.includes('commercial_design_source_required'));
+assert(!commercialGate.sources.includes('COMMERCIAL_LOAD_AUSTIN_IECC_C403_2_1'));
+assert(commercialGate.sources.includes('TX_ENERGY_COMMERCIAL_2015_IECC'));
 
 console.log('project end-to-end chain tests passed');
