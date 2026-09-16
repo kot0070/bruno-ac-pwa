@@ -15,6 +15,18 @@ assert.strictEqual(residential.quantities.find(x=>x.key==='supply-registers').ca
 assert.strictEqual(residential.quantities.find(x=>x.key==='line-set-ft').final,35);
 assert.strictEqual(residential.quantities.find(x=>x.key==='aux-pan').codeMinimum,1);
 assert.strictEqual(residential.ready,true);
+assert.strictEqual(residential.areaOutletAllowance,5);
+
+const large=E.buildPlan({projectType:'residential',sqft:20000,systemType:'split-heat-pump',indoorLocation:'attic',rooms:[
+ {id:'b',type:'bedroom',count:3,area:150},
+ {id:'k',type:'kitchen',count:1,area:180},
+ {id:'l',type:'living',count:1,area:350}
+],overrides:{'line-set-ft':35,'condensate-ft':30}});
+assert.strictEqual(large.areaOutletAllowance,50);
+assert.strictEqual(large.quantities.find(x=>x.key==='supply-registers').calculated,50,'20,000 ft² must visibly change preliminary estimating allowance');
+assert.strictEqual(large.quantities.find(x=>x.key==='return-grilles').calculated,13);
+assert(large.checks.some(x=>x.key==='preliminary-area-allowance'));
+assert(large.quantities.find(x=>x.key==='supply-registers').basis.includes('not a code minimum'));
 
 const below=E.buildPlan({projectType:'residential',sqft:2000,systemType:'split-heat-pump',indoorLocation:'attic',rooms:[{id:'b',type:'bedroom',count:1,area:100}],overrides:{'line-set-ft':25,'condensate-ft':25,'aux-pan':0,'float-switch':1}});
 assert.strictEqual(below.quantities.find(x=>x.key==='aux-pan').status,'below-minimum');
