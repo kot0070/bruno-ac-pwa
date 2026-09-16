@@ -15,7 +15,7 @@
   <div class="actions"><a class="btn" href="./">← Bruno AC</a><button class="btn" id="reload">Reload current job</button><button class="btn primary" id="calculate">Recalculate full</button><button class="btn accent" id="apply">Add / Update Job Materials</button></div>
 </header>
 <main class="wrap">
-  <div class="notice"><strong>Workflow:</strong> start with project type, total area and rooms/zones. The compact estimator creates code/design checks and starting quantities. Then open the full live calculation to adjust field quantities, catalog matches and final materials. Manual J/S/D and OEM/AHJ-controlled values are never invented from square footage alone.</div>
+  <div class="notice"><strong>Workflow:</strong> start with project type, total area and rooms/zones, then complete Building / Envelope / Load Inputs on the same calculator surface. The app keeps unresolved engineering inputs explicit; Manual J/S/D, OEM/nameplate and AHJ-controlled values are never invented from square footage alone.</div>
   <div class="jobbar" id="jobbar"></div>
   <div class="grid">
     <section class="card">
@@ -70,7 +70,9 @@
 <script src="./ac-calculator.js"></script>
 <script src="./project-mode-bridge.js"></script>
 <script src="./project-estimator-core.js"></script>
+<script src="./project-building-schema.js"></script>
 <script src="./project-estimator-wizard.js"></script>
+<script src="./project-building-ux.js"></script>
 <script src="./ac-calculator-ux.js"></script>
 <script src="./ac-calculator-review-ux.js"></script>
 <script src="./secondary-drain-guard.js"></script>
