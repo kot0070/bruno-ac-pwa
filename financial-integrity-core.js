@@ -48,6 +48,7 @@
     var parsed;
     try { parsed = JSON.parse(String(raw)); } catch (e) { return { status: 'invalid', value: null, error: 'invalid_json' }; }
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { status: 'invalid', value: null, error: 'job_not_object' };
+    if (!parsed.quote || typeof parsed.quote !== 'object' || Array.isArray(parsed.quote) || !Array.isArray(parsed.materialsUsed) || !Array.isArray(parsed.catalog)) return { status: 'invalid', value: null, error: 'job_shape_invalid' };
     return { status: 'valid', value: parsed };
   }
 
