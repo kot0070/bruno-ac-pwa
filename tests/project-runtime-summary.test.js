@@ -26,4 +26,5 @@ const {JSDOM}=require('jsdom');
  w.document.dispatchEvent(new w.CustomEvent('bruno:compliance-updated',{detail:{status:'ready',blockers:[]}}));
  assert(w.document.getElementById('brs-blockers').textContent.includes('READY'));
  console.log('project runtime summary DOM tests passed');
+ dom.window.close();
 })().catch(e=>{console.error(e);process.exit(1)});
