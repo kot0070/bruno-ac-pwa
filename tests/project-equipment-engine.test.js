@@ -7,6 +7,7 @@ const load={input_completeness:'complete',cooling_total_Btuh:42000,heating_Btuh:
 const blocked=E.select(null,{});
 assert.strictEqual(blocked.status,'blocked');
 assert(blocked.blockers.includes('validated_load_required'));
+assert.deepStrictEqual(blocked.sources,['EQUIPMENT_OEM_01']);
 
 const unresolved=E.select(load,{});
 assert.strictEqual(unresolved.calculated.requiredCapacityBtuh,42000);
@@ -15,6 +16,7 @@ assert.strictEqual(unresolved.calculated.nominalCapacityRangeBtuh.max,null);
 assert(unresolved.blockers.includes('verified_equipment_selection_policy_required_for_upper_bound'));
 assert(unresolved.blockers.includes('catalog_or_OEM_equipment_dataset_required'));
 assert.strictEqual(unresolved.final,null);
+assert(!unresolved.sources.includes('EQUIPMENT_SELECTION_MANUAL_S_01'),'Manual S must not be claimed without an explicit verified Manual S policy');
 
 const catalog=[
  {id:'eq-1',equipment:{manufacturer:'Acme',model:'A42',nominalBtuh:42000,ratedCoolingBtuh:43000,ratedHeatingBtuh:40000,voltage:'208/230',phase:'1',mca:24,mocp:35,refrigerant:'R-454B',lineSet:'OEM table',accessories:['kit'],oemSource:'https://example.com/oem/a42'}},
@@ -29,6 +31,11 @@ assert.strictEqual(resolved.selected.equipment.model,'A42');
 assert.strictEqual(resolved.final.capacityBtuh,43000);
 assert.strictEqual(resolved.final.systemCount,1);
 assert.strictEqual(resolved.calculated.requiredCapacityBtuh,42000,'selected equipment must not overwrite calculated load');
+assert(resolved.sources.includes('VERIFIED_SELECTION_POLICY_TEST'));
+assert(resolved.sources.includes('EQUIPMENT_OEM_01'));
+assert(!resolved.sources.includes('EQUIPMENT_SELECTION_MANUAL_S_01'));
+const manualS=E.select(load,{selectionPolicy:{maxOversizeFraction:.2,sourceId:'EQUIPMENT_SELECTION_MANUAL_S_01'},catalogEquipment:catalog});
+assert(manualS.sources.includes('EQUIPMENT_SELECTION_MANUAL_S_01'),'Manual S may be cited only when explicitly selected as the verified policy source');
 
 const heatDominant={input_completeness:'complete',cooling_total_Btuh:30000,heating_Btuh:60000};
 const heatCatalog=[
