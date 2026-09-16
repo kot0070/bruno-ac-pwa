@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 28
+handoff_version: 29
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,67 +10,69 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: PR27_PROJECT_ESTIMATOR_AUDITED_REWORK_REQUIRED
+state: MAIN_PROJECT_ESTIMATOR_AUDITED_REWORK_REQUIRED
 ```
 
 ## CURRENT PRODUCTION TARGET
 
 ```yaml
-production_mode: FEATURE_PR
-production_pr: 27
-production_branch: feature/project-estimator-wizard-v1
-base_main: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
-audited_head: cf856a30b2f9cdcb9d61373d3472fef31b9e7343
-implementation_report: audits/implementation/PR27_PROJECT_ESTIMATOR_WIZARD_cf856a30.md
-audit_task: PR27_PROJECT_ESTIMATOR_WIZARD_AUDIT_01
-pr_state: OPEN_DRAFT
-merge_performed: false
+production_mode: DIRECT_MAIN
+production_branch: main
+audited_head: e5da455e38f36a4226ec407894efe2c84b301eda
+source_pr: 27
+source_pr_final_head: aefdf975583e5f2cb17e739cf9fcc3d9334bbc66
+implementation_report: audits/implementation/MAIN_PROJECT_ESTIMATOR_E5DA455E.md
+audit_task: MAIN_PROJECT_ESTIMATOR_ACCEPTANCE_01
 browser_runtime: NOT_PERFORMED
 verdict: C_REJECT_REWORK_REQUIRED
 ```
 
-## CURRENT BLOCKERS
+## CURRENT BLOCKER
 
 ```yaml
 F01:
   severity: P1
-  defect: Journal schema-v4 restore validation does not validate stable workers[] identity shape or workerId resolution before writes
-F02:
-  severity: P1
-  defect: project-mode bridge can force-enable Apply on Commercial -> Residential even while project/BOM blockers still require disabled state
+  defect: full technical calculator treats missing secondary/overflow drain run for pan-drain or overflow-drain as warning-only, allowing authoritative Apply when the selected compliance method still lacks its required measured field run
 ```
 
 ## VERIFIED CLOSED / PRESERVED
 
 ```yaml
-commercial_authoritative_apply_guard: CLOSED
-prior_F03_standalone_bypass: CLOSED
-prior_F04_month_quarter_navigation: CLOSED
-prior_F05_stable_worker_payroll_ledger: CLOSED
-journal_revenue_vs_payroll_semantics: PRESERVED
-pwa_cache: bruno-ac-v40
-ci_run: 35042103577
-ci_validated_commit: ad1cb2ff96bf1eee78e79e84804afe7c0f4a118c
-ci_result: SUCCESS
+prior_journal_v4_restore_identity_blocker: CLOSED
+prior_commercial_to_residential_force_enable_blocker: CLOSED
+staged_compact_calculator_source_architecture: VERIFIED_STATIC
+residential_commercial_room_catalog_isolation: VERIFIED
+minimum_calculated_final_model: VERIFIED
+staged_override_to_bom_sync: VERIFIED
+commercial_authoritative_apply_guard: PRESERVED
+catalog_current_pricing_and_dual_price_tracks: PRESERVED
+journal_payroll_calendar_backup_regressions: PRESERVED_BY_SOURCE_PLUS_CI
+pwa_cache: bruno-ac-v41
+feature_ci_run: 35043250401
+feature_ci_validated_commit: a4204fd145853d2663ed40ef8ec42c30ddd1ac43
+feature_ci_result: SUCCESS
 post_ci_delta:
-  - DELETE .github/workflows/pr27-project-estimator-validation.yml
+  - DELETE .github/workflows/pr27-blocker-fix-validation.yml
+pages_run: 35043470123
+pages_head: e5da455e38f36a4226ec407894efe2c84b301eda
+pages_result: SUCCESS
 ```
 
 ## AUDIT REPORT
 
 ```text
-audits/history/PR27_cf856a30b2f9cdcb9d61373d3472fef31b9e7343_20260915-2005.md
+audits/history/MAIN_PROJECT_ESTIMATOR_e5da455e38f36a4226ec407894efe2c84b301eda_20260915-2052.md
 ```
 
 ## NEXT ACTION
 
-Correct F01 and F02 on `feature/project-estimator-wizard-v1`, produce a new exact HEAD, refresh TASK_CURRENT/implementation evidence as required, then run a fresh independent AUDIT ONLY. Do not merge PR #27 before re-audit acceptance.
+Correct the full technical overflow-method required-length gating on production code in a separate implementation cycle. For `pan-drain` and `overflow-drain`, a zero/missing measured secondary run must fail closed before Job mutation unless the operator selects another valid protection method. Add executable regressions for both cases, produce a new exact production HEAD, refresh TASK_CURRENT/implementation evidence, then run a fresh independent AUDIT ONLY.
 
 ## AUDIT SAFETY
 
 ```yaml
 main_modified_by_audit: false
-production_branch_modified_by_audit: false
+production_code_modified_by_audit: false
 production_pr_modified_by_audit: false
 merge_performed_by_audit: false
 audit_writes_only_under_audits: true
