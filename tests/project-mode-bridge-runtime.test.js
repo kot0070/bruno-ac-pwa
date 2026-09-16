@@ -9,6 +9,7 @@ w.localStorage.setItem('bruno-ac-project-context-v1',JSON.stringify({type:'comme
 const apply=w.document.getElementById('apply');
 apply.disabled=false;
 w.eval(src);
+if(!w.document.getElementById('bruno-commercial-mode'))w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
 assert.strictEqual(apply.disabled,false,'legacy bridge must not permanently disable commercial Apply; calculator/compliance gate owns readiness');
 const banner=w.document.getElementById('bruno-commercial-mode');
 assert(banner,'commercial informational banner must remain');
