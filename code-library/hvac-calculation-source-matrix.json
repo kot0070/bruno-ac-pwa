@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "matrixId": "hvac-calculation-source-matrix-2026",
   "title": "Bruno AC HVAC Calculation Source Matrix",
-  "jurisdictionBaseline": "Texas / Austin when project location is Austin",
+  "jurisdictionBaseline": "Texas statewide baseline with project-specific local AHJ precedence",
   "lastVerified": "2026-09-16",
   "copyrightPolicy": "Metadata, implementation summaries, identifiers, and official links only. Copyrighted standards/manuals are not reproduced.",
   "sources": [
@@ -37,6 +37,36 @@
       "summary": "Texas adopted the 2026 NEC as the state electrical code effective September 1, 2026, with a limited Texas modification. Equipment-specific circuit sizing remains dependent on nameplate/OEM data and installation conditions."
     },
     {
+      "rule_id": "TX_ENERGY_SINGLE_FAMILY_2015_IRC_CH11",
+      "title": "Texas statewide minimum energy code — one- and two-family residential",
+      "calculation_domain": "energy",
+      "jurisdiction": "TX statewide minimum",
+      "applicability": "Texas one- and two-family residential construction three stories or fewer above grade where a qualifying local code does not supersede the statewide minimum.",
+      "calculation_effect": "reference_only",
+      "source_url": "https://comptroller.texas.gov/programs/seco/code/single-family.php",
+      "source_authority": "Texas State Energy Conservation Office",
+      "section": "Texas Building Energy Performance Standards — Single-family residential",
+      "verified_on": "2026-09-16",
+      "copyright_storage": "metadata_summary_only",
+      "source_status": "VERIFIED",
+      "summary": "SECO identifies 2015 IRC Chapter 11 as the statewide minimum energy-code baseline for qualifying one- and two-family residential construction; local jurisdictions may adopt qualifying amendments or more stringent codes."
+    },
+    {
+      "rule_id": "TX_ENERGY_COMMERCIAL_2015_IECC",
+      "title": "Texas statewide minimum energy code — commercial",
+      "calculation_domain": "energy",
+      "jurisdiction": "TX statewide minimum",
+      "applicability": "Texas commercial, industrial and other covered construction where a qualifying local code does not supersede the statewide minimum.",
+      "calculation_effect": "reference_only",
+      "source_url": "https://comptroller.texas.gov/programs/seco/code/commercial.php",
+      "source_authority": "Texas State Energy Conservation Office",
+      "section": "Texas Building Energy Performance Standards — Commercial",
+      "verified_on": "2026-09-16",
+      "copyright_storage": "metadata_summary_only",
+      "source_status": "VERIFIED",
+      "summary": "SECO identifies the 2015 IECC as the statewide minimum energy-code baseline for covered commercial construction; local jurisdictions may adopt qualifying amendments or more stringent codes."
+    },
+    {
       "rule_id": "AUSTIN_TECHNICAL_CODES_2026",
       "title": "Austin adopted technical-code baseline",
       "calculation_domain": "energy",
@@ -53,18 +83,19 @@
     },
     {
       "rule_id": "LOCAL_AHJ_01",
-      "title": "Local AHJ amendments and interpretations",
+      "title": "Project-specific local AHJ amendments and interpretations",
       "calculation_domain": "equipment",
       "jurisdiction": "project-specific",
-      "applicability": "Every project; resolve city/county/AHJ from actual job location before treating local requirements as verified.",
+      "applicability": "Every project; resolve the actual city/county/AHJ and attach its source before treating local requirements as verified.",
       "calculation_effect": "required_input",
-      "source_url": "https://www.austintexas.gov/development-services/code-interpretations",
-      "source_authority": "City of Austin Development Services (Austin example); actual project AHJ controls",
-      "section": "Technical Code Interpretations",
+      "source_url": null,
+      "source_authority": "Actual project authority having jurisdiction",
+      "section": "Project-specific code adoption / amendments / interpretations",
       "verified_on": "2026-09-16",
-      "copyright_storage": "public_document_local_copy_allowed",
+      "copyright_storage": "metadata_summary_only",
       "source_status": "PROJECT_SPECIFIC_VERIFY",
-      "summary": "Local interpretations and amendments can alter application of model-code requirements. Austin maintains a technical code interpretation library, including HVAC interpretations."
+      "source_url_required_before_calculation": true,
+      "summary": "Local amendments and interpretations can change model-code application. The app intentionally stores no generic Austin link as the authoritative source for non-Austin work; the operator must attach the actual project AHJ source."
     },
     {
       "rule_id": "COMMERCIAL_LOAD_AUSTIN_IECC_C403_2_1",
@@ -127,6 +158,21 @@
       "summary": "Austin commercial review requires outside-air calculations demonstrating that minimum outside-air rates are accommodated by the HVAC equipment."
     },
     {
+      "rule_id": "BRUNO_TRANSPARENT_LOAD_V1",
+      "title": "Bruno transparent envelope load v1",
+      "calculation_domain": "load",
+      "jurisdiction": "internal calculation method; code applicability resolved separately",
+      "applicability": "When the Bruno transparent envelope load engine is used. This identifies the implemented algorithm and does not claim Manual J, Manual N, Standard 183, or code-compliance certification.",
+      "calculation_effect": "reference_only",
+      "source_url": "https://github.com/kot0070/bruno-ac-pwa/blob/main/project-load-engine.js",
+      "source_authority": "Bruno AC application implementation",
+      "section": "project-load-engine.js / Bruno transparent envelope load v1",
+      "verified_on": "2026-09-16",
+      "copyright_storage": "metadata_summary_only",
+      "source_status": "VERIFIED",
+      "summary": "Internal transparent envelope/load arithmetic used by the app. Regulatory and methodology standards are separate provenance and are not implied by this method identifier."
+    },
+    {
       "rule_id": "RESIDENTIAL_LOAD_MANUAL_J_01",
       "title": "ACCA Manual J residential load calculation methodology",
       "calculation_domain": "load",
@@ -146,7 +192,7 @@
       "title": "ACCA Manual S residential equipment selection",
       "calculation_domain": "equipment",
       "jurisdiction": "US residential methodology / project code applicability required",
-      "applicability": "Residential equipment selection after a valid heating/cooling load is available.",
+      "applicability": "Residential equipment selection after a valid heating/cooling load is available when Manual S is the selected and verified policy source.",
       "calculation_effect": "required_input",
       "source_url": "https://www.acca.org/standards/technical-manuals/manual-s",
       "source_authority": "Air Conditioning Contractors of America",
@@ -154,7 +200,7 @@
       "verified_on": "2026-09-16",
       "copyright_storage": "metadata_summary_only",
       "source_status": "VERIFIED",
-      "summary": "Manual S selects residential equipment using heating/cooling loads, manufacturer performance data, and design conditions. Load and equipment-selection outputs must remain distinct."
+      "summary": "Manual S selects residential equipment using heating/cooling loads, manufacturer performance data, and design conditions. The runtime result cites this source only when the verified selection policy explicitly identifies it."
     },
     {
       "rule_id": "DUCT_DESIGN_01",
