@@ -11,6 +11,7 @@
     var path=window.location.pathname||'',isMain=/\/$/.test(path)||/\/index\.html$/i.test(path);if(!isMain||document.getElementById('phase2-nav-js'))return;
     loadScript('catalog-v6-js','./catalog-v6.js');
     loadScript('full-backup-js','./app-backup-bridge.js');
+    loadScript('project-mode-bridge-js','./project-mode-bridge.js');
     injectCss('phase2-nav-css','./navigation-v2.css',function(navCssReady){if(!navCssReady)return;injectCss('phase2-tree-css','./navigation-tree.css',function(treeReady){if(!treeReady)return;loadScript('phase2-nav-js','./navigation-v2.js',function(navJsReady){if(!navJsReady)return;injectCss('phase5-workspace-css','./workspace-v5.css',function(workCssReady){if(!workCssReady)return;loadScript('phase5-workspace-js','./workspace-v5.js')})})})});
   }
   loadGroupedNavigation();
