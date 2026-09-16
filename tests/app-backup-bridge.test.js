@@ -2,15 +2,19 @@
 const assert=require('assert');
 const B=require('../app-backup-bridge.js');
 function mem(seed){let o=Object.assign({},seed||{});return {get length(){return Object.keys(o).length},key(i){return Object.keys(o)[i]||null},getItem(k){return Object.prototype.hasOwnProperty.call(o,k)?o[k]:null},setItem(k,v){o[k]=String(v)},dump(){return o}}}
-const s=mem({'bruno-ac-v1':'JOB','bruno-ac-service-journal-v2':'JOURNAL','bruno-ac-room-plan-v1':'ROOM','other-app':'NO'});
+const journal=JSON.stringify({schemaVersion:4,settings:{},workers:[{id:'w',name:'Helper'}],calls:[{id:'c',date:'2026-09-15'}],crew:[{id:'p',workerId:'w',date:'2026-09-15'}]});
+const s=mem({'bruno-ac-v1':'JOB','bruno-ac-service-journal-v2':journal,'bruno-ac-room-plan-v1':'ROOM','other-app':'NO'});
 const b=B.buildBackup(s);
 assert.strictEqual(b.type,'bruno-ac-full-app-backup');
-assert.strictEqual(b.storage['bruno-ac-service-journal-v2'],'JOURNAL');
+assert.strictEqual(b.storage['bruno-ac-service-journal-v2'],journal);
 assert.strictEqual(b.storage['bruno-ac-room-plan-v1'],'ROOM');
 assert.strictEqual(b.storage['other-app'],undefined);
 assert.strictEqual(B.validateBackup(b),true);
 const target=mem();const written=B.restoreBackup(b,target);
 assert(written.includes('bruno-ac-service-journal-v2'));
-assert.strictEqual(target.getItem('bruno-ac-service-journal-v2'),'JOURNAL');
+assert.strictEqual(target.getItem('bruno-ac-service-journal-v2'),journal);
+assert.strictEqual(B.validateJournalRaw('not-json'),false);
+assert.strictEqual(B.validateJournalRaw(JSON.stringify({schemaVersion:99,settings:{},calls:[],crew:[],workers:[]})),false);
+assert.strictEqual(B.validateBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'bruno-ac-service-journal-v2':'not-json'}}),false);
 assert.throws(()=>B.restoreBackup({product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,storage:{'other':'x'}},target));
 console.log('app-backup-bridge tests passed');
