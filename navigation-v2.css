@@ -17,6 +17,8 @@ body.phase2-nav-ready main{padding-top:1rem}
 .phase3-calculator-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.9rem 1rem;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);margin:0 0 .75rem}
 .phase3-calculator-head h2{margin:0;font-size:1.05rem}
 .phase3-calculator-head p{margin:.2rem 0 0;color:var(--text-muted);font-size:.82rem}
+/* S02: project class and standalone navigation live inside the single calculator model. Hide legacy duplicate shell controls. */
+.phase3-project-actions{display:none!important}
 .phase3-calculator-frame{display:block;width:100%;min-height:760px;border:0;border-radius:12px;background:transparent}
 .phase4-result-rail{display:none;position:absolute;z-index:4;pointer-events:none}
 .phase4-result-rail.show{display:block}
