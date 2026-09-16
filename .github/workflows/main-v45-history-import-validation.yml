@@ -1,0 +1,45 @@
+name: Main v45 history import validation
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Project estimator core
+        run: node tests/project-estimator-core.test.js
+      - name: Project history core
+        run: node tests/project-history-core.test.js
+      - name: Project estimator integration
+        run: node tests/project-estimator-integration.test.js
+      - name: Service Journal
+        run: node tests/service-journal-ux.test.js
+      - name: Secondary drain guard
+        run: node tests/secondary-drain-guard.test.js
+      - name: Full app backup
+        run: node tests/app-backup-bridge.test.js
+      - name: Financial integrity
+        run: node tests/financial-integrity.test.js
+      - name: Calculator pricing
+        run: node tests/ac-calculator-pricing.test.js
+      - name: Calculator lifecycle
+        run: node tests/pr22-lifecycle-integration.test.js
+      - name: Calculator review UX
+        run: node tests/ac-calculator-review-ux.test.js
+      - name: Code registry
+        run: node tests/code-rule-registry.test.js
+      - name: Syntax
+        run: |
+          node --check project-history-core.js
+          node --check project-estimator-core.js
+          node --check project-estimator-wizard.js
+          node --check service-journal-ux.js
+          node --check ac-calculator.js
+          node --check secondary-drain-guard.js
+          node --check sw.js
