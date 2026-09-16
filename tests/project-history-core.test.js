@@ -3,6 +3,7 @@ const assert=require('assert');
 const H=require('../project-history-core.js');
 
 function snap(id,sqft){return {schemaVersion:1,id:id,createdAt:'2026-09-15T20:00:00.000Z',projectPlan:{schemaVersion:2,projectType:'residential',sqft:sqft,rooms:[{id:'r1',type:'bedroom',count:3,area:100}],quantities:[{key:'q',final:3}],extras:[{id:'e1',catalogId:'cat-1',label:'Item',qty:2,customerUnitPrice:100,yourUnitCost:70}]},calculatorInputs:{sqft:String(sqft)},bom:[{label:'Item',qty:2}],totals:{customerMaterials:200,yourCost:140,marginDollar:60,marginPct:30},pricingFrozen:true};}
+function extended(){return {buildingEnvelope:{schemaVersion:4,project:{conditionedFloorArea:2000}},loadResult:{status:'complete',sources:['LOAD_SOURCE']},equipmentResult:{status:'ready',sources:['EQUIPMENT_SOURCE']},electricalResult:{status:'ready',sources:['ELECTRICAL_SOURCE']},mechanicalBOM:{status:'ready',rows:[{key:'x'}],sources:['MECH_SOURCE']},pricedBOM:{status:'ready',rows:[{key:'x',catalogId:'cat-1'}],totals:{customerMaterials:200,yourCost:140,marginDollar:60,marginPct:30}},complianceGate:{status:'ready'},catalogBindings:{x:'cat-1'},quantityOverrides:{},complianceMetadata:{},sourceRefs:['LOAD_SOURCE','EQUIPMENT_SOURCE','ELECTRICAL_SOURCE','MECH_SOURCE'],chainVersion:1,frozenAt:'2026-09-16T13:00:00.000Z'};}
 
 let store=H.normalizeStore(null);
 let a=H.add(store,snap('',2000));
@@ -25,6 +26,20 @@ assert.strictEqual(Object.prototype.hasOwnProperty.call(dup.plan.extras[0],'cust
 assert.strictEqual(Object.prototype.hasOwnProperty.call(dup.plan.extras[0],'yourUnitCost'),false);
 assert.strictEqual(dup.plan.duplicatedFromSnapshotId,b.store.items[0].id);
 
+// Extended snapshots freeze the full calculation chain and duplicate only project/building inputs.
+const full=snap('full',2000);full.extended=extended();
+assert.strictEqual(H.validateSnapshot(full).ok,true);
+const fullDup=H.duplicatePlan(full);
+assert.strictEqual(fullDup.ok,true);
+assert.strictEqual(fullDup.buildingEnvelope.schemaVersion,4);
+assert.strictEqual(fullDup.plan.duplicatedFromSnapshotId,'full');
+const malformedExtended=JSON.parse(JSON.stringify(full));delete malformedExtended.extended.electricalResult;
+assert.strictEqual(H.validateSnapshot(malformedExtended).ok,false);
+assert.strictEqual(H.validateSnapshot(malformedExtended).error,'missing_extended_electricalResult');
+const malformedRefs=JSON.parse(JSON.stringify(full));malformedRefs.extended.sourceRefs='LOAD_SOURCE';
+assert.strictEqual(H.validateSnapshot(malformedRefs).ok,false);
+assert.strictEqual(H.validateSnapshot(malformedRefs).error,'invalid_extended_sourceRefs');
+
 let one=H.exportOne(b.store.items[0]);
 assert.strictEqual(one.ok,true);
 assert.strictEqual(one.payload.type,'project-calculation-snapshot');
@@ -33,6 +48,12 @@ assert.strictEqual(imported.ok,true);
 assert.strictEqual(imported.added,1);
 assert.notStrictEqual(imported.store.items[0].id,b.store.items[0].id);
 assert.strictEqual(imported.store.items[0].importedFromId,b.store.items[0].id);
+
+const fullExport=H.exportOne(full);assert.strictEqual(fullExport.ok,true);
+const fullImport=H.importPayload(fullExport.payload,H.normalizeStore(null));
+assert.strictEqual(fullImport.ok,true);
+assert.deepStrictEqual(fullImport.store.items[0].extended.pricedBOM.totals,full.extended.pricedBOM.totals);
+assert.deepStrictEqual(fullImport.store.items[0].extended.sourceRefs,full.extended.sourceRefs);
 
 let all=H.exportAll(b.store);
 assert.strictEqual(all.type,'project-calculation-history');
