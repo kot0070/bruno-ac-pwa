@@ -1,0 +1,34 @@
+name: M02 P11 primary Job guard corrective
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Harden primary Job structural classifier
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('financial-integrity-core.js')
+          s=p.read_text()
+          old="""    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { status: 'invalid', value: null, error: 'job_not_object' };\n    return { status: 'valid', value: parsed };"""
+          new="""    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { status: 'invalid', value: null, error: 'job_not_object' };\n    if (!parsed.quote || typeof parsed.quote !== 'object' || Array.isArray(parsed.quote) || !Array.isArray(parsed.materialsUsed) || !Array.isArray(parsed.catalog)) return { status: 'invalid', value: null, error: 'job_shape_invalid' };\n    return { status: 'valid', value: parsed };"""
+          if old not in s:
+              raise SystemExit('classifier target not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit corrective and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/master-m02-p11-primary-guard-fix.yml
+          git add financial-integrity-core.js
+          git commit -m "P11 harden primary Job structural corruption guard"
+          git push origin HEAD:main
