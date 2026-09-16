@@ -5,22 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f1419">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'">
-  <title>Bruno AC · Code & BOM Calculator V2</title>
+  <title>Bruno AC · Project Estimator</title>
   <link rel="stylesheet" href="./ac-calculator.css">
+  <link rel="stylesheet" href="./project-estimator-wizard.css">
 </head>
 <body>
 <header class="top">
-  <div class="brand">Bruno AC · Code & BOM Calculator <small>V2 · safety-fixed test build · Texas residential HVAC</small></div>
-  <div class="actions"><a class="btn" href="./">← Bruno AC</a><button class="btn" id="reload">Reload current job</button><button class="btn primary" id="calculate">Calculate</button><button class="btn accent" id="apply">Add / Update Job Materials</button></div>
+  <div class="brand">Bruno AC · Project Estimator <small>project setup → code/design checks → BOM → final override</small></div>
+  <div class="actions"><a class="btn" href="./">← Bruno AC</a><button class="btn" id="reload">Reload current job</button><button class="btn primary" id="calculate">Recalculate full</button><button class="btn accent" id="apply">Add / Update Job Materials</button></div>
 </header>
 <main class="wrap">
-  <div class="notice"><strong>Purpose:</strong> generate a reviewable HVAC scope/BOM and code checks. It does <strong>not</strong> perform Manual J, Manual S or Manual D; it does not infer tonnage, breaker/MCA/MOCP, line-set diameter, or refrigerant charge. OEM listing/nameplate and local AHJ amendments control.</div>
+  <div class="notice"><strong>Workflow:</strong> start with project type, total area and rooms/zones. The compact estimator creates code/design checks and starting quantities. Then open the full live calculation to adjust field quantities, catalog matches and final materials. Manual J/S/D and OEM/AHJ-controlled values are never invented from square footage alone.</div>
   <div class="jobbar" id="jobbar"></div>
   <div class="grid">
     <section class="card">
-      <h2>1 · Project / system inputs</h2>
+      <h2>Full calculation · system / field inputs</h2>
       <div class="fields">
-        <div class="field"><label>House area (ft²)</label><input id="sqft" type="number" min="0" step="50"></div>
+        <div class="field"><label>House / building area (ft²)</label><input id="sqft" type="number" min="0" step="50"></div>
         <div class="field"><label>System</label><select id="systemType"><option value="split-heat-pump">Split heat pump</option><option value="split-air-conditioner">Split AC</option><option value="split-ac-furnace">Split AC + furnace</option><option value="package">Package unit</option><option value="mini-split">Mini-split</option></select><small id="packageHint" hidden>Package unit ignores split indoor-location logic and uses OEM-specific support.</small><small id="miniHint" hidden>Mini-split filter-drier/control are OEM-specific and are not auto-selected.</small></div>
         <div class="field"><label>Job kind</label><select id="jobKind"><option value="replace">Replacement</option><option value="new">New installation</option><option value="repair">Repair / modification</option></select></div>
         <div class="field"><label>Tonnage / capacity (manual)</label><input id="tonnage" type="text" placeholder="e.g. 3 ton / 36,000 BTU"></div>
@@ -29,7 +30,7 @@
         <div class="field"><label>Outdoor unit support</label><select id="outdoorMount"><option value="ground">Ground pad / slab</option><option value="wall">Wall bracket</option><option value="roof">Roof support / rails</option><option value="existing">Existing support</option></select></div>
         <div class="field"><label>Line-set run (ft)</label><input id="lineSetFt" type="number" min="0" step="1"></div>
         <div class="field"><label>Primary condensate run (ft)</label><input id="condensateFt" type="number" min="0" step="1"></div>
-        <div class="field"><label>Secondary / overflow drain run (ft)</label><input id="secondaryDrainFt" type="number" min="0" step="1"><small>Enter actual separate field run. V2 no longer copies primary length.</small></div>
+        <div class="field"><label>Secondary / overflow drain run (ft)</label><input id="secondaryDrainFt" type="number" min="0" step="1"><small>Enter actual separate field run.</small></div>
         <div class="field"><label>Overflow protection method</label><select id="overflowProtection"><option value="pan-switch">Aux pan + shutoff switch</option><option value="pan-drain">Aux pan + separate drain</option><option value="switch-only">Listed shutoff device</option><option value="overflow-drain">Separate overflow drain</option></select></div>
         <div class="field"><label>Condensate pump space</label><select id="pumpSpaceClass"><option value="verify">Verify / unknown</option><option value="uninhabitable">Uninhabitable space</option><option value="habitable">Habitable / occupied space</option></select></div>
         <div class="field"><label>Duct scope</label><select id="ductMode"><option value="existing">Existing ducts / no takeoff</option><option value="replace">Replace ducts</option><option value="new">New ducts</option></select></div>
@@ -53,17 +54,23 @@
       </div>
     </section>
     <section class="card">
-      <h2>3 · Generated BOM</h2>
+      <h2>Generated BOM · live final quantities</h2>
       <div class="summary"><div class="stat"><div class="k">Selected lines</div><div class="v" id="statLines">0</div></div><div class="stat"><div class="k">Catalog resolved</div><div class="v" id="statResolved">0/0</div></div><div class="stat"><div class="k">Customer Materials</div><div class="v" id="statCustomer">—</div></div><div class="stat"><div class="k">Your Material Cost</div><div class="v" id="statYour">—</div></div><div class="stat"><div class="k">Material Margin</div><div class="v" id="statMargin">—</div></div><div class="stat"><div class="k">Material Margin %</div><div class="v" id="statMarginPct">—</div></div><div class="stat"><div class="k">Warnings</div><div class="v" id="statWarnings">0</div></div></div>
       <div class="gate" id="applyGate"></div>
-      <div class="tablewrap"><table><thead><tr><th>Add</th><th>Requirement</th><th class="col-level">Level</th><th>Qty</th><th>Unit</th><th class="col-match">Catalog result</th><th class="col-money">Customer Unit</th><th class="col-money">Customer Ext.</th><th class="col-money">Your Unit</th><th class="col-money">Your Ext.</th><th class="col-money">Margin $</th><th class="col-money">Margin %</th><th class="col-ref">Reference</th></tr></thead><tbody id="bomBody"></tbody></table></div>
-      <p class="muted">Customer Price feeds quote-side Job Materials. Your Cost becomes the procurement snapshot used by Job Profitability until an Actual purchase cost is entered. Manual Job Materials are never deleted. Re-running Apply intentionally rebuilds only AC Calculator-generated rows from current Catalog pricing.</p>
+      <div class="tablewrap"><table><thead><tr><th>Add</th><th>Requirement</th><th class="col-level">Level</th><th>Final Qty</th><th>Unit</th><th class="col-match">Catalog result</th><th class="col-money">Customer Unit</th><th class="col-money">Customer Ext.</th><th class="col-money">Your Unit</th><th class="col-money">Your Ext.</th><th class="col-money">Margin $</th><th class="col-money">Margin %</th><th class="col-ref">Reference</th></tr></thead><tbody id="bomBody"></tbody></table></div>
+      <p class="muted">Final quantities feed the Job. Customer Price goes to quote-side Job Materials; Your Cost becomes the procurement snapshot. Add additional manual materials from Catalog when the generated scope does not cover a field condition.</p>
     </section>
-    <section class="card"><h2>4 · Code / coordination checks</h2><div id="codeChecks"></div></section>
-    <section class="card"><h2>5 · Assumptions & warnings</h2><h3>Assumptions</h3><ul class="list" id="assumptions"></ul><h3>Warnings</h3><ul class="list" id="warnings"></ul><div class="actions"><button class="btn" id="exportPlan">Export calculator plan JSON</button></div></section>
+    <section class="card"><h2>Code / coordination checks</h2><div id="codeChecks"></div></section>
+    <section class="card"><h2>Assumptions & warnings</h2><h3>Assumptions</h3><ul class="list" id="assumptions"></ul><h3>Warnings</h3><ul class="list" id="warnings"></ul><div class="actions"><button class="btn" id="exportPlan">Export calculator plan JSON</button></div></section>
   </div>
 </main>
-<footer class="foot">Bruno AC Services LLC · AC Code & BOM Calculator V2 · verify AHJ + OEM before field installation</footer>
+<footer class="foot">Bruno AC Services LLC · verify adopted code, AHJ, OEM and engineering requirements before field installation</footer>
 <div class="toast" id="toast"></div>
-<script src="./ac-calculator-engine.js"></script><script src="./ac-calculator.js"></script><script src="./ac-calculator-ux.js"></script><script src="./ac-calculator-review-ux.js"></script>
+<script src="./ac-calculator-engine.js"></script>
+<script src="./ac-calculator.js"></script>
+<script src="./project-mode-bridge.js"></script>
+<script src="./project-estimator-core.js"></script>
+<script src="./project-estimator-wizard.js"></script>
+<script src="./ac-calculator-ux.js"></script>
+<script src="./ac-calculator-review-ux.js"></script>
 </body></html>
