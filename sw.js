@@ -1,5 +1,5 @@
 /* Bruno AC Estimating — app shell offline cache */
-const CACHE = 'bruno-ac-v45';
+const CACHE = 'bruno-ac-v46';
 const SHELL = [
   './','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png',
   './sw-register.js','./financial-integrity-core.js','./navigation-v2.js','./navigation-v2.css','./navigation-tree.css','./workspace-v5.js','./workspace-v5.css',
