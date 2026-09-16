@@ -1,0 +1,15 @@
+(function(root,factory){var api=factory();if(typeof module==='object'&&module.exports){module.exports=api;return}if(root)root.BrunoAppBackup=api;if(typeof document!=='undefined')api.init()})(typeof self!=='undefined'?self:this,function(){
+'use strict';
+var PREFIX='bruno-ac-';
+function collectBrunoStorage(storage){var out={};if(!storage)return out;for(var i=0;i<storage.length;i++){var k=storage.key(i);if(k&&k.indexOf(PREFIX)===0){var v=storage.getItem(k);if(typeof v==='string')out[k]=v}}return out}
+function buildBackup(storage){return {product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,exportedAt:new Date().toISOString(),storage:collectBrunoStorage(storage)}}
+function validateBackup(b){if(!b||typeof b!=='object'||Array.isArray(b)||b.product!=='bruno-ac'||b.type!=='bruno-ac-full-app-backup'||Number(b.version)!==2||!b.storage||typeof b.storage!=='object'||Array.isArray(b.storage))return false;return Object.keys(b.storage).every(function(k){return k.indexOf(PREFIX)===0&&typeof b.storage[k]==='string'})}
+function restoreBackup(b,storage){if(!validateBackup(b))throw new Error('Invalid Bruno AC full app backup');var keys=Object.keys(b.storage),written=[];keys.forEach(function(k){storage.setItem(k,b.storage[k]);written.push(k)});return written}
+function downloadJson(obj){var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a'),d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');a.href=URL.createObjectURL(blob);a.download='bruno-ac-full-backup-'+stamp+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+function exportNow(){downloadJson(buildBackup(localStorage))}
+function importFile(file){if(!file)return;var r=new FileReader();r.onload=function(){try{var b=JSON.parse(String(r.result||'')),written=restoreBackup(b,localStorage);alert('Full Bruno AC backup restored: '+written.length+' storage sections. The app will reload.');window.location.reload()}catch(e){alert('Could not restore full Bruno AC backup: '+e.message)}};r.readAsText(file)}
+function bindExport(el){if(!el||el.dataset.fullBackup==='1')return;el.dataset.fullBackup='1';el.title='Full app backup: all Bruno AC local data including Service Journal';el.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();exportNow()},true)}
+function bindImport(input){if(!input||input.dataset.fullBackup==='1')return;input.dataset.fullBackup='1';input.addEventListener('change',function(e){e.preventDefault();e.stopImmediatePropagation();var f=input.files&&input.files[0];importFile(f);input.value=''},true)}
+function init(){function bind(){bindExport(document.getElementById('btn-export-app'));bindExport(document.getElementById('help-export-app'));bindImport(document.getElementById('btn-import-app'))}bind();setTimeout(bind,0);setTimeout(bind,500)}
+return {collectBrunoStorage:collectBrunoStorage,buildBackup:buildBackup,validateBackup:validateBackup,restoreBackup:restoreBackup,init:init};
+});
