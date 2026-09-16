@@ -64,7 +64,7 @@ assert(mobileCss.includes('color-scheme:dark'));
 assert(mobileCss.includes('safe-area-inset-bottom'));
 assert(css.includes('.pew-price-strip'));
 assert(workspaceCss.includes('.letterhead-strip select'));
-assert(sw.includes("bruno-ac-v63"));
+assert(sw.includes("bruno-ac-v64"));
 assert(sw.includes("./service-journal-storage-guard.js"));
 assert(sw.includes("./project-history-v2-bridge.js"));
 assert(sw.includes("./project-runtime-summary.js"));
