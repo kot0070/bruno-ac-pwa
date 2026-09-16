@@ -4,138 +4,49 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S10
-last_completed_stage: S09
-next_stage_after_current: S11
-main_head: b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0
+current_stage: S11
+last_completed_stage: S10
+next_stage_after_current: S12
+main_head: 5b01400890854569758f01831317713864713f86
 ```
 
 ## HARD RULE
 Read the master plan first, then this file before every stage. Execute only `current_stage`. Do not skip forward. After the stage is complete, update this file before beginning the next stage.
 
-## COMPLETED STAGES
+## COMPLETED STAGES SUMMARY
 
-### S00
-```yaml
-status: DONE
-main_head: 9e05636fb3bbc26c0b60ef4624753539e728bd87
-```
+| Stage | Status | Validated commit | CI run | Final main HEAD | PWA |
+|---|---|---|---|---|---|
+| S00 | DONE | 9e05636f | — | 9e05636fb3bbc26c0b60ef4624753539e728bd87 | v45 |
+| S01 Journal runtime | DONE | a6f68aeb | 35092712396 SUCCESS | a158e7fad54bfa765014f6cdc5f0c09e726f941f | v46 |
+| S02 One surface | DONE | c18b8d83 | 35093427826 SUCCESS | 70e7bfdf38eb260dc93af49ba83582dfad52340e | v47 |
+| S03 Source library | DONE | 78629414 | 35096658178 SUCCESS | b774570e60e99be12a3c419b2f4732390c990572 | v48 |
+| S04 Building schema | DONE | 9c148220 | 35097154353 SUCCESS | 8371b425fbdb7d0317e2eb2f96ef5a6367d4bff1 | v49 |
+| S05 Load engine | DONE | 72e74f9b | 35097713832 SUCCESS | cd32882cc0c20e27f597be8270e7c2dca271f0b1 | v50 |
+| S06 Equipment | DONE | eaf061b9 | 35098245799 SUCCESS | 91ef75514ea511dd69b9ebfee04c2fd0953c525a | v51 |
+| S07 Electrical | DONE | e9ab51a8 | 35098930455 SUCCESS | 38c98cf77f60cc975e4c7fedec02426735ea0bd6 | v52 |
+| S08 Mechanical BOM | DONE | 3f6a58c0 | 35100406825 SUCCESS | 907fb057c802e011a8354963e8af5f8c5ef65556 | v53 |
+| S09 Catalog/pricing | DONE | 716e08a8 | 35100991107 SUCCESS | b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0 | v54 |
+| S10 Overrides/compliance/Apply | DONE | 3c399955 | 35102124833 SUCCESS | 5b01400890854569758f01831317713864713f86 | v55 |
 
-### S01 — JOURNAL MOBILE RUNTIME CORRECTION
-```yaml
-status: DONE
-final_main_head: a158e7fad54bfa765014f6cdc5f0c09e726f941f
-validated_commit: a6f68aeb16904cb63761226e118a65d9db5b7c94
-ci_run: 35092712396
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v46
-browser_mobile_runtime: NOT_PERFORMED
-executable_dom_runtime: PASS_jsdom
-```
-
-### S02 — ONE-SURFACE CALCULATOR ARCHITECTURE
-```yaml
-status: DONE
-final_main_head: 70e7bfdf38eb260dc93af49ba83582dfad52340e
-validated_commit: c18b8d83b99884942c6b6013a3169b0ae6a21925
-ci_run: 35093427826
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v47
-browser_mobile_runtime: NOT_PERFORMED
-executable_dom_runtime: PASS_jsdom
-```
-
-### S03 — REGULATORY / STANDARDS / SOURCE LIBRARY HARDENING
-```yaml
-status: DONE
-final_main_head: b774570e60e99be12a3c419b2f4732390c990572
-validated_commit: 7862941429ea0958476cfc63fccbf935f51c2e09
-ci_run: 35096658178
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v48
-source_matrix_validation: PASS
-```
-
-### S04 — PROJECT / BUILDING / ZONE / ENVELOPE SCHEMA
-```yaml
-status: DONE
-final_main_head: 8371b425fbdb7d0317e2eb2f96ef5a6367d4bff1
-validated_commit: 9c1482209368cd35279b7e3e7192f664acca92b5
-ci_run: 35097154353
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v49
-schema_tests: PASS
-```
-
-### S05 — HEATING / COOLING LOAD ENGINE
-```yaml
-status: DONE
-final_main_head: cd32882cc0c20e27f597be8270e7c2dca271f0b1
-validated_commit: 72e74f9b2ccf7f13a20e776e93586e9072f2893b
-ci_run: 35097713832
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v50
-browser_runtime: NOT_PERFORMED
-load_fixture_tests: PASS
-```
-
-### S06 — EQUIPMENT CAPACITY + SYSTEM-COUNT SELECTION
-```yaml
-status: DONE
-final_main_head: 91ef75514ea511dd69b9ebfee04c2fd0953c525a
-validated_commit: eaf061b90d40a5a5fe7bc536e44f76721498fdfd
-ci_run: 35098245799
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v51
-browser_runtime: NOT_PERFORMED
-equipment_fixture_tests: PASS
-```
-
-### S07 — ELECTRICAL DEPENDENCY ENGINE
-```yaml
-status: DONE
-final_main_head: 38c98cf77f60cc975e4c7fedec02426735ea0bd6
-validated_commit: e9ab51a87f7bf171f9ef1549ac968967ee869c56
-ci_run: 35098930455
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v52
-browser_runtime: NOT_PERFORMED
-electrical_fixture_tests: PASS
-```
-
-### S08 — MECHANICAL DEPENDENCY + BOM ENGINE
-```yaml
-status: DONE
-final_main_head: 907fb057c802e011a8354963e8af5f8c5ef65556
-validated_commit: 3f6a58c072e054fa3e3d6a0b9cd06ea8ea478790
-ci_run: 35100406825
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v53
-browser_runtime: NOT_PERFORMED
-mechanical_bom_fixture_tests: PASS
-```
-
-### S09 — CATALOG RESOLUTION + LIVE PRICING
-```yaml
-status: DONE
-final_main_head: b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0
-validated_commit: 716e08a8dab11a9a792d60495fbdda3b3e4a2d4c
-ci_run: 35100991107
-ci_result: SUCCESS
-pwa_cache: bruno-ac-v54
-browser_runtime: NOT_PERFORMED
-catalog_pricing_fixture_tests: PASS
-```
+## S10 EVIDENCE
 
 Implemented:
-- BOM resolves to stable Catalog identity by exact row ID, saved operator binding, explicit Catalog `bomKeys`, or conservative safe-default mapping;
-- unresolved and multiple-match states remain explicit instead of choosing a price unsafely;
-- Customer Price (`unitCost`) remains quote-side authority;
-- Your Cost remains internal; blank Your Cost uses current Customer Price fallback with provenance `customer-price-fallback`; explicit zero remains valid; malformed financial values fail closed;
-- extended Customer Materials / Your Cost / Margin are recalculated live from the current editable Catalog only;
-- operator Catalog binding is persisted separately and does not mutate confirmed/job snapshots;
-- same-surface live pricing UI added;
-- full regression CI passed and temporary validation workflow removed.
+- per-BOM final quantity override lifecycle with explicit reason;
+- override below hard `minimum_qty` is fail-closed;
+- live Catalog price recomputation uses final quantity without mutating Job until explicit Apply;
+- unified compliance gate covers building/load/equipment/electrical/mechanical/pricing readiness;
+- commercial path requires explicit jurisdiction/AHJ verification and a commercial design/load source instead of silently reusing residential state;
+- legacy calculator Apply now delegates to the live compliance gate once available, while retaining legacy fail-closed fallback during startup;
+- Confirm and Apply are capture-gated by the same compliance result;
+- existing financial apply engine and snapshot semantics remain unchanged;
+- regression includes financial integrity, lifecycle, secondary drain, Journal and full chain.
 
-## S10 ENTRY GATE
-S09 Catalog/pricing implementation and full regression CI passed. S10 may start. S11 and later remain forbidden until S10 is DONE and this state file is updated.
+```yaml
+browser_runtime: NOT_PERFORMED
+compliance_fixture_tests: PASS
+financial_lifecycle_regression: PASS
+```
+
+## S11 ENTRY GATE
+S10 implementation and full regression CI passed. S11 may start. S12 and later remain forbidden until S11 is DONE and this state file is updated.
