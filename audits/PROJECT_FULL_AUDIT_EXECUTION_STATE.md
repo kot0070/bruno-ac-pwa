@@ -5,11 +5,11 @@ master_plan: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
 master_id: PROJECT_FULL_AUDIT_MASTER_01
 execution_mode: DIRECT_MAIN + STRICT_SEQUENTIAL + AUTONOMOUS
 status: ACTIVE
-current_stage: P08
-last_completed_stage: P07
-next_stage_after_current: P09
+current_stage: P09
+last_completed_stage: P08
+next_stage_after_current: P10
 starting_accepted_main_head: 7c89b706546e4d2e465405544dc398220e664db9
-main_head: 1a6681072541f3bbb72afa98c0b0929179241ad5
+main_head: 8352e2760b9717bb33d271d764ca683c855820e5
 browser_mobile_runtime: NOT_PERFORMED
 ```
 
@@ -25,32 +25,29 @@ browser_mobile_runtime: NOT_PERFORMED
 | P05 | DONE_WITH_FINDINGS | 0e03928e38a06fbbd59f61cd119d48c81d373680 | 0e03928e38a06fbbd59f61cd119d48c81d373680 | `audits/PROJECT_FULL_AUDIT_P05_REGULATORY.md`; P0=0/P1=3/P2=1 |
 | P06 | DONE | 0e03928e38a06fbbd59f61cd119d48c81d373680 | 1a6681072541f3bbb72afa98c0b0929179241ad5 | `audits/implementation/PROJECT_FULL_AUDIT_P06_1A668107.md`; CI `35141489808` SUCCESS; Pages `35141552548` SUCCESS; PWA v62 |
 | P07 | DONE_WITH_FINDINGS | 1a6681072541f3bbb72afa98c0b0929179241ad5 | 1a6681072541f3bbb72afa98c0b0929179241ad5 | `audits/PROJECT_FULL_AUDIT_P07_GHOSTS.md`; P0=1/P1=3/P2=1 |
-| P08 | ACTIVE | 1a6681072541f3bbb72afa98c0b0929179241ad5 | — | hidden-defect/runtime remediation in progress |
-| P09 | NOT_STARTED | — | — | — |
+| P08 | DONE | 1a6681072541f3bbb72afa98c0b0929179241ad5 | 8352e2760b9717bb33d271d764ca683c855820e5 | `audits/implementation/PROJECT_FULL_AUDIT_P08_8352E276.md`; CI `35142558380` SUCCESS; Pages `35142638650` SUCCESS; PWA v63 |
+| P09 | ACTIVE | 8352e2760b9717bb33d271d764ca683c855820e5 | — | test-quality audit + executable coverage hardening |
 | P10 | NOT_STARTED | — | — | — |
 | P11 | NOT_STARTED | — | — | — |
 
-## P07 RECORD
+## P08 RECORD
 
 ```yaml
-status: DONE_WITH_FINDINGS
+status: DONE
 started_from_main_HEAD: 1a6681072541f3bbb72afa98c0b0929179241ad5
-completed_main_HEAD: 1a6681072541f3bbb72afa98c0b0929179241ad5
-changed_files: []
-findings:
-  P0:
-    - oversized syntactically valid primary Job can be treated as missing while writes remain unlocked
-  P1:
-    - first installation initializes from embedded 3-ton demo Job
-    - legacy commercial bridge permanently disables Apply despite authoritative compliance readiness
-    - enhancement loader failures are silently swallowed
-  P2:
-    - default jurisdiction phrase Texas / Austin area remains provisional/ambiguous
-report: audits/PROJECT_FULL_AUDIT_P07_GHOSTS.md
+validated_commit: 7c6afa15de3ae122b555cd8f16e0c92f75fa0ec5
+completed_main_HEAD: 8352e2760b9717bb33d271d764ca683c855820e5
+implementation_report: audits/implementation/PROJECT_FULL_AUDIT_P08_8352E276.md
+ci_run: 35142558380
+ci_result: SUCCESS
+pages_run: 35142638650
+pages_result: SUCCESS
+temporary_validation_workflow: REMOVED
+pwa_cache: bruno-ac-v63
 browser_mobile_runtime: NOT_PERFORMED
-next_stage_authorized: P08
+next_stage_authorized: P09
 ```
 
 ## HARD RULE
 
-Execute only `current_stage`. Audit-only stages do not modify production. Remediation stages may write directly to `main`. No stage becomes DONE until evidence and exact final HEAD are persisted here.
+Execute only `current_stage`. P09 may harden tests and adjacent seams only. No stage becomes DONE until executable evidence and exact final HEAD are persisted here.
