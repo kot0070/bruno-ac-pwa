@@ -1,6 +1,8 @@
 'use strict';
 const assert=require('assert');
+const fs=require('fs');
 const UX=require('../service-journal-ux.js');
+const src=fs.readFileSync('service-journal-ux.js','utf8');
 
 assert.deepStrictEqual(UX.rangeBounds('2026-09-11','week'),{start:'2026-09-07',end:'2026-09-13'});
 assert.deepStrictEqual(UX.rangeBounds('2026-09-11','month'),{start:'2026-09-01',end:'2026-09-30'});
@@ -9,6 +11,11 @@ assert.strictEqual(UX.shiftPeriod('2026-01-31','month',1),'2026-02-28');
 assert.strictEqual(UX.shiftPeriod('2026-02-28','month',1),'2026-03-28');
 assert.strictEqual(UX.shiftPeriod('2026-12-31','quarter',1),'2027-01-31');
 assert.strictEqual(UX.shiftPeriod('2027-01-31','quarter',-1),'2026-10-31');
+
+assert(src.includes('<details class="sj4-card sj4-tax"><summary>'),'tax/payroll settings must default collapsed');
+assert(!src.includes('<details open class="sj4-card sj4-tax">'),'tax/payroll settings must not default open');
+assert(src.includes('data-edit-call='),'saved calls must render static rows with explicit edit action');
+assert(src.includes('sj4-call-modal'),'editing must use modal rather than persistent inline inputs');
 
 const s=UX.defaultState();
 s.selectedDate='2026-09-11';
