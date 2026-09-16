@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S08
-last_completed_stage: S07
-next_stage_after_current: S09
-main_head: 38c98cf77f60cc975e4c7fedec02426735ea0bd6
+current_stage: S09
+last_completed_stage: S08
+next_stage_after_current: S10
+main_head: 907fb057c802e011a8354963e8af5f8c5ef65556
 ```
 
 ## HARD RULE
@@ -67,8 +67,6 @@ pwa_cache: bruno-ac-v49
 schema_tests: PASS
 ```
 
-Implemented schema v4, deterministic migration from legacy project-plan schema 1-3, building/envelope/zone input UI, explicit unresolved engineering fields, no fabricated load values.
-
 ### S05 — HEATING / COOLING LOAD ENGINE
 ```yaml
 status: DONE
@@ -80,8 +78,6 @@ pwa_cache: bruno-ac-v50
 browser_runtime: NOT_PERFORMED
 load_fixture_tests: PASS
 ```
-
-Implemented transparent deterministic heating/cooling load engine with blocked/provisional states, hand-checkable formulas, same-surface UI and no square-footage-only tonnage fallback.
 
 ### S06 — EQUIPMENT CAPACITY + SYSTEM-COUNT SELECTION
 ```yaml
@@ -95,8 +91,6 @@ browser_runtime: NOT_PERFORMED
 equipment_fixture_tests: PASS
 ```
 
-Implemented calculated-load separation, verified selection policy gate, Catalog/OEM candidate selection, unresolved OEM behavior and explicit override provenance.
-
 ### S07 — ELECTRICAL DEPENDENCY ENGINE
 ```yaml
 status: DONE
@@ -109,14 +103,28 @@ browser_runtime: NOT_PERFORMED
 electrical_fixture_tests: PASS
 ```
 
+### S08 — MECHANICAL DEPENDENCY + BOM ENGINE
+```yaml
+status: DONE
+final_main_head: 907fb057c802e011a8354963e8af5f8c5ef65556
+validated_commit: 3f6a58c072e054fa3e3d6a0b9cd06ea8ea478790
+ci_run: 35100406825
+ci_result: SUCCESS
+pwa_cache: bruno-ac-v53
+browser_runtime: NOT_PERFORMED
+mechanical_bom_fixture_tests: PASS
+```
+
 Implemented:
-- electrical dependency chain starts from selected equipment/OEM record, never floor area or tonnage alone;
-- voltage/phase/MCA/MOCP remain unresolved when nameplate/OEM data are missing;
-- circuit/OCPD/disconnect coordination is explicit and fail-closed for invalid OCPD above MOCP;
-- conductor/routing requirement remains field-verification dependent rather than invented;
-- generated electrical BOM rows preserve requirement source, source refs and unresolved state;
-- same-surface electrical result UI added;
+- final selected OEM/Catalog equipment becomes the root of mechanical BOM generation;
+- equipment, supports, controls, refrigerant, condensate/overflow, duct takeoff, electrical rows and explicit commercial-scope allowances are consolidated;
+- all BOM rows carry requirement source, calculated/minimum/final quantity, unit, Catalog match state and source references;
+- field route lengths remain blockers when required rather than being derived from square footage;
+- operator-only equipment override cannot fabricate a material BOM without resolved Catalog/OEM equipment;
+- electrical BOM from S07 is included without replacing its provenance;
+- same-surface mechanical BOM table added;
+- S07 electrical scripts are now explicitly wired in calculator HTML;
 - full regression CI passed and temporary validation workflow removed.
 
-## S08 ENTRY GATE
-S07 electrical-dependency implementation and full regression CI passed. S08 may start. S09 and later remain forbidden until S08 is DONE and this state file is updated.
+## S09 ENTRY GATE
+S08 mechanical/BOM implementation and full regression CI passed. S09 may start. S10 and later remain forbidden until S09 is DONE and this state file is updated.
