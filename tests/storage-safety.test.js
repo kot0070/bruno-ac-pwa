@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('assert');
 const F=require('../financial-integrity-core.js');
+const J=require('../service-journal-storage-guard.js');
 
 function FakeStorage(seed){this.o=Object.assign({},seed||{});}
 Object.defineProperty(FakeStorage.prototype,'length',{get:function(){return Object.keys(this.o).length}});
@@ -31,4 +32,20 @@ assert.strictEqual(F.classifyPrimaryJobRaw(storage.getItem(F.PRIMARY_JOB_KEY)).s
 const healthyStorage=new FakeStorage({'bruno-ac-v1':JSON.stringify({quote:{}})});
 const healthy=F.installPrimaryStorageGuard({Storage:FakeStorage,localStorage:healthyStorage,document:null});
 assert.strictEqual(healthy.locked,false);
+
+const validJournal={schemaVersion:4,settings:{employeeSocialSecurityPct:6.2,twcWageBase:9000},workers:[],calls:[{id:'c',date:'2026-09-16',hours:1.5,gross:250}],crew:[{id:'w',date:'2026-09-16',rate:20,hours:8}]};
+assert.strictEqual(J.validateRaw(JSON.stringify(validJournal)).ok,true);
+const badRate=JSON.parse(JSON.stringify(validJournal));badRate.crew[0].rate='abc';
+assert.strictEqual(J.validateRaw(JSON.stringify(badRate)).ok,false);
+const badPct=JSON.parse(JSON.stringify(validJournal));badPct.settings.employeeSocialSecurityPct=120;
+assert.strictEqual(J.validateRaw(JSON.stringify(badPct)).ok,false);
+const negativeGross=JSON.parse(JSON.stringify(validJournal));negativeGross.calls[0].gross=-1;
+assert.strictEqual(J.validateRaw(JSON.stringify(negativeGross)).ok,false);
+const jStorage=new FakeStorage({[J.KEY]:JSON.stringify(badRate)});
+const jGuard=J.install({Storage:FakeStorage,localStorage:jStorage});
+assert.strictEqual(jGuard.invalid,true);
+assert.throws(()=>jStorage.getItem(J.KEY),/BRUNO_JOURNAL_STORAGE_LOCKED/,'malformed explicit Journal numerics must be blocked before normalization');
+jGuard.restore();
+assert.strictEqual(jStorage.getItem(J.KEY),JSON.stringify(badRate),'guard must not mutate the malformed stored payload');
+
 console.log('storage safety tests passed');
