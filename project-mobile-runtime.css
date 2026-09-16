@@ -1,0 +1,10 @@
+:root{color-scheme:dark}
+body,input,select,textarea,button{color-scheme:dark}
+#projectEstimatorWizard input,#projectEstimatorWizard select,#projectEstimatorWizard textarea{background:#0f1720;color:#e7eef7;border-color:#33445a}
+#projectEstimatorWizard select option{background:#0f1720;color:#e7eef7}
+@media(max-width:760px){
+  body{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  #projectEstimatorWizard{padding-bottom:max(72px,calc(72px + env(safe-area-inset-bottom)))}
+  #projectEstimatorWizard section{scroll-margin-top:12px}
+  #projectEstimatorWizard .btn,#projectEstimatorWizard button,#projectEstimatorWizard input,#projectEstimatorWizard select{min-height:42px}
+}
