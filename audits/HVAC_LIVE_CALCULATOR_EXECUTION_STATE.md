@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S09
-last_completed_stage: S08
-next_stage_after_current: S10
-main_head: 907fb057c802e011a8354963e8af5f8c5ef65556
+current_stage: S10
+last_completed_stage: S09
+next_stage_after_current: S11
+main_head: b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0
 ```
 
 ## HARD RULE
@@ -115,16 +115,27 @@ browser_runtime: NOT_PERFORMED
 mechanical_bom_fixture_tests: PASS
 ```
 
+### S09 — CATALOG RESOLUTION + LIVE PRICING
+```yaml
+status: DONE
+final_main_head: b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0
+validated_commit: 716e08a8dab11a9a792d60495fbdda3b3e4a2d4c
+ci_run: 35100991107
+ci_result: SUCCESS
+pwa_cache: bruno-ac-v54
+browser_runtime: NOT_PERFORMED
+catalog_pricing_fixture_tests: PASS
+```
+
 Implemented:
-- final selected OEM/Catalog equipment becomes the root of mechanical BOM generation;
-- equipment, supports, controls, refrigerant, condensate/overflow, duct takeoff, electrical rows and explicit commercial-scope allowances are consolidated;
-- all BOM rows carry requirement source, calculated/minimum/final quantity, unit, Catalog match state and source references;
-- field route lengths remain blockers when required rather than being derived from square footage;
-- operator-only equipment override cannot fabricate a material BOM without resolved Catalog/OEM equipment;
-- electrical BOM from S07 is included without replacing its provenance;
-- same-surface mechanical BOM table added;
-- S07 electrical scripts are now explicitly wired in calculator HTML;
+- BOM resolves to stable Catalog identity by exact row ID, saved operator binding, explicit Catalog `bomKeys`, or conservative safe-default mapping;
+- unresolved and multiple-match states remain explicit instead of choosing a price unsafely;
+- Customer Price (`unitCost`) remains quote-side authority;
+- Your Cost remains internal; blank Your Cost uses current Customer Price fallback with provenance `customer-price-fallback`; explicit zero remains valid; malformed financial values fail closed;
+- extended Customer Materials / Your Cost / Margin are recalculated live from the current editable Catalog only;
+- operator Catalog binding is persisted separately and does not mutate confirmed/job snapshots;
+- same-surface live pricing UI added;
 - full regression CI passed and temporary validation workflow removed.
 
-## S09 ENTRY GATE
-S08 mechanical/BOM implementation and full regression CI passed. S09 may start. S10 and later remain forbidden until S09 is DONE and this state file is updated.
+## S10 ENTRY GATE
+S09 Catalog/pricing implementation and full regression CI passed. S10 may start. S11 and later remain forbidden until S10 is DONE and this state file is updated.
