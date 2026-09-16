@@ -115,3 +115,22 @@ test('full-app export is a parseable Bruno AC backup with the primary Job', asyn
   const job = JSON.parse(backup.storage['bruno-ac-v1']);
   expectPrimaryShape(job);
 });
+
+test('real project-class input persists through localStorage and reload', async ({ page }) => {
+  const calculatorGroup = visibleGroup(page, 'calculator');
+  await expect(calculatorGroup).toBeVisible();
+  await calculatorGroup.click();
+
+  const projectType = page.locator('#phase3-project-type');
+  await expect(projectType).toBeVisible();
+  await projectType.selectOption('commercial');
+  await expect(projectType).toHaveValue('commercial');
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('bruno-ac-project-context-v1') || '{}'));
+  expect(stored.type).toBe('commercial');
+
+  await page.reload();
+  await waitForStableWorkspace(page);
+  await visibleGroup(page, 'calculator').click();
+  await expect(page.locator('#phase3-project-type')).toHaveValue('commercial');
+});
