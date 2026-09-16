@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S03
-last_completed_stage: S02
-next_stage_after_current: S04
-main_head: 70e7bfdf38eb260dc93af49ba83582dfad52340e
+current_stage: S04
+last_completed_stage: S03
+next_stage_after_current: S05
+main_head: b774570e60e99be12a3c419b2f4732390c990572
 ```
 
 ## HARD RULE
@@ -38,24 +38,11 @@ browser_mobile_runtime: NOT_PERFORMED
 executable_dom_runtime: PASS_jsdom
 ```
 
-Changed production/test files:
-
-```text
-service-journal-ux.js
-sw-register.js
-sw.js
-tests/service-journal-ux.test.js
-tests/service-journal-dom.test.js
-tests/project-estimator-integration.test.js
-```
-
 Implemented:
-
-- Service Journal loads independently of the optional workspace enhancement chain.
-- Payroll / Tax Settings are real collapsed details with compact summary and explicit collapse action.
+- Service Journal loads independently of optional workspace enhancement chain.
+- Payroll / Tax Settings are collapsed details with compact summary and explicit collapse action.
 - Saved Service Calls render compact/read-only with explicit modal Edit.
 - stable worker/payroll/period behavior preserved.
-- PWA cache v46.
 
 ## S02 — ONE-SURFACE CALCULATOR ARCHITECTURE
 
@@ -70,46 +57,47 @@ browser_mobile_runtime: NOT_PERFORMED
 executable_dom_runtime: PASS_jsdom
 ```
 
-Changed production/test files:
+Implemented:
+- Wizard and downstream technical/BOM grid are one calculator surface / one scroll context.
+- legacy `Open live technical calculator` action removed from normal flow.
+- duplicate visible project authorities removed.
+- old demo/job tonnage removed from active calculation and retained only as migration metadata.
+- commercial Apply fail-closed preserved.
+
+## S03 — REGULATORY / STANDARDS / SOURCE LIBRARY HARDENING
+
+```yaml
+status: DONE
+final_main_head: b774570e60e99be12a3c419b2f4732390c990572
+validated_commit: 7862941429ea0958476cfc63fccbf935f51c2e09
+ci_run: 35096658178
+ci_result: SUCCESS
+pwa_cache: bruno-ac-v48
+browser_runtime: NOT_PERFORMED
+source_matrix_validation: PASS
+```
+
+Changed production/test files include:
 
 ```text
-project-mode-bridge.js
-navigation-v2.css
+code-library/hvac-calculation-source-matrix.json
+code-rule-registry.js
+code-library-ux.js
 sw.js
-tests/project-single-surface-dom.test.js
+tests/code-rule-registry.test.js
 tests/project-estimator-integration.test.js
 ```
 
 Implemented:
+- calculation-source matrix with explicit domain, jurisdiction, applicability, calculation effect, provenance, verification date, copyright-storage policy and source status;
+- Texas ACR 2026 baseline, Texas 2026 NEC coordination baseline, Austin technical-code/AHJ sources;
+- separate residential load / equipment / duct methodology sources;
+- Austin commercial load, COMcheck/energy, duct and ventilation source rows;
+- project-specific OEM/nameplate source slot remains intentionally unresolved until exact equipment is selected;
+- registry validates required future source IDs and unresolved source slots;
+- Code Library UI exposes source matrix and fail-closed OEM source requirement;
+- source matrix included in offline PWA shell.
 
-- Wizard and downstream technical/BOM grid are forced into one calculator surface / one scroll context.
-- legacy `Open live technical calculator` action is removed from normal keyboard/visible flow.
-- outer shell project selector / standalone action is hidden so project inputs have one visible authority.
-- duplicate technical `sqft`, `systemType`, `indoorLocation`, `tonnage` fields are hidden from the downstream technical form.
-- old demo/job tonnage is removed from active calculator input and retained only as `data-legacy-capacity` migration metadata.
-- legacy tonnage pill in jobbar is hidden from the live calculator surface.
-- reset/re-render cannot leave the technical grid hidden; MutationObserver reapplies the one-surface contract.
-- commercial Apply fail-closed remains owned by the existing project gate.
+## S04 ENTRY GATE
 
-Executable DOM fixture verifies:
-
-```text
-technical grid visible inline
-legacy open-full hidden and untabbable
-single visible project input authority
-legacy 3-ton capacity removed from active input
-legacy capacity retained as metadata only
-legacy tonnage jobbar pill hidden
-reset hidden state is immediately corrected
-```
-
-Known limitation carried to S12/final audit:
-
-```yaml
-actual_android_browser_runtime_after_S01_S02: NOT_PERFORMED
-user_runtime_recheck_required_before_final_acceptance: true
-```
-
-## S03 ENTRY GATE
-
-S02 implementation and full regression CI passed. S03 may start. S04 and later remain forbidden until S03 is DONE and this state file is updated.
+S03 source-library implementation and full regression CI passed. S04 may start. S05 and later remain forbidden until S04 is DONE and this state file is updated.
