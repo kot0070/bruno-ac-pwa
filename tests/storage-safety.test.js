@@ -13,6 +13,8 @@ FakeStorage.prototype.removeItem=function(k){delete this.o[k]};
 assert.strictEqual(F.classifyPrimaryJobRaw(null).status,'missing');
 assert.strictEqual(F.classifyPrimaryJobRaw('{bad').status,'invalid');
 assert.strictEqual(F.classifyPrimaryJobRaw('[]').status,'invalid');
+assert.strictEqual(F.classifyPrimaryJobRaw('{}').status,'invalid','empty object must be treated as structural Job corruption');
+assert.strictEqual(F.classifyPrimaryJobRaw(JSON.stringify({quote:{}})).status,'invalid','partial Job authority must not bypass the storage guard');
 assert.strictEqual(F.classifyPrimaryJobRaw(JSON.stringify({quote:{},materialsUsed:[],catalog:[]})).status,'valid');
 
 const raw='{not valid json';
@@ -29,7 +31,13 @@ storage.setItem(F.PRIMARY_JOB_KEY,JSON.stringify({quote:{},materialsUsed:[],cata
 assert.strictEqual(guard.locked,false,'a valid explicit recovery write may unlock storage');
 assert.strictEqual(F.classifyPrimaryJobRaw(storage.getItem(F.PRIMARY_JOB_KEY)).status,'valid');
 
-const healthyStorage=new FakeStorage({'bruno-ac-v1':JSON.stringify({quote:{}})});
+const structuralRaw='{}';
+const structuralStorage=new FakeStorage({'bruno-ac-v1':structuralRaw});
+const structuralGuard=F.installPrimaryStorageGuard({Storage:FakeStorage,localStorage:structuralStorage,document:null});
+assert.strictEqual(structuralGuard.locked,true,'structurally invalid JSON object must be protected as corruption');
+assert.strictEqual(structuralStorage.getItem(F.PRIMARY_RESCUE_KEY),structuralRaw);
+
+const healthyStorage=new FakeStorage({'bruno-ac-v1':JSON.stringify({quote:{},materialsUsed:[],catalog:[]})});
 const healthy=F.installPrimaryStorageGuard({Storage:FakeStorage,localStorage:healthyStorage,document:null});
 assert.strictEqual(healthy.locked,false);
 
