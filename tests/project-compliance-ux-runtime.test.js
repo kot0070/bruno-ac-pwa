@@ -1,0 +1,32 @@
+'use strict';
+const assert=require('assert');
+const fs=require('fs');
+const {JSDOM}=require('jsdom');
+const src=fs.readFileSync('project-compliance-ux.js','utf8');
+const dom=new JSDOM('<!doctype html><html><head></head><body><div id="projectEstimatorWizard"><div id="pcp-pricing"></div></div><button id="apply">Apply</button><button id="pew-confirm">Confirm</button></body></html>',{url:'https://example.test/ac-calculator.html',runScripts:'outside-only',pretendToBeVisual:true});
+const w=dom.window;
+w.alert=function(){};
+w.BrunoBuildingSchema={validate:()=>({ok:true})};
+w.BrunoProjectComplianceGate={evaluate:()=>({status:'blocked',blockers:['electrical_dependency_not_ready'],warnings:[]})};
+w.BrunoCurrentLoadResult={status:'ready'};w.BrunoCurrentEquipmentResult={status:'ready'};w.BrunoCurrentElectricalResult={status:'provisional'};w.BrunoCurrentMechanicalBOM={status:'ready'};w.BrunoCurrentPricedBOM={status:'ready'};
+w.eval(src);
+function tick(ms=10){return new Promise(r=>w.setTimeout(r,ms));}
+(async()=>{
+  await tick();
+  const state=w.document.getElementById('pcg-state');
+  assert(state,'compliance UX must mount on the live estimator surface');
+  assert(state.textContent.includes('BLOCKED'));
+  const ev=new w.MouseEvent('click',{bubbles:true,cancelable:true});
+  const allowed=w.document.getElementById('apply').dispatchEvent(ev);
+  assert.strictEqual(allowed,false,'authoritative compliance gate must cancel Apply while blocked');
+  w.BrunoProjectComplianceGate.evaluate=()=>({status:'ready',blockers:[],warnings:[],sources:['TX_ENERGY_RESIDENTIAL_2015_IRC_CH11']});
+  w.document.getElementById('pcg-ahj').checked=true;
+  w.document.getElementById('pcg-ahj').dispatchEvent(new w.Event('change',{bubbles:true}));
+  await tick();
+  assert(state.textContent.includes('READY'));
+  const ev2=new w.MouseEvent('click',{bubbles:true,cancelable:true});
+  const allowed2=w.document.getElementById('apply').dispatchEvent(ev2);
+  assert.strictEqual(allowed2,true,'ready authoritative gate must not be blocked by compliance UX');
+  console.log('project compliance UX runtime tests passed');
+  w.close();
+})().catch(e=>{console.error(e);process.exit(1)});
