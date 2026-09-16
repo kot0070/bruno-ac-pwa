@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S07
-last_completed_stage: S06
-next_stage_after_current: S08
-main_head: 91ef75514ea511dd69b9ebfee04c2fd0953c525a
+current_stage: S08
+last_completed_stage: S07
+next_stage_after_current: S09
+main_head: 38c98cf77f60cc975e4c7fedec02426735ea0bd6
 ```
 
 ## HARD RULE
@@ -95,27 +95,28 @@ browser_runtime: NOT_PERFORMED
 equipment_fixture_tests: PASS
 ```
 
-Changed production/test files include:
-```text
-project-equipment-engine.js
-project-equipment-ux.js
-ac-calculator.html
-sw.js
-tests/project-equipment-engine.test.js
-tests/project-estimator-integration.test.js
+Implemented calculated-load separation, verified selection policy gate, Catalog/OEM candidate selection, unresolved OEM behavior and explicit override provenance.
+
+### S07 — ELECTRICAL DEPENDENCY ENGINE
+```yaml
+status: DONE
+final_main_head: 38c98cf77f60cc975e4c7fedec02426735ea0bd6
+validated_commit: e9ab51a87f7bf171f9ef1549ac968967ee869c56
+ci_run: 35098930455
+ci_result: SUCCESS
+pwa_cache: bruno-ac-v52
+browser_runtime: NOT_PERFORMED
+electrical_fixture_tests: PASS
 ```
 
 Implemented:
-- calculated load remains separate from selected equipment and operator override;
-- required capacity derives from validated heating/cooling load, not arbitrary tonnage;
-- verified upper selection bound is fail-closed until an explicit sourced oversize/selection policy is supplied;
-- Catalog/OEM equipment candidates carry manufacturer/model, nominal/rated capacities, voltage/phase, MCA/MOCP, refrigerant, line-set/accessory metadata and OEM source when present;
-- automatic selection only occurs for a candidate that meets load, verified upper bound, heating requirement when known, and has OEM provenance;
-- missing equipment dataset or OEM source remains unresolved rather than invented;
-- operator override requires explicit reason and never rewrites calculated load;
-- same-surface equipment requirement/selection UI added;
-- deterministic tests cover blocked load, unresolved policy/catalog, OEM-source gating, resolved candidate selection, and override separation;
-- PWA cache v51.
+- electrical dependency chain starts from selected equipment/OEM record, never floor area or tonnage alone;
+- voltage/phase/MCA/MOCP remain unresolved when nameplate/OEM data are missing;
+- circuit/OCPD/disconnect coordination is explicit and fail-closed for invalid OCPD above MOCP;
+- conductor/routing requirement remains field-verification dependent rather than invented;
+- generated electrical BOM rows preserve requirement source, source refs and unresolved state;
+- same-surface electrical result UI added;
+- full regression CI passed and temporary validation workflow removed.
 
-## S07 ENTRY GATE
-S06 equipment-selection implementation and full regression CI passed. S07 may start. S08 and later remain forbidden until S07 is DONE and this state file is updated.
+## S08 ENTRY GATE
+S07 electrical-dependency implementation and full regression CI passed. S08 may start. S09 and later remain forbidden until S08 is DONE and this state file is updated.
