@@ -51,14 +51,12 @@ function enforceOneSurface(doc){
 }
 function guardDocument(doc){
   if(!doc)return;
-  var commercial=type()==='commercial',notice=doc.querySelector('.notice'),applyBtn=doc.getElementById('apply'),banner=doc.getElementById('bruno-commercial-mode');
+  var commercial=type()==='commercial',notice=doc.querySelector('.notice'),banner=doc.getElementById('bruno-commercial-mode');
   if(commercial){
-    if(!banner&&notice){banner=doc.createElement('div');banner.id='bruno-commercial-mode';banner.className='notice';banner.style.borderColor='#8b6b20';banner.style.background='#2a2414';banner.style.color='#ffe08a';banner.innerHTML='<strong>COMMERCIAL PROJECT MODE:</strong> residential IRC-derived checks are not commercial compliance authority. Verify adopted IMC/UMC/IFGC, applicable energy/fire requirements, local AHJ and OEM/design criteria. Apply to Job is blocked until a commercial calculation path is completed.';notice.parentNode.insertBefore(banner,notice.nextSibling);}
-    if(applyBtn){applyBtn.dataset.commercialBlocked='1';applyBtn.disabled=true;applyBtn.title='Blocked: commercial code/design verification required';}
+    if(!banner&&notice){banner=doc.createElement('div');banner.id='bruno-commercial-mode';banner.className='notice';banner.style.borderColor='#8b6b20';banner.style.background='#2a2414';banner.style.color='#ffe08a';banner.innerHTML='<strong>COMMERCIAL PROJECT MODE:</strong> residential IRC-derived checks are not commercial compliance authority. Verify adopted IMC/UMC/IFGC, applicable energy/fire requirements, local AHJ and OEM/design criteria. Apply remains fail-closed until the authoritative compliance gate is ready.';notice.parentNode.insertBefore(banner,notice.nextSibling);}
     doc.documentElement.classList.add('bruno-commercial-project');
   }else{
     if(banner)banner.remove();
-    if(applyBtn&&applyBtn.dataset.commercialBlocked){delete applyBtn.dataset.commercialBlocked;if(applyBtn.title==='Blocked: commercial code/design verification required')applyBtn.title='';}
     doc.documentElement.classList.remove('bruno-commercial-project');
   }
   enforceOneSurface(doc);
@@ -68,8 +66,7 @@ function bindFrame(frame){if(!frame||frame.dataset.projectModeBridge==='1')retur
 function scan(){guardDocument(document);document.querySelectorAll('.phase3-calculator-frame').forEach(bindFrame)}
 function init(){
   scan();
-  document.addEventListener('click',function(e){var b=e.target&&e.target.closest&&e.target.closest('#apply');if(b&&type()==='commercial'){e.preventDefault();e.stopImmediatePropagation();alert('Commercial project is fail-closed. Complete commercial code/design verification before applying materials to Job.')}},true);
-  if(window.MutationObserver)new MutationObserver(function(){scan();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
+  if(window.MutationObserver)new MutationObserver(function(){scan()}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
   window.addEventListener('storage',function(e){if(e.key===KEY)scan()});
   document.addEventListener('change',function(e){if(e.target&&(e.target.id==='phase3-project-type'||e.target.id==='pew-type'))setTimeout(scan,0)});
   document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('#reload'))setTimeout(function(){if(ignoreLegacyCapacity(document)){var c=document.getElementById('calculate');if(c)c.click();}enforceOneSurface(document);},0)},true);
