@@ -18,7 +18,7 @@ function evaluate(ctx){ctx=ctx||{};var out={status:'ready',blockers:[],warnings:
    source('LOCAL_AHJ_01');
    if(austin){source('COMMERCIAL_LOAD_AUSTIN_IECC_C403_2_1');source('AUSTIN_TECHNICAL_CODES_2026')}else source('TX_ENERGY_COMMERCIAL_2015_IECC');
  }
- if(eq&&eq.final&&eq.final.mode==='override'&&!txt(eq.final.overrideReason||eq.override&&eq.override.reason))block('equipment_override_reason_required');
+ if(eq&&eq.final&&eq.final.mode==='operator_override'&&!txt(eq.override_reason||eq.final.overrideReason||eq.override&&eq.override.reason))block('equipment_override_reason_required');
  source('EQUIPMENT_OEM_01');source('ELECTRICAL_2026_NEC_01');
  out.status=out.blockers.length?'blocked':out.warnings.length?'provisional':'ready';return out}
 function currentBlockReason(){if(typeof window==='undefined')return '';var g=window.BrunoCurrentComplianceGate;if(!g)return 'Project compliance gate has not resolved yet.';return g.blockers&&g.blockers.length?g.blockers.join('; '):''}
