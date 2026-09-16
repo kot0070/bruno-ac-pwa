@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S04
-last_completed_stage: S03
-next_stage_after_current: S05
-main_head: b774570e60e99be12a3c419b2f4732390c990572
+current_stage: S05
+last_completed_stage: S04
+next_stage_after_current: S06
+main_head: 8371b425fbdb7d0317e2eb2f96ef5a6367d4bff1
 ```
 
 ## HARD RULE
@@ -19,10 +19,6 @@ Read the master plan first, then this file before every stage. Execute only `cur
 ```yaml
 status: DONE
 main_head: 9e05636fb3bbc26c0b60ef4624753539e728bd87
-evidence:
-  master_plan_persisted: true
-  starting_main_head_verified: true
-  user_runtime_defects_recorded: true
 ```
 
 ## S01 — JOURNAL MOBILE RUNTIME CORRECTION
@@ -38,12 +34,6 @@ browser_mobile_runtime: NOT_PERFORMED
 executable_dom_runtime: PASS_jsdom
 ```
 
-Implemented:
-- Service Journal loads independently of optional workspace enhancement chain.
-- Payroll / Tax Settings are collapsed details with compact summary and explicit collapse action.
-- Saved Service Calls render compact/read-only with explicit modal Edit.
-- stable worker/payroll/period behavior preserved.
-
 ## S02 — ONE-SURFACE CALCULATOR ARCHITECTURE
 
 ```yaml
@@ -56,13 +46,6 @@ pwa_cache: bruno-ac-v47
 browser_mobile_runtime: NOT_PERFORMED
 executable_dom_runtime: PASS_jsdom
 ```
-
-Implemented:
-- Wizard and downstream technical/BOM grid are one calculator surface / one scroll context.
-- legacy `Open live technical calculator` action removed from normal flow.
-- duplicate visible project authorities removed.
-- old demo/job tonnage removed from active calculation and retained only as migration metadata.
-- commercial Apply fail-closed preserved.
 
 ## S03 — REGULATORY / STANDARDS / SOURCE LIBRARY HARDENING
 
@@ -77,27 +60,46 @@ browser_runtime: NOT_PERFORMED
 source_matrix_validation: PASS
 ```
 
+Implemented:
+- calculation-source matrix with regulatory/design/OEM provenance;
+- required future-source validation and unresolved OEM slots;
+- Code Library matrix UI and offline availability.
+
+## S04 — PROJECT / BUILDING / ZONE / ENVELOPE SCHEMA
+
+```yaml
+status: DONE
+final_main_head: 8371b425fbdb7d0317e2eb2f96ef5a6367d4bff1
+validated_commit: 9c1482209368cd35279b7e3e7192f664acca92b5
+ci_run: 35097154353
+ci_result: SUCCESS
+pwa_cache: bruno-ac-v49
+browser_runtime: NOT_PERFORMED
+schema_tests: PASS
+```
+
 Changed production/test files include:
 
 ```text
-code-library/hvac-calculation-source-matrix.json
-code-rule-registry.js
-code-library-ux.js
+project-building-schema.js
+project-building-ux.js
+ac-calculator.html
 sw.js
-tests/code-rule-registry.test.js
+tests/project-building-schema.test.js
 tests/project-estimator-integration.test.js
 ```
 
 Implemented:
-- calculation-source matrix with explicit domain, jurisdiction, applicability, calculation effect, provenance, verification date, copyright-storage policy and source status;
-- Texas ACR 2026 baseline, Texas 2026 NEC coordination baseline, Austin technical-code/AHJ sources;
-- separate residential load / equipment / duct methodology sources;
-- Austin commercial load, COMcheck/energy, duct and ventilation source rows;
-- project-specific OEM/nameplate source slot remains intentionally unresolved until exact equipment is selected;
-- registry validates required future source IDs and unresolved source slots;
-- Code Library UI exposes source matrix and fail-closed OEM source requirement;
-- source matrix included in offline PWA shell.
+- dedicated schema version 4 for project/building/envelope/zone inputs;
+- project fields: location/ZIP/jurisdiction, total and conditioned area, building type/usage, stories, ceiling height, construction scope, system/zone preferences;
+- envelope fields: wall/roof/floor thermal inputs, windows/doors, infiltration, ventilation, occupancy/internal gains, design conditions + source ID, duct location/condition;
+- zone fields: area, ceiling height, exterior exposure, windows/doors, occupancy/gains, supply-return relationship and system assignment;
+- deterministic migration from legacy project-plan schema 1-3;
+- migration copies only explicit legacy values and leaves conditioned area/envelope/design data unresolved instead of inventing them;
+- unsupported legacy schema fails with a clear migration block;
+- same-surface Building / Envelope / Load Inputs UI persists schema independently and synchronizes explicit legacy project/room context;
+- validation exposes unresolved load inputs but does not fabricate load results.
 
-## S04 ENTRY GATE
+## S05 ENTRY GATE
 
-S03 source-library implementation and full regression CI passed. S04 may start. S05 and later remain forbidden until S04 is DONE and this state file is updated.
+S04 building/envelope schema implementation and full regression CI passed. S05 may start. S06 and later remain forbidden until S05 is DONE and this state file is updated.
