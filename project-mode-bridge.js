@@ -14,9 +14,14 @@ function addSingleSurfaceStyle(doc){
    +'.bruno-single-surface-inline-note{margin:0 0 10px;padding:9px 10px;border:1px solid #344a62;border-radius:9px;background:#101923;color:var(--muted);font-size:12px}'
    +'.pew-one-surface #pew-open-full{display:none!important}'
    +'.pew-one-surface #pew-finish-step .pew-confirm-note{margin-top:8px}'
-   +'.pew-one-surface .pew-finish-step-note{display:block;color:var(--muted);font-size:10px;margin:6px 0}'
    +'@media(max-width:700px){.bruno-single-surface-grid{display:block!important}.bruno-single-surface-grid>.card{margin-bottom:10px}}';
   doc.head.appendChild(s);
+}
+function ignoreLegacyCapacity(doc){
+  var tons=doc.getElementById('tonnage'),changed=false;
+  if(tons&&tons.value){if(!tons.dataset.legacyCapacity)tons.dataset.legacyCapacity=tons.value;tons.value='';tons.dataset.legacyCapacityIgnored='1';changed=true;}
+  doc.querySelectorAll('#jobbar .pill').forEach(function(p){if(/\bton\b|btu/i.test(String(p.textContent||'')))p.classList.add('bruno-single-source-hidden');});
+  return changed;
 }
 function enforceOneSurface(doc){
   if(!doc)return;
@@ -27,10 +32,10 @@ function enforceOneSurface(doc){
   grid.classList.add('bruno-single-surface-grid');
   if(grid.hidden)grid.hidden=false;
   ['sqft','systemType','indoorLocation','tonnage'].forEach(function(id){var w=fieldWrap(doc,id);if(w)w.classList.add('bruno-single-source-hidden');});
-  var tons=doc.getElementById('tonnage');
-  if(tons&&tons.value&&!tons.dataset.legacyCapacity){tons.dataset.legacyCapacity=tons.value;tons.value='';tons.dataset.legacyCapacityIgnored='1';}
+  var capacityChanged=ignoreLegacyCapacity(doc);
   var open=doc.getElementById('pew-open-full');if(open){open.hidden=true;open.setAttribute('aria-hidden','true');open.tabIndex=-1;}
   var sub=wizard.querySelector('.pew-sub');if(sub)sub.textContent='Project → Rooms / zones → Code & design → Technical details → BOM / price → Review';
+  var notice=doc.querySelector('main.wrap>.notice');if(notice&&!notice.dataset.singleSurface){notice.dataset.singleSurface='1';notice.innerHTML='<strong>Live workflow:</strong> enter the project and building information once. Technical details, code/design checks, generated BOM and pricing update on this same calculator surface. Capacity will come from the load/equipment path; legacy demo tonnage is not used as a calculated result.';}
   var finish=doc.getElementById('pew-finish-step');
   if(finish){
     var strong=finish.querySelector('.pew-step-title strong'),small=finish.querySelector('.pew-step-title small');
@@ -40,8 +45,9 @@ function enforceOneSurface(doc){
   var first=grid.querySelector('.card');
   if(first){
     var h=first.querySelector('h2');if(h)h.textContent='Technical installation details';
-    if(!first.querySelector('.bruno-single-surface-inline-note')){var n=doc.createElement('p');n.className='bruno-single-surface-inline-note';n.textContent='Project type, building area, system family and equipment location are controlled above. This section contains only downstream field/installation details. Capacity is not inherited from the demo job.';first.insertBefore(n,h?h.nextSibling:first.firstChild);}
+    if(!first.querySelector('.bruno-single-surface-inline-note')){var n=doc.createElement('p');n.className='bruno-single-surface-inline-note';n.textContent='Project type, building area, system family and equipment location are controlled above. This section contains downstream field/installation details only. Capacity is not inherited from the demo job.';first.insertBefore(n,h?h.nextSibling:first.firstChild);}
   }
+  if(capacityChanged&&!doc.documentElement.dataset.capacityRecalcQueued){doc.documentElement.dataset.capacityRecalcQueued='1';setTimeout(function(){var c=doc.getElementById('calculate');if(c)c.click();delete doc.documentElement.dataset.capacityRecalcQueued;},0);}
 }
 function guardDocument(doc){
   if(!doc)return;
@@ -66,8 +72,8 @@ function init(){
   if(window.MutationObserver)new MutationObserver(function(){scan();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
   window.addEventListener('storage',function(e){if(e.key===KEY)scan()});
   document.addEventListener('change',function(e){if(e.target&&(e.target.id==='phase3-project-type'||e.target.id==='pew-type'))setTimeout(scan,0)});
-  document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('#reload'))setTimeout(function(){var t=document.getElementById('tonnage');if(t&&t.value){t.dataset.legacyCapacity=t.value;t.value='';t.dataset.legacyCapacityIgnored='1';var c=document.getElementById('calculate');if(c)c.click();}enforceOneSurface(document);},0)},true);
+  document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('#reload'))setTimeout(function(){if(ignoreLegacyCapacity(document)){var c=document.getElementById('calculate');if(c)c.click();}enforceOneSurface(document);},0)},true);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-window.BrunoProjectModeBridge={type:type,apply:apply,guardDocument:guardDocument,enforceOneSurface:enforceOneSurface};
+window.BrunoProjectModeBridge={type:type,apply:apply,guardDocument:guardDocument,enforceOneSurface:enforceOneSurface,ignoreLegacyCapacity:ignoreLegacyCapacity};
 })();
