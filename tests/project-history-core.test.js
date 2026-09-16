@@ -39,6 +39,34 @@ assert.strictEqual(all.type,'project-calculation-history');
 let importedAll=H.importPayload(all,H.normalizeStore(null));
 assert.strictEqual(importedAll.ok,true);
 assert.strictEqual(importedAll.added,2);
+assert.strictEqual(new Set(importedAll.store.items.map(x=>x.id)).size,importedAll.store.items.length,'imported IDs must be collision-free');
+
+// Atomic full-history import: one malformed member rejects the entire batch and leaves store unchanged.
+const target=H.add(H.normalizeStore(null),snap('',1800)).store;
+const mixed=H.exportAll(b.store);
+mixed.history.items[1]=JSON.parse(JSON.stringify(mixed.history.items[1]));
+delete mixed.history.items[1].projectPlan;
+const atomic=H.importPayload(mixed,target);
+assert.strictEqual(atomic.ok,false);
+assert.strictEqual(atomic.added,0);
+assert.deepStrictEqual(atomic.store,target);
+
+// totals are required and strictly number|null; no missing/coercible values.
+const missingTotal=snap('missing',2000);delete missingTotal.totals.marginPct;
+assert.strictEqual(H.validateSnapshot(missingTotal).ok,false);
+assert.strictEqual(H.validateSnapshot(missingTotal).error,'missing_total_marginPct');
+const stringTotal=snap('string',2000);stringTotal.totals.customerMaterials='200';
+assert.strictEqual(H.validateSnapshot(stringTotal).ok,false);
+assert.strictEqual(H.validateSnapshot(stringTotal).error,'invalid_total_customerMaterials');
+const boolTotal=snap('bool',2000);boolTotal.totals.yourCost=false;
+assert.strictEqual(H.validateSnapshot(boolTotal).ok,false);
+assert.strictEqual(H.validateSnapshot(boolTotal).error,'invalid_total_yourCost');
+const nullTotals=snap('nulls',2000);nullTotals.totals={customerMaterials:null,yourCost:null,marginDollar:null,marginPct:null};
+assert.strictEqual(H.validateSnapshot(nullTotals).ok,true);
+
+// Unsupported/coercible payload version is rejected strictly.
+const badVersion=H.exportAll(b.store);badVersion.version='1';
+assert.strictEqual(H.importPayload(badVersion,target).ok,false);
 
 let removed=H.remove(b.store,b.store.activeId);
 assert.strictEqual(removed.items.length,1);
