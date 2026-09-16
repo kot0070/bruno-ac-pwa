@@ -4,14 +4,14 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S12
-last_completed_stage: S11
-next_stage_after_current: S13
-main_head: 87daa47afa23d276b6c69484bb3d38f055c7dcb3
+current_stage: S13
+last_completed_stage: S12
+next_stage_after_current: NONE
+main_head: 459c497b60cc77c511e9337a888bdff7508c2fef
 ```
 
 ## HARD RULE
-Read the master plan first, then this file before every stage. Execute only `current_stage`. Do not skip forward. After the stage is complete, update this file before beginning the next stage.
+Read the master plan first, then this file before every stage. Execute only `current_stage`. Do not skip forward. M01 is not CLOSED until S13 receives an independent persisted A verdict.
 
 ## COMPLETED STAGES SUMMARY
 
@@ -29,23 +29,44 @@ Read the master plan first, then this file before every stage. Execute only `cur
 | S09 Catalog/pricing | DONE | 716e08a8 | 35100991107 SUCCESS | b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0 | v54 |
 | S10 Overrides/compliance/Apply | DONE | 3c399955 | 35102124833 SUCCESS | 5b01400890854569758f01831317713864713f86 | v55 |
 | S11 History/templates/export/import | DONE | 256471e0 | 35121613789 SUCCESS | 87daa47afa23d276b6c69484bb3d38f055c7dcb3 | v56 |
+| S12 Mobile UX/PWA/E2E | DONE | 43dbd145 | 35122703196 SUCCESS | 459c497b60cc77c511e9337a888bdff7508c2fef | v58 |
 
-## S11 EVIDENCE
+## S12 EVIDENCE
 
 Implemented:
-- confirmed calculation snapshots now freeze building/envelope, load, equipment, electrical, mechanical BOM, priced BOM, compliance gate, Catalog bindings, quantity overrides, compliance metadata and direct source refs;
-- history validator fails closed on missing extended-chain components and malformed source refs/totals;
-- duplicate-as-new preserves project/building geometry but clears frozen Catalog bindings/overrides/compliance metadata so current Catalog repricing is re-entered;
-- original frozen snapshot remains unchanged;
-- strict atomic import, strict totals, unique IDs and legacy v45 history invariants remain intact;
-- extended history bridge is wired into the calculator and PWA shell;
-- full regression CI passed.
+- sticky same-surface runtime result strip for Cooling Load / Selected Capacity / System Count / Customer Materials / Your Cost / blockers;
+- grouped actionable blocker panel driven by the live compliance gate;
+- major Building / Load / Equipment / Electrical / Mechanical BOM / Pricing / Review sections can collapse/expand without navigating to a second calculator;
+- mobile dark-control hardening and safe-area spacing added;
+- executable JSDOM runtime test covers live strip values, blockers, READY transition and collapsible sections;
+- end-to-end dependency-chain fixture verifies 2,000 ft² vs 20,000 ft² materially changes load, envelope changes affect load, incomplete inputs block, and a fully resolved load -> OEM equipment -> electrical -> mechanical BOM -> Catalog pricing -> compliance chain reaches READY;
+- all history, financial, Apply lifecycle, Journal, secondary-drain, source registry and syntax regression tests passed;
+- exact final HEAD GitHub Pages deployment succeeded.
 
 ```yaml
-browser_runtime: NOT_PERFORMED
-history_fixture_tests: PASS
-full_regression: PASS
+validated_commit: 43dbd14524ce192659738e3a1d611aab46112094
+ci_run: 35122703196
+ci_result: SUCCESS
+pages_run: 35122795091
+pages_result: SUCCESS
+final_main_head: 459c497b60cc77c511e9337a888bdff7508c2fef
+pwa_cache: bruno-ac-v58
+browser_mobile_runtime: NOT_PERFORMED
+executable_dom_runtime: PASS_jsdom
+end_to_end_chain: PASS
 ```
 
-## S12 ENTRY GATE
-S11 implementation and full regression CI passed. S12 may start. S13 remains forbidden until S12 is DONE and this state file is updated.
+## KNOWN LIMITATION TO AUDIT EXPLICITLY
+Automatic equipment candidate selection currently selects one exact OEM/Catalog candidate when it satisfies the verified range. Operator override supports `systemCount > 1`, but automatic optimization/splitting into multiple smaller systems is not claimed as implemented. Auditor must treat any product/UI implication otherwise as a finding.
+
+## S13 ENTRY GATE
+S01-S12 are DONE with recorded evidence. S13 independent AUDIT ONLY is authorized against exact `main` HEAD `459c497b60cc77c511e9337a888bdff7508c2fef`.
+
+S13 requirements:
+- independent audit of full source/load/equipment/electrical/mechanical/pricing/compliance/history/mobile/PWA chain;
+- exact target HEAD required;
+- production writes forbidden;
+- browser/mobile runtime strongly preferred; if unavailable, record `NOT_PERFORMED` and do not claim it;
+- full report MUST be persisted to audit workspace before chat response;
+- `LATEST_AUDIT.md` and `HANDOFF.md` MUST be updated before chat response;
+- chat response only after successful persistence: `VERDICT / AUDITED HEAD / BLOCKERS / FULL REPORT`.
