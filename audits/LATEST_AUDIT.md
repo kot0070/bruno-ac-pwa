@@ -1,26 +1,26 @@
-# LATEST AUDIT
+# LATEST AUDIT / ACCEPTANCE EVIDENCE
 
 ```yaml
-task_id: PROJECT_FULL_AUDIT_MASTER_01_P11_FINAL
+task_id: PLAYWRIGHT_BROWSER_E2E_MASTER_01_FINAL
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
 production_branch: main
-audited_head: d8df33f2e58f48062f299daa276492e0b9b4c6e3
+audited_head: c410f9d12ca5c0e4c0fdf0e2f36569af73657039
 verdict: A_ACCEPT
 blockers: []
-findings:
-  P0: 0
-  P1: 0
-  release_blocking_P2: 0
-browser_runtime: NOT_PERFORMED
-offline_runtime: NOT_PERFORMED
-corrective_regression_run: 35151667486
-corrective_regression_result: SUCCESS
-final_pages_run: 35151736138
+browser_runtime: PERFORMED_PLAYWRIGHT_CHROMIUM_DESKTOP_AND_MOBILE_EMULATION
+physical_mobile_runtime: NOT_PERFORMED
+safari_runtime: NOT_PERFORMED
+browser_e2e_run: 35163379213
+browser_e2e_result: SUCCESS
+browser_tests_passed: 10
+browser_tests_failed: 0
+final_pages_run: 35163378406
 final_pages_result: SUCCESS
-pwa_cache: bruno-ac-v64
-temporary_validation_workflow: REMOVED
-full_report: audits/PROJECT_FULL_AUDIT_P11_FINAL.md
+playwright_report_artifact: 10473593437
+full_report: audits/PLAYWRIGHT_BROWSER_E2E_FINAL.md
 ```
 
-Canonical full report: `audits/PROJECT_FULL_AUDIT_P11_FINAL.md`.
+Canonical full report: `audits/PLAYWRIGHT_BROWSER_E2E_FINAL.md`.
+
+Permanent process change: covered critical browser-visible flows require green exact-production-HEAD Browser E2E evidence for final `A_ACCEPT`; source/unit/JSDOM evidence alone is insufficient when a realistic browser scenario is available.
