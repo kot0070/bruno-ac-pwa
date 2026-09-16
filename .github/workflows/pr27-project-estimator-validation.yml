@@ -25,7 +25,7 @@ jobs:
       - name: Calculator pricing
         run: node tests/ac-calculator-pricing.test.js
       - name: Calculator lifecycle
-        run: node tests/ac-calculator-lifecycle-integration.test.js
+        run: node tests/pr22-lifecycle-integration.test.js
       - name: Calculator review UX
         run: node tests/ac-calculator-review-ux.test.js
       - name: Code rule registry
