@@ -21,9 +21,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 2000
+          npm config set fetch-retry-maxtimeout 20000
+          npm install --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run real browser E2E
