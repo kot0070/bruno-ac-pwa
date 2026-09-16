@@ -12,8 +12,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Service Journal
+      - name: Install DOM test dependency
+        run: npm install --no-save jsdom@25
+      - name: Service Journal core
         run: node tests/service-journal-ux.test.js
+      - name: Service Journal DOM
+        run: node tests/service-journal-dom.test.js
       - name: Project estimator integration
         run: node tests/project-estimator-integration.test.js
       - name: Project estimator core
