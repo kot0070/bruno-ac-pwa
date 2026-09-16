@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 33
+handoff_version: 34
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,7 +10,7 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: MAIN_JOURNAL_ESTIMATOR_UX_V43_ACCEPTED
+state: MAIN_PROJECT_HISTORY_V44_AUDIT_READY
 ```
 
 ## CURRENT PRODUCTION TARGET
@@ -18,44 +18,66 @@ state: MAIN_JOURNAL_ESTIMATOR_UX_V43_ACCEPTED
 ```yaml
 production_mode: DIRECT_MAIN
 production_branch: main
-accepted_head: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
-base_accepted_head: 5c7884b32f9e48adb0d3c81f9b8c70fb18f921db
-verdict: A_ACCEPT
-blockers: none
-latest_report: audits/history/MAIN_JOURNAL_ESTIMATOR_UX_V43_436a3696bd69779ef7d03e618db1c4ad4d8cf42a_20260915-2200.md
+base_accepted_head: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
+target_head: 19846aa72a0370fbb5cd164a37d8abe9c41a750a
+implementation_report: audits/implementation/MAIN_PROJECT_HISTORY_V44_19846AA7.md
+audit_task: MAIN_PROJECT_HISTORY_V44_AUDIT_01
 browser_runtime: NOT_PERFORMED
-offline_runtime: NOT_PERFORMED
 ```
 
-## AUDIT RESULT
+## IMPLEMENTED CYCLE
 
-Independent audit accepted the Journal/mobile UX and staged Project Calculator visibility/responsiveness cycle at exact main HEAD `436a3696bd69779ef7d03e618db1c4ad4d8cf42a`.
+Added reusable calculation history on top of the accepted V43 staged Project Calculator:
 
-Verified:
+```text
+Confirm & Save Calculation
+-> frozen snapshot
+-> Active calculation
+-> History
+-> Activate
+-> Duplicate as new
+-> Export one / Export all
+-> Import snapshot/history
+```
 
-- Journal Tax/Payroll settings source is collapsed by default;
-- saved Service Calls remain static archive rows with explicit Edit/modal flow;
-- letterhead select receives dark-theme styling only;
-- 2,000 -> 20,000 ft² changes the preliminary estimating allowance;
-- area formula is explicitly non-code / non-Manual-J/D;
-- Final overrides feed the existing full calculator;
-- staged Customer Price / Your Cost / Margin reads existing calculator outputs;
-- blank Your Cost fallback, explicit zero, INVALID_FINANCIAL, historical snapshots and explicit Re-Apply lifecycle remain intact;
-- Commercial, required-input, unresolved BOM, invalid-financial and secondary-drain fail-closed gates remain active;
-- PWA cache is `bruno-ac-v43` with network-first JS/CSS/JSON behavior and cached fallback;
-- validation CI and exact final Pages deployment succeeded.
+Frozen snapshot stores project plan, calculator inputs, selected BOM rows and displayed Customer Materials / Your Cost / Margin values.
 
-Non-blocking P2 debt:
+Duplicate preserves project/catalog identity and quantity but removes historical Catalog price fields so the new editable calculation returns to CURRENT Catalog pricing.
 
-1. browser/offline runtime was `NOT_PERFORMED` in the audit environment;
-2. new staged-wizard/full-calculator event coupling lacks a mounted DOM integration test; current coverage is deterministic core + source integration + existing calculator lifecycle/pricing tests.
+Import validates product/type/version/snapshot shape and assigns new local IDs to imported snapshots.
 
-## AUDIT SAFETY
+## PRESERVED ACCEPTED BASELINE
 
 ```yaml
-production_modified_by_auditor: false
-main_modified_by_auditor: false
-active_pr_modified_by_auditor: false
-merge_performed_by_auditor: false
-audit_branch_only_writes: true
+v43_material_price_preview: PRESERVED
+v43_area_live_input: PRESERVED
+area_heuristic_non_code_boundary: PRESERVED
+commercial_apply_fail_closed: PRESERVED
+secondary_drain_fail_closed: PRESERVED
+unresolved_bom_fail_closed: PRESERVED
+invalid_financial_fail_closed: PRESERVED
+customer_vs_your_cost_tracks: PRESERVED
+explicit_apply_reapply_job_snapshots: PRESERVED
+journal_v4: UNCHANGED
 ```
+
+## VALIDATION
+
+```yaml
+ci_run: 35051528777
+ci_validated_commit: ca7f2ee9eaa81354ea59d5f5c6e81dace9d08ae8
+ci_result: SUCCESS
+final_head: 19846aa72a0370fbb5cd164a37d8abe9c41a750a
+post_ci_delta:
+  - DELETE .github/workflows/main-v44-history-validation.yml
+pages_run: 35051572014
+pwa_cache: bruno-ac-v44
+```
+
+Pages final conclusion must be independently checked by auditor; implementation report was written while the final deployment run was still completing.
+
+## NEXT ACTION
+
+Run independent AUDIT ONLY against exact `main` HEAD `19846aa72a0370fbb5cd164a37d8abe9c41a750a` using `audits/TASK_CURRENT.md`.
+
+Do not modify production/main during audit.
