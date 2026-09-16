@@ -6,8 +6,8 @@ protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
 handoff: audits/HANDOFF.md
 roadmap: audits/ROADMAP_NEXT.md
-implementation_report: audits/implementation/MAIN_JOURNAL_ESTIMATOR_UX_V43_436A3696.md
-previous_accepted_report: audits/history/MAIN_SECONDARY_DRAIN_5c7884b32f9e48adb0d3c81f9b8c70fb18f921db_20260915-2113.md
+implementation_report: audits/implementation/MAIN_PROJECT_HISTORY_V44_19846AA7.md
+previous_accepted_report: audits/history/MAIN_JOURNAL_ESTIMATOR_UX_V43_436a3696bd69779ef7d03e618db1c4ad4d8cf42a_20260915-2200.md
 protocol_required: true
 ```
 
@@ -23,168 +23,147 @@ audit_exact_head_required: true
 ```
 
 ```yaml
-task_id: MAIN_JOURNAL_ESTIMATOR_UX_V43_AUDIT_01
+task_id: MAIN_PROJECT_HISTORY_V44_AUDIT_01
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
 production_branch: main
-base_accepted_head: 5c7884b32f9e48adb0d3c81f9b8c70fb18f921db
-target_head: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
+base_accepted_head: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
+target_head: 19846aa72a0370fbb5cd164a37d8abe9c41a750a
 status: ACTIVE
 ```
 
 ## OBJECTIVE
 
-Perform an independent adversarial audit of exact `main` HEAD `436a3696bd69779ef7d03e618db1c4ad4d8cf42a` after the Journal/mobile UX and staged Project Calculator visibility/responsiveness cycle.
+Perform an independent adversarial audit of exact `main` HEAD `19846aa72a0370fbb5cd164a37d8abe9c41a750a` after adding reusable Project Calculator history/snapshots.
 
-Do not treat this as cosmetic-only. Verify runtime state, pricing authority, fail-closed behavior, PWA freshness/offline semantics, and previous accepted financial/calculator invariants.
+Do not treat this as a UI-only audit. Verify data authority, frozen pricing semantics, duplicate/import behavior, full-app backup, PWA and all accepted calculator/financial fail-closed gates.
 
-## USER-VISIBLE ACCEPTANCE TARGETS
-
-### Service Call Journal
-
-Verify on mobile/browser if available:
-
-- Payroll / Tax Settings are collapsed by default and expand only on operator action;
-- saved Service Calls display as compact static archive rows, not persistent inline edit controls;
-- explicit Edit opens the edit UI/modal and Save returns the row to static form;
-- compact rows remain usable with long address/description/price content;
-- Helpers/Crew/payroll math, stable worker identity, Day/Week/Month/Quarter archive behavior and storage remain unchanged.
-
-### Bright/white mobile control
-
-Verify the Job letterhead select no longer renders as a white/light strip in dark theme and that styling does not alter letterhead/company/quote behavior.
-
-## PROJECT CALCULATOR — AREA RESPONSIVENESS
-
-Required behavior after baseline exists:
-
-- changing `Total building area` recalculates live on input;
-- 2,000 ft² vs 20,000 ft² with the same limited room schedule must no longer look identical;
-- implementation currently uses a preliminary estimating allowance:
+## REQUIRED HISTORY FLOW
 
 ```text
-Residential: max(conditioned room count, ceil(total ft² / 400))
-Commercial:  max(conditioned zone count, ceil(total ft² / 600))
+staged calculator
+-> resolve required inputs / generated BOM
+-> current Catalog pricing
+-> Confirm & Save Calculation
+-> frozen active snapshot
+-> History
+-> Activate / Duplicate / Export / Import
 ```
 
-This formula is ACCEPTABLE ONLY as a clearly labeled preliminary estimating heuristic. Auditor must reject if UI/source presents or implies it is:
+Verify:
 
-- a code minimum;
-- Manual J;
-- Manual D;
-- equipment sizing;
-- airflow engineering;
-- tonnage selection.
+- `Confirm & Save Calculation` cannot succeed while `projectPlan.ready` is false;
+- Commercial remains fail-closed for confirmation while commercial verification is unavailable;
+- full calculator disabled Apply state prevents confirmation;
+- saved snapshot captures the selected BOM and current displayed Customer Materials / Your Cost / Margin values;
+- later edits to Catalog/current plan do not mutate the historical snapshot;
+- Activate changes history selection only and does not mutate Job/current calculation;
+- delete removes only the selected history snapshot.
 
-Verify line-set length, condensate length, tonnage, equipment capacity, breaker/MCA/MOCP, refrigerant charge and other field/OEM/design values are still not fabricated from square footage.
+## DUPLICATE AS NEW
 
-Manual Final overrides must remain operator-controlled and downstream live state must update correctly.
+Critical requirement:
 
-## MATERIAL / PRICE VISIBILITY
+- Duplicate restores the historical project structure/rooms/overrides/extras into a new editable calculation;
+- historical Catalog extra price fields are removed before duplication;
+- Catalog IDs and quantities remain so the duplicate reprices through CURRENT Catalog;
+- duplicate carries `duplicatedFromSnapshotId` / timestamp provenance;
+- duplicate does not mutate the source frozen snapshot.
 
-Step 4 should now visibly show:
+## IMPORT / EXPORT
 
-- generated/selected line count;
-- Catalog resolved count;
-- Customer Materials;
-- Your Material Cost;
-- Material Margin;
-- Minimum / Calculated / Final material rows;
-- blockers / required field measurements;
-- Catalog extras where used.
+Audit both single-snapshot and full-history payloads.
 
-Independently verify the staged price strip reads the existing full-calculator outputs and does NOT implement a second divergent pricing engine.
+Required import behavior:
 
-Re-check accepted pricing authority:
+- Bruno product marker required;
+- version 1 required;
+- supported payload type required;
+- project plan must validate;
+- BOM must be an array;
+- totals numeric/null only;
+- malformed payloads rejected before history write;
+- imported snapshots receive new IDs;
+- `importedFromId` preserves source identity without allowing overwrite/collision.
 
-```text
-Catalog unitCost -> Calculator customerUnitPrice -> Job unitCost -> Quote
-Catalog yourCost -> Calculator yourUnitCost -> Job procurementCostSnapshot -> P&L
-```
+Confirm full App Export/Import includes `bruno-ac-project-history-v1` through the accepted full-app `bruno-ac-*` storage policy.
 
-Also re-check:
+## V43 REGRESSION — MUST PRESERVE
 
-- blank Your Cost fallback remains `customer-price-fallback`;
-- INVALID_FINANCIAL remains fail-closed;
-- zero remains valid/reviewable;
-- Catalog changes do not retroactively alter Job snapshots without explicit Apply/Re-Apply;
-- Actual Cost precedence remains P&L-only;
-- Method A remains unchanged.
+Re-check accepted V43 behavior:
 
-## FAIL-CLOSED / CODE-DESIGN BOUNDARY
+- Step 4 still visibly shows `Materials & price preview`;
+- price strip still reads existing full calculator outputs rather than a parallel pricing engine;
+- `Total building area` still recalculates live on input;
+- 2,000 vs 20,000 ft² remains visibly responsive through the explicitly labeled estimating heuristic;
+- heuristic is never represented as code minimum / Manual J / Manual D / equipment sizing;
+- required line-set/condensate measurements remain fail-closed;
+- secondary-drain pan-drain/overflow-drain guard remains fail-closed;
+- Commercial Apply remains fail-closed;
+- unresolved BOM and INVALID_FINANCIAL remain fail-closed;
+- blank Your Cost fallback, explicit zero, Customer Price/Your Cost separation and explicit Apply/Re-Apply snapshots remain intact;
+- Actual Cost precedence and Method A remain unchanged.
 
-Re-check previously accepted gates around the modified staged flow:
-
-- missing required line-set/condensate field measurements remain blocking;
-- below represented hard minimum remains blocking;
-- secondary-drain `pan-drain` / `overflow-drain` missing run remains fail-closed;
-- Commercial Apply remains authoritative fail-closed;
-- unresolved BOM / invalid financial states cannot be bypassed by staged UI;
-- changing area or overrides must not revive a stale previously-applicable BOM.
-
-## PWA V43 / STALE-ASSET HARDENING
+## PWA V44
 
 Expected cache:
 
 ```text
-bruno-ac-v43
+bruno-ac-v44
 ```
 
-For JS/CSS/JSON shell assets the service worker now prefers network with cached fallback. Verify:
+Verify:
 
-- current deployed Journal/calculator assets refresh instead of indefinitely presenting older cached UI;
-- offline fallback still works when network is unavailable;
-- navigation shell remains coherent;
-- no reload loop or excessive forced-refresh behavior is introduced.
-
-If actual offline/browser runtime cannot be executed, report exactly `NOT_PERFORMED` for those checks and do not infer runtime success from static source.
+- `project-history-core.js` is included in SHELL;
+- history works after v44 activation;
+- existing network-first JS/CSS/JSON + cached fallback behavior is preserved;
+- offline availability of history core is not inferred from static source if runtime is unavailable.
 
 ## VALIDATION EVIDENCE TO VERIFY
 
 ```yaml
-validated_run: 35049028474
-validated_commit: f7638584081fb3247963eeefae7f18762f822a73
+validated_run: 35051528777
+validated_commit: ca7f2ee9eaa81354ea59d5f5c6e81dace9d08ae8
 expected_ci_result: SUCCESS
-final_target: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
+final_target: 19846aa72a0370fbb5cd164a37d8abe9c41a750a
 expected_post_ci_delta:
-  - DELETE .github/workflows/main-v43-ux-validation.yml
-pages_run: 35049069724
-pages_result: SUCCESS
-expected_cache: bruno-ac-v43
+  - DELETE .github/workflows/main-v44-history-validation.yml
+pages_run: 35051572014
+expected_cache: bruno-ac-v44
 ```
 
-Exact compare from prior accepted HEAD to target should contain only:
+Exact compare from accepted V43 HEAD to target should contain only:
 
-- `project-estimator-core.js`
 - `project-estimator-wizard.js`
-- `project-estimator-wizard.css`
-- `workspace-v5.css`
+- `project-history-core.js`
 - `sw.js`
-- `tests/project-estimator-core.test.js`
 - `tests/project-estimator-integration.test.js`
-- `tests/service-journal-ux.test.js`
+- `tests/project-history-core.test.js`
+
+Auditor must independently verify Pages final conclusion for exact target HEAD.
 
 ## BROWSER RUNTIME
 
-Strongly preferred. Test at minimum:
+Strongly preferred. Minimum runtime path:
 
-1. fresh load after v43 activation;
-2. Journal Tax Settings initial collapsed state;
-3. Add/Save/Edit a service call and confirm compact static archived row;
-4. Job/letterhead dark control appearance;
-5. Project Calculator baseline at 2,000 ft²;
-6. change to 20,000 ft² and verify preliminary material recommendation changes live;
-7. verify wording says estimating/design allowance, not code minimum;
-8. resolve required field lengths and observe price strip;
-9. adjust Final quantity and confirm price/BOM state responds;
-10. verify Commercial / secondary-drain / financial blockers remain fail-closed.
+1. create/resolve a residential staged calculation;
+2. ensure current full BOM Apply is eligible;
+3. Confirm & Save;
+4. verify Active snapshot totals;
+5. change current project/Catalog and prove frozen snapshot does not change;
+6. Duplicate as new and verify current Catalog repricing path;
+7. export one snapshot;
+8. import it and verify a new ID is created;
+9. export/import full history;
+10. verify malformed import is rejected;
+11. verify accepted V43 2,000 -> 20,000 ft² responsiveness and fail-closed gates still work.
 
-If unavailable, report exactly `NOT_PERFORMED`.
+If browser runtime is unavailable, report exactly `NOT_PERFORMED`.
 
 ## REQUIRED REPORT
 
 ```yaml
-report_path_template: audits/history/MAIN_JOURNAL_ESTIMATOR_UX_V43_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
+report_path_template: audits/history/MAIN_PROJECT_HISTORY_V44_<AUDITED_HEAD>_<YYYYMMDD-HHMM>.md
 latest_alias: audits/LATEST_AUDIT.md
 required_return:
   - VERDICT
