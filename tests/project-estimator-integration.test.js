@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('assert');
+const fs=require('fs');
+const html=fs.readFileSync('ac-calculator.html','utf8');
+const calc=fs.readFileSync('ac-calculator.js','utf8');
+const bridge=fs.readFileSync('project-mode-bridge.js','utf8');
+const sw=fs.readFileSync('sw.js','utf8');
+
+assert(html.includes('project-estimator-core.js'));
+assert(html.includes('project-estimator-wizard.js'));
+assert(html.includes('project-mode-bridge.js'));
+assert(calc.includes("PROJECT_KEY='bruno-ac-project-plan-v1'"));
+assert(calc.includes('appendProjectExtras(scope)'));
+assert(calc.includes('projectBlockedReason()'));
+assert(calc.includes("Commercial project is fail-closed"));
+assert(bridge.includes("closest('#apply')"));
+assert(bridge.includes("type()==='commercial'"));
+assert(!bridge.includes('applyBtn.disabled=false'),'bridge must never force-enable Apply after Commercial mode');
+assert(sw.includes("bruno-ac-v41"));
+assert(sw.includes("./project-estimator-wizard.js"));
+assert(sw.includes("./project-estimator-wizard.css"));
+console.log('project-estimator integration tests passed');
