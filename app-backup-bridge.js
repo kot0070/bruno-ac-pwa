@@ -3,7 +3,19 @@
 var PREFIX='bruno-ac-',JOURNAL_KEY='bruno-ac-service-journal-v2';
 function collectBrunoStorage(storage){var out={};if(!storage)return out;for(var i=0;i<storage.length;i++){var k=storage.key(i);if(k&&k.indexOf(PREFIX)===0){var v=storage.getItem(k);if(typeof v==='string')out[k]=v}}return out}
 function buildBackup(storage){return {product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,exportedAt:new Date().toISOString(),storage:collectBrunoStorage(storage)}}
-function validateJournalRaw(raw){if(typeof raw!=='string')return false;var j;try{j=JSON.parse(raw)}catch(e){return false}if(!j||typeof j!=='object'||Array.isArray(j)||[3,4].indexOf(Number(j.schemaVersion))<0)return false;if(!j.settings||typeof j.settings!=='object'||Array.isArray(j.settings)||!Array.isArray(j.calls)||!Array.isArray(j.crew))return false;if(Number(j.schemaVersion)>=4&&!Array.isArray(j.workers))return false;return j.calls.every(function(c){return c&&typeof c==='object'&&!Array.isArray(c)&&typeof c.id==='string'&&typeof c.date==='string'})&&j.crew.every(function(w){return w&&typeof w==='object'&&!Array.isArray(w)&&typeof w.id==='string'&&typeof w.date==='string'&&(Number(j.schemaVersion)<4||typeof w.workerId==='string')})}
+function nonEmptyString(v){return typeof v==='string'&&v.trim().length>0}
+function validateJournalRaw(raw){
+  if(typeof raw!=='string')return false;var j;try{j=JSON.parse(raw)}catch(e){return false}
+  if(!j||typeof j!=='object'||Array.isArray(j)||[3,4].indexOf(Number(j.schemaVersion))<0)return false;
+  if(!j.settings||typeof j.settings!=='object'||Array.isArray(j.settings)||!Array.isArray(j.calls)||!Array.isArray(j.crew))return false;
+  if(!j.calls.every(function(c){return c&&typeof c==='object'&&!Array.isArray(c)&&nonEmptyString(c.id)&&nonEmptyString(c.date)}))return false;
+  if(Number(j.schemaVersion)<4)return j.crew.every(function(w){return w&&typeof w==='object'&&!Array.isArray(w)&&nonEmptyString(w.id)&&nonEmptyString(w.date)});
+  if(!Array.isArray(j.workers))return false;
+  var ids={},ok=true;
+  j.workers.forEach(function(w){if(!ok)return;if(!w||typeof w!=='object'||Array.isArray(w)||!nonEmptyString(w.id)||typeof w.name!=='string'){ok=false;return}var id=w.id.trim();if(ids[id]){ok=false;return}ids[id]=true;});
+  if(!ok)return false;
+  return j.crew.every(function(w){return w&&typeof w==='object'&&!Array.isArray(w)&&nonEmptyString(w.id)&&nonEmptyString(w.date)&&nonEmptyString(w.workerId)&&!!ids[w.workerId.trim()]});
+}
 function validateBackup(b){if(!b||typeof b!=='object'||Array.isArray(b)||b.product!=='bruno-ac'||b.type!=='bruno-ac-full-app-backup'||Number(b.version)!==2||!b.storage||typeof b.storage!=='object'||Array.isArray(b.storage))return false;var keys=Object.keys(b.storage);if(!keys.every(function(k){return k.indexOf(PREFIX)===0&&typeof b.storage[k]==='string'}))return false;if(Object.prototype.hasOwnProperty.call(b.storage,JOURNAL_KEY)&&!validateJournalRaw(b.storage[JOURNAL_KEY]))return false;return true}
 function restoreBackup(b,storage){if(!validateBackup(b))throw new Error('Invalid Bruno AC full app backup');var keys=Object.keys(b.storage),written=[];keys.forEach(function(k){storage.setItem(k,b.storage[k]);written.push(k)});return written}
 function downloadJson(obj){var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a'),d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');a.href=URL.createObjectURL(blob);a.download='bruno-ac-full-backup-'+stamp+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
