@@ -52,6 +52,16 @@ async function clickWorkspaceAction(page, selector) {
   await action.click();
 }
 
+async function openSummary(page) {
+  const jobGroup = visibleGroup(page, 'job');
+  await expect(jobGroup).toBeVisible();
+  await jobGroup.click();
+  const summaryTab = page.locator('.phase2-sub-btn[data-tab="summary"]:visible').first();
+  await expect(summaryTab).toBeVisible();
+  await summaryTab.click();
+  await expect(page.locator('#panel-summary')).toHaveClass(/active/);
+}
+
 test.beforeEach(async ({ page }) => {
   await acceptDialogs(page);
   await page.goto('/');
@@ -116,21 +126,24 @@ test('full-app export is a parseable Bruno AC backup with the primary Job', asyn
   expectPrimaryShape(job);
 });
 
-test('real project-class input persists through localStorage and reload', async ({ page }) => {
-  const calculatorGroup = visibleGroup(page, 'calculator');
-  await expect(calculatorGroup).toBeVisible();
-  await calculatorGroup.click();
+test('visible Summary overhead input persists through autosave and reload', async ({ page }) => {
+  await clickWorkspaceAction(page, '#btn-blank');
+  await page.waitForTimeout(250);
+  expectPrimaryShape(await readPrimaryJob(page));
 
-  const projectType = page.locator('#phase3-project-type');
-  await expect(projectType).toBeVisible();
-  await projectType.selectOption('commercial');
-  await expect(projectType).toHaveValue('commercial');
-
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('bruno-ac-project-context-v1') || '{}'));
-  expect(stored.type).toBe('commercial');
+  await openSummary(page);
+  const overhead = page.locator('#sum-oh');
+  await expect(overhead).toBeVisible();
+  const rawBefore = await page.evaluate(() => localStorage.getItem('bruno-ac-v1'));
+  await overhead.fill('0.17');
+  await overhead.blur();
+  await expect(overhead).toHaveValue('0.17');
+  await page.waitForFunction(before => localStorage.getItem('bruno-ac-v1') !== before, rawBefore, { timeout: 5000 });
 
   await page.reload();
   await waitForStableWorkspace(page);
-  await visibleGroup(page, 'calculator').click();
-  await expect(page.locator('#phase3-project-type')).toHaveValue('commercial');
+  await openSummary(page);
+  await expect(page.locator('#sum-oh')).toBeVisible();
+  await expect(page.locator('#sum-oh')).toHaveValue('0.17');
+  expectPrimaryShape(await readPrimaryJob(page));
 });
