@@ -5,11 +5,11 @@ master_plan: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
 master_id: PROJECT_FULL_AUDIT_MASTER_01
 execution_mode: DIRECT_MAIN + STRICT_SEQUENTIAL + AUTONOMOUS
 status: ACTIVE
-current_stage: P00
-last_completed_stage: NONE
-next_stage_after_current: P01
+current_stage: P01
+last_completed_stage: P00
+next_stage_after_current: P02
 starting_accepted_main_head: 7c89b706546e4d2e465405544dc398220e664db9
-main_head_at_authorization: 7c89b706546e4d2e465405544dc398220e664db9
+main_head: 7c89b706546e4d2e465405544dc398220e664db9
 browser_mobile_runtime: NOT_PERFORMED
 ```
 
@@ -17,8 +17,8 @@ browser_mobile_runtime: NOT_PERFORMED
 
 | Stage | Status | Started main HEAD | Completed main HEAD | Evidence |
 |---|---|---|---|---|
-| P00 | ACTIVE | 7c89b706546e4d2e465405544dc398220e664db9 | — | baseline/inventory pending |
-| P01 | NOT_STARTED | — | — | — |
+| P00 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 7c89b706546e4d2e465405544dc398220e664db9 | `audits/PROJECT_FULL_AUDIT_P00_INVENTORY.md`; no production changes |
+| P01 | ACTIVE | 7c89b706546e4d2e465405544dc398220e664db9 | — | architecture audit in progress |
 | P02 | NOT_STARTED | — | — | — |
 | P03 | NOT_STARTED | — | — | — |
 | P04 | NOT_STARTED | — | — | — |
@@ -29,6 +29,21 @@ browser_mobile_runtime: NOT_PERFORMED
 | P09 | NOT_STARTED | — | — | — |
 | P10 | NOT_STARTED | — | — | — |
 | P11 | NOT_STARTED | — | — | — |
+
+## P00 RECORD
+
+```yaml
+status: DONE
+started_from_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
+completed_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
+changed_files: []
+implementation_summary: repository/runtime/state/test/PWA inventory persisted
+executable_tests_CI: not_required_audit_only_inventory
+browser_mobile_runtime: NOT_PERFORMED
+known_limitations: runtime visual acceptance not performed
+regressions_checked: no production mutation
+next_stage_authorized: P01
+```
 
 ## HARD RULE
 
