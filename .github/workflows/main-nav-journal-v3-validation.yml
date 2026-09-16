@@ -1,0 +1,32 @@
+name: Main navigation Journal v3 validation
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Service Journal payroll
+        run: node tests/service-journal-ux.test.js
+      - name: Full app backup
+        run: node tests/app-backup-bridge.test.js
+      - name: Financial integrity
+        run: node tests/financial-integrity.test.js
+      - name: Calculator review UX
+        run: node tests/ac-calculator-review-ux.test.js
+      - name: Code rule registry
+        run: node tests/code-rule-registry.test.js
+      - name: Syntax checks
+        run: |
+          node --check service-journal-ux.js
+          node --check app-backup-bridge.js
+          node --check project-mode-bridge.js
+          node --check navigation-v2.js
+          node --check sw-register.js
+          node --check workspace-v5.js
