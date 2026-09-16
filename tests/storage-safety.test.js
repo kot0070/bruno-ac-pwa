@@ -9,6 +9,12 @@ FakeStorage.prototype.key=function(i){return Object.keys(this.o)[i]||null};
 FakeStorage.prototype.getItem=function(k){return Object.prototype.hasOwnProperty.call(this.o,k)?this.o[k]:null};
 FakeStorage.prototype.setItem=function(k,v){this.o[k]=String(v)};
 FakeStorage.prototype.removeItem=function(k){delete this.o[k]};
+function StructuralStorage(seed){this.o=Object.assign({},seed||{});}
+Object.defineProperty(StructuralStorage.prototype,'length',{get:function(){return Object.keys(this.o).length}});
+StructuralStorage.prototype.key=FakeStorage.prototype.key;
+StructuralStorage.prototype.getItem=FakeStorage.prototype.getItem;
+StructuralStorage.prototype.setItem=FakeStorage.prototype.setItem;
+StructuralStorage.prototype.removeItem=FakeStorage.prototype.removeItem;
 
 assert.strictEqual(F.classifyPrimaryJobRaw(null).status,'missing');
 assert.strictEqual(F.classifyPrimaryJobRaw('{bad').status,'invalid');
@@ -32,13 +38,16 @@ assert.strictEqual(guard.locked,false,'a valid explicit recovery write may unloc
 assert.strictEqual(F.classifyPrimaryJobRaw(storage.getItem(F.PRIMARY_JOB_KEY)).status,'valid');
 
 const structuralRaw='{}';
-const structuralStorage=new FakeStorage({'bruno-ac-v1':structuralRaw});
-const structuralGuard=F.installPrimaryStorageGuard({Storage:FakeStorage,localStorage:structuralStorage,document:null});
+const structuralStorage=new StructuralStorage({'bruno-ac-v1':structuralRaw});
+const structuralGuard=F.installPrimaryStorageGuard({Storage:StructuralStorage,localStorage:structuralStorage,document:null});
 assert.strictEqual(structuralGuard.locked,true,'structurally invalid JSON object must be protected as corruption');
 assert.strictEqual(structuralStorage.getItem(F.PRIMARY_RESCUE_KEY),structuralRaw);
 
-const healthyStorage=new FakeStorage({'bruno-ac-v1':JSON.stringify({quote:{},materialsUsed:[],catalog:[]})});
-const healthy=F.installPrimaryStorageGuard({Storage:FakeStorage,localStorage:healthyStorage,document:null});
+function HealthyStorage(seed){this.o=Object.assign({},seed||{});}
+Object.defineProperty(HealthyStorage.prototype,'length',{get:function(){return Object.keys(this.o).length}});
+HealthyStorage.prototype.key=FakeStorage.prototype.key;HealthyStorage.prototype.getItem=FakeStorage.prototype.getItem;HealthyStorage.prototype.setItem=FakeStorage.prototype.setItem;HealthyStorage.prototype.removeItem=FakeStorage.prototype.removeItem;
+const healthyStorage=new HealthyStorage({'bruno-ac-v1':JSON.stringify({quote:{},materialsUsed:[],catalog:[]})});
+const healthy=F.installPrimaryStorageGuard({Storage:HealthyStorage,localStorage:healthyStorage,document:null});
 assert.strictEqual(healthy.locked,false);
 
 const validJournal={schemaVersion:4,settings:{employeeSocialSecurityPct:6.2,twcWageBase:9000},workers:[],calls:[{id:'c',date:'2026-09-16',hours:1.5,gross:250}],crew:[{id:'w',date:'2026-09-16',rate:20,hours:8}]};
