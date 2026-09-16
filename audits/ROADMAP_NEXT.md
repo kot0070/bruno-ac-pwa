@@ -1,94 +1,77 @@
 # BRUNO AC — NEXT PHASE ROADMAP
 
 ```yaml
-roadmap_version: 3
+roadmap_version: 4
 repository: kot0070/bruno-ac-pwa
 production_mode: DIRECT_MAIN
-accepted_baseline_head: 436a3696bd69779ef7d03e618db1c4ad4d8cf42a
-current_major_phase: reusable_project_calculation_history
-current_target_head: 19846aa72a0370fbb5cd164a37d8abe9c41a750a
-current_status: AUDIT_PENDING
+accepted_baseline_head: 9e05636fb3bbc26c0b60ef4624753539e728bd87
+current_major_phase: HVAC_live_calculator_rework
+master_execution_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
+execution_mode: STRICT_SEQUENTIAL
+current_stage: S00
+next_stage: S01
+final_independent_audit_after: S12
 ```
 
-## CORE ESTIMATOR FLOW
+## MASTER AUTHORITY FOR THIS PHASE
+
+For the HVAC calculator rework, `audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md` is the controlling execution file.
+
+Before every implementation stage:
 
 ```text
-Building / project setup
-  -> room / zone schedule
-  -> applicable code / design checks
-  -> code minimums only where defensible
-  -> preliminary calculated baseline
-  -> contractor / customer overrides
-  -> final quantities
-  -> Catalog resolution
-  -> Customer Price + Your Cost
-  -> margin / estimate
-  -> full technical calculator
-  -> explicit Apply / Re-Apply to Job
+read master plan
+-> inspect CURRENT_STAGE
+-> execute only that stage
+-> test / record evidence
+-> update exact main HEAD and stage completion record in master plan
+-> only then advance CURRENT_STAGE
 ```
 
-Accepted constraints remain authoritative:
+Do not skip stages and do not start a later stage while the current stage is not `DONE`.
 
-- square footage may drive only a clearly labeled preliminary estimating heuristic;
-- it must not fabricate Manual J / Manual D / tonnage / OEM / field measurements;
-- below known hard minimums remain fail-closed;
-- Commercial remains fail-closed until its verified design/code path exists;
-- Customer Price and Your Cost remain separate financial tracks.
-
-## V44 — CALCULATION HISTORY / REUSE
-
-Current target adds:
+## TARGET PRODUCT FLOW
 
 ```text
-Confirm & Save Calculation
--> frozen snapshot
--> Active calculation
--> History
--> Activate
--> Duplicate as new
--> Export one
--> Export all
--> Import
+Project / Building
+-> Location / jurisdiction / design conditions
+-> Rooms / zones / envelope / usage
+-> Heating & cooling load
+-> Required capacity
+-> Equipment / system count
+-> Electrical dependencies
+-> Mechanical / duct / refrigerant / condensate dependencies
+-> Generated BOM
+-> Catalog resolution
+-> Customer Price / Your Cost / Margin
+-> Review / overrides with provenance
+-> frozen confirmation snapshot
+-> explicit Apply / Re-Apply to Job
 ```
 
-Snapshot stores:
+The normal operator flow must use one live calculator surface. No second competing full-calculator authority and no normal-flow page bouncing.
 
-```yaml
-project_structure:
-  - project class
-  - total area
-  - rooms / zones
-  - calculated quantities
-  - Final overrides
-  - Catalog extras
-technical_context:
-  - full calculator inputs
-  - selected generated BOM rows
-financial_snapshot:
-  - Customer Materials
-  - Your Cost
-  - Margin $
-  - Margin %
-metadata:
-  - createdAt
-  - catalog item count
-  - calculator gate state
-  - source/import/duplicate provenance
-```
+## FINANCIAL AND LIFECYCLE BASELINE
 
-Historical snapshots remain immutable with frozen prices.
+Preserve the accepted architecture:
 
-`Duplicate as new` preserves scope/quantities/Catalog identities but drops frozen unit price fields so the new editable calculation returns to the CURRENT Catalog pricing path.
+- Catalog `unitCost` = Customer Price authority.
+- Catalog `yourCost` = internal procurement authority.
+- blank Your Cost fallback and explicit zero remain distinct.
+- invalid explicit financial values remain fail-closed.
+- current editable calculations may use current Catalog pricing.
+- confirmed history snapshots remain frozen.
+- Job values change only on explicit Apply / Re-Apply.
+- later Catalog edits do not mutate historical Job snapshots.
 
-## AFTER V44 AUDIT
+## SOURCE POLICY
 
-If accepted, the next large expansion should build on the same snapshot/provenance model:
+Regulatory / standards / OEM calculations must be source-driven. Store direct links, metadata, rule IDs, implementation summaries and permitted excerpts; do not reproduce entire copyrighted code books/manuals.
 
-1. reusable named templates / project patterns;
-2. compare historical snapshot vs current Catalog pricing;
-3. optional customer/job metadata linking without coupling history to one active Job;
-4. richer room/zone inputs where they materially affect design takeoff;
-5. deeper Commercial estimator only after authoritative commercial rule/design inputs are defined;
-6. mounted DOM/browser regression coverage for staged-wizard/full-calculator interactions.
+Square footage is an initial building input, not a standalone code-compliant tonnage rule. Load/capacity claims must identify their calculation method and source provenance.
 
-Do not create a parallel pricing engine. New reuse/template features must continue to reference the accepted full calculator and Catalog pricing authority.
+## AUDIT POLICY FOR THIS PHASE
+
+Do not run a full independent audit after every stage. Each stage receives implementation tests/evidence and is recorded in the master plan. After S01–S12 are complete, create one full `TASK_CURRENT.md` audit target covering the entire final exact main HEAD.
+
+The final auditor must persist the complete report in the audit workspace, update `LATEST_AUDIT.md` and `HANDOFF.md`, and only then return the short verdict in chat.
