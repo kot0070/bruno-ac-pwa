@@ -23,6 +23,8 @@ assert(!austin.sources.includes('TX_ENERGY_COMMERCIAL_2015_IECC'));
 assert.strictEqual(gate.isAustinJurisdiction('Austin area'),false);
 assert.strictEqual(gate.isAustinJurisdiction('Austin, TX'),true);
 let missing=readyCtx();missing.electricalResult={status:'provisional'};r=gate.evaluate(missing);assert(r.blockers.includes('electrical_dependency_not_ready'));
+let forgedOverride=readyCtx();forgedOverride.equipmentResult={status:'ready',final:{mode:'operator_override',capacityBtuh:48000,systemCount:1},override_reason:''};r=gate.evaluate(forgedOverride);assert(r.blockers.includes('equipment_override_reason_required'),'defensive compliance gate must reject operator override without reason');
+let documentedOverride=readyCtx();documentedOverride.equipmentResult={status:'ready',final:{mode:'operator_override',capacityBtuh:48000,systemCount:1},override_reason:'Documented field strategy'};r=gate.evaluate(documentedOverride);assert(!r.blockers.includes('equipment_override_reason_required'));
 
 const row={key:'disconnect',final_qty:1,calculated_qty:1,minimum_qty:1,unit:'ea'};
 assert.strictEqual(pricing.applyOverride(row,{finalQty:0,reason:'remove'}).error,'override_below_hard_minimum');
