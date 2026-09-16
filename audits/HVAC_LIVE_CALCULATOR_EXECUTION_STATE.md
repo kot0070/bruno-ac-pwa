@@ -4,10 +4,10 @@
 master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
 master_id: HVAC_LIVE_CALCULATOR_MASTER_01
 execution_mode: STRICT_SEQUENTIAL
-current_stage: S11
-last_completed_stage: S10
-next_stage_after_current: S12
-main_head: 5b01400890854569758f01831317713864713f86
+current_stage: S12
+last_completed_stage: S11
+next_stage_after_current: S13
+main_head: 87daa47afa23d276b6c69484bb3d38f055c7dcb3
 ```
 
 ## HARD RULE
@@ -28,25 +28,24 @@ Read the master plan first, then this file before every stage. Execute only `cur
 | S08 Mechanical BOM | DONE | 3f6a58c0 | 35100406825 SUCCESS | 907fb057c802e011a8354963e8af5f8c5ef65556 | v53 |
 | S09 Catalog/pricing | DONE | 716e08a8 | 35100991107 SUCCESS | b9f52ffa3aea8a3a2fc1000f5064968c19e8b8e0 | v54 |
 | S10 Overrides/compliance/Apply | DONE | 3c399955 | 35102124833 SUCCESS | 5b01400890854569758f01831317713864713f86 | v55 |
+| S11 History/templates/export/import | DONE | 256471e0 | 35121613789 SUCCESS | 87daa47afa23d276b6c69484bb3d38f055c7dcb3 | v56 |
 
-## S10 EVIDENCE
+## S11 EVIDENCE
 
 Implemented:
-- per-BOM final quantity override lifecycle with explicit reason;
-- override below hard `minimum_qty` is fail-closed;
-- live Catalog price recomputation uses final quantity without mutating Job until explicit Apply;
-- unified compliance gate covers building/load/equipment/electrical/mechanical/pricing readiness;
-- commercial path requires explicit jurisdiction/AHJ verification and a commercial design/load source instead of silently reusing residential state;
-- legacy calculator Apply now delegates to the live compliance gate once available, while retaining legacy fail-closed fallback during startup;
-- Confirm and Apply are capture-gated by the same compliance result;
-- existing financial apply engine and snapshot semantics remain unchanged;
-- regression includes financial integrity, lifecycle, secondary drain, Journal and full chain.
+- confirmed calculation snapshots now freeze building/envelope, load, equipment, electrical, mechanical BOM, priced BOM, compliance gate, Catalog bindings, quantity overrides, compliance metadata and direct source refs;
+- history validator fails closed on missing extended-chain components and malformed source refs/totals;
+- duplicate-as-new preserves project/building geometry but clears frozen Catalog bindings/overrides/compliance metadata so current Catalog repricing is re-entered;
+- original frozen snapshot remains unchanged;
+- strict atomic import, strict totals, unique IDs and legacy v45 history invariants remain intact;
+- extended history bridge is wired into the calculator and PWA shell;
+- full regression CI passed.
 
 ```yaml
 browser_runtime: NOT_PERFORMED
-compliance_fixture_tests: PASS
-financial_lifecycle_regression: PASS
+history_fixture_tests: PASS
+full_regression: PASS
 ```
 
-## S11 ENTRY GATE
-S10 implementation and full regression CI passed. S11 may start. S12 and later remain forbidden until S11 is DONE and this state file is updated.
+## S12 ENTRY GATE
+S11 implementation and full regression CI passed. S12 may start. S13 remains forbidden until S12 is DONE and this state file is updated.
