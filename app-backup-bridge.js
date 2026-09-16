@@ -1,6 +1,6 @@
 (function(root,factory){var api=factory();if(typeof module==='object'&&module.exports){module.exports=api;return}if(root)root.BrunoAppBackup=api;if(typeof document!=='undefined')api.init()})(typeof self!=='undefined'?self:this,function(){
 'use strict';
-var PREFIX='bruno-ac-',JOURNAL_KEY='bruno-ac-service-journal-v2';
+var PREFIX='bruno-ac-',JOURNAL_KEY='bruno-ac-service-journal-v2',PRIMARY_JOB_KEY='bruno-ac-v1';
 var KNOWN_JSON_KEYS={
   'bruno-ac-v1':1,
   'bruno-ac-service-journal-v2':1,
@@ -16,6 +16,7 @@ function collectBrunoStorage(storage){var out={};if(!storage)return out;for(var 
 function buildBackup(storage){return {product:'bruno-ac',type:'bruno-ac-full-app-backup',version:2,exportedAt:new Date().toISOString(),storage:collectBrunoStorage(storage)}}
 function nonEmptyString(v){return typeof v==='string'&&v.trim().length>0}
 function validJsonObjectRaw(raw){if(typeof raw!=='string')return false;var x;try{x=JSON.parse(raw)}catch(e){return false}return !!(x&&typeof x==='object'&&!Array.isArray(x))}
+function validPrimaryJobRaw(raw){if(typeof raw!=='string')return false;var j;try{j=JSON.parse(raw)}catch(e){return false}return !!(j&&typeof j==='object'&&!Array.isArray(j)&&j.quote&&typeof j.quote==='object'&&!Array.isArray(j.quote)&&Array.isArray(j.materialsUsed)&&Array.isArray(j.catalog))}
 function validateJournalRaw(raw){
   if(typeof raw!=='string')return false;var j;try{j=JSON.parse(raw)}catch(e){return false}
   if(!j||typeof j!=='object'||Array.isArray(j)||[3,4].indexOf(Number(j.schemaVersion))<0)return false;
@@ -28,7 +29,7 @@ function validateJournalRaw(raw){
   if(!ok)return false;
   return j.crew.every(function(w){return w&&typeof w==='object'&&!Array.isArray(w)&&nonEmptyString(w.id)&&nonEmptyString(w.date)&&nonEmptyString(w.workerId)&&!!ids[w.workerId.trim()]});
 }
-function validateKnownRaw(key,raw){if(key===JOURNAL_KEY)return validateJournalRaw(raw);if(KNOWN_JSON_KEYS[key])return validJsonObjectRaw(raw);return true}
+function validateKnownRaw(key,raw){if(key===PRIMARY_JOB_KEY)return validPrimaryJobRaw(raw);if(key===JOURNAL_KEY)return validateJournalRaw(raw);if(KNOWN_JSON_KEYS[key])return validJsonObjectRaw(raw);return true}
 function validateBackup(b){if(!b||typeof b!=='object'||Array.isArray(b)||b.product!=='bruno-ac'||b.type!=='bruno-ac-full-app-backup'||Number(b.version)!==2||!b.storage||typeof b.storage!=='object'||Array.isArray(b.storage))return false;var keys=Object.keys(b.storage);if(!keys.every(function(k){return k.indexOf(PREFIX)===0&&typeof b.storage[k]==='string'&&validateKnownRaw(k,b.storage[k])}))return false;return true}
 function brunoKeys(storage){var out=[];if(!storage)return out;for(var i=0;i<storage.length;i++){var k=storage.key(i);if(k&&k.indexOf(PREFIX)===0)out.push(k)}return out}
 function clearBrunoStorage(storage){brunoKeys(storage).forEach(function(k){storage.removeItem(k)})}
@@ -52,5 +53,5 @@ function importFile(file){if(!file)return;var r=new FileReader();r.onload=functi
 function bindExport(el){if(!el||el.dataset.fullBackup==='1')return;el.dataset.fullBackup='1';el.title='Full app backup: all Bruno AC local data including Service Journal';el.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();exportNow()},true)}
 function bindImport(input){if(!input||input.dataset.fullBackup==='1')return;input.dataset.fullBackup='1';input.addEventListener('change',function(e){e.preventDefault();e.stopImmediatePropagation();var f=input.files&&input.files[0];importFile(f);input.value=''},true)}
 function init(){function bind(){bindExport(document.getElementById('btn-export-app'));bindExport(document.getElementById('help-export-app'));bindImport(document.getElementById('btn-import-app'))}bind();setTimeout(bind,0);setTimeout(bind,500)}
-return {PREFIX:PREFIX,KNOWN_JSON_KEYS:KNOWN_JSON_KEYS,collectBrunoStorage:collectBrunoStorage,buildBackup:buildBackup,validJsonObjectRaw:validJsonObjectRaw,validateKnownRaw:validateKnownRaw,validateJournalRaw:validateJournalRaw,validateBackup:validateBackup,brunoKeys:brunoKeys,restoreBackup:restoreBackup,init:init};
+return {PREFIX:PREFIX,PRIMARY_JOB_KEY:PRIMARY_JOB_KEY,KNOWN_JSON_KEYS:KNOWN_JSON_KEYS,collectBrunoStorage:collectBrunoStorage,buildBackup:buildBackup,validJsonObjectRaw:validJsonObjectRaw,validPrimaryJobRaw:validPrimaryJobRaw,validateKnownRaw:validateKnownRaw,validateJournalRaw:validateJournalRaw,validateBackup:validateBackup,brunoKeys:brunoKeys,restoreBackup:restoreBackup,init:init};
 });
