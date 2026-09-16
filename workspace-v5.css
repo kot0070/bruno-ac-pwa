@@ -28,6 +28,20 @@ html[data-theme="light"] .phase5-zero-price .mat-cost{border-color:rgba(185,28,2
 .workspace-other-prefs .btn{min-height:32px!important;padding:.3rem .4rem!important;font-size:.7rem!important}
 .workspace-prefs-hidden{display:none!important}
 
+/* Keep company/letterhead controls in the dark app theme. */
+.letterhead-strip select{appearance:auto!important;background:var(--bg-input)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:8px!important;min-height:40px!important;padding:.45rem .65rem!important}
+.letterhead-strip select:disabled{background:#151d27!important;color:var(--text-muted)!important;opacity:1!important}
+
+/* Service Journal: settings stay collapsed until requested; saved calls remain compact/static. */
+.sj4-tax:not([open]) .sj4-tax-body{display:none!important}
+.sj4-row{padding:.38rem .48rem!important;gap:.35rem!important;min-width:0!important}
+.sj4-row>div:first-child{min-width:0!important}
+.sj4-row>div:first-child strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.82rem!important}
+.sj4-row>div:first-child small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.6rem!important}
+.sj4-row>div:last-child{text-align:right;min-width:max-content}
+.sj4-row .sj4-actions{justify-content:flex-end;margin-top:.16rem;gap:.2rem!important}
+.sj4-row .sj4-actions .btn{min-height:28px!important;padding:.2rem .42rem!important;font-size:.66rem!important}
+
 /* Live totals are contextual: hidden outside estimating/quote workflow. */
 #live-totals:not(.workspace-totals-visible){display:none!important}
 #live-totals.workspace-totals-visible{display:flex!important;padding:.3rem .75rem!important;gap:.35rem!important;min-height:0!important;align-items:center!important}
@@ -85,6 +99,8 @@ html[data-theme="light"] .phase5-zero-price .mat-cost{border-color:rgba(185,28,2
   .workspace-action-menu[open] .workspace-action-popover{top:70px}
   #live-totals.workspace-totals-visible{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;padding:.28rem .55rem!important}
   #live-totals.workspace-totals-visible .total-chip{min-width:0!important;width:100%!important}
+  .sj4-row{grid-template-columns:minmax(0,1fr) auto!important}
+  .sj4-row>div:last-child strong{font-size:.78rem!important}
 }
 @media(max-width:430px){
   #live-totals.workspace-totals-visible{grid-template-columns:repeat(2,minmax(0,1fr))!important}
