@@ -21,8 +21,12 @@ assert(src.includes('sj5-tax:not([open]) .sj5-tax-body{display:none!important}')
 assert(src.includes('callCardHtml'),'saved calls must render through static compact card markup');
 assert(src.includes('data-edit-call='),'saved calls must expose explicit Edit action');
 assert(src.includes('sj5-call-modal'),'editing must use modal instead of persistent inline controls');
-assert(loader.includes("loadScript('service-journal-ux-js','./service-journal-ux.js')"),'primary Journal loader must not depend on workspace-v5');
-assert(loader.indexOf("loadScript('service-journal-ux-js','./service-journal-ux.js')") < loader.indexOf("if(document.getElementById('phase2-nav-js'))return"),'Journal loader must execute before optional navigation/workspace early return');
+const guardToken="'service-journal-storage-guard-js','./service-journal-storage-guard.js'";
+const journalToken="'service-journal-ux-js','./service-journal-ux.js'";
+assert(loader.includes(guardToken),'Journal storage guard must load on the primary runtime path');
+assert(loader.includes(journalToken),'primary Journal loader must not depend on workspace-v5');
+assert(loader.indexOf(guardToken)<loader.indexOf(journalToken),'numeric-integrity guard must run before the Journal normalizer');
+assert(loader.indexOf(journalToken)<loader.indexOf("if(document.getElementById('phase2-nav-js'))return"),'Journal loader must execute before optional navigation/workspace early return');
 
 const card=UX.callCardHtml({id:'c1',date:'2026-09-11',time:'08:00',address:'123 Long Address Rd',description:'Replace capacitor',hours:1.5,gross:245,status:'done'});
 assert(card.includes('sj5-call-card'));
