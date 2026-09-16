@@ -1,7 +1,7 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 26
+handoff_version: 27
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
@@ -10,64 +10,89 @@ current_task: audits/TASK_CURRENT.md
 latest_report_alias: audits/LATEST_AUDIT.md
 history_dir: audits/history
 implementation_report_dir: audits/implementation
-state: MAIN_NAV_JOURNAL_V3_REAUDIT_REJECTED
+state: PR27_PROJECT_ESTIMATOR_AUDIT_READY
 ```
 
 ## CURRENT PRODUCTION TARGET
 
 ```yaml
-production_mode: DIRECT_MAIN
-production_branch: main
-audited_head: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
-base_rejected_head: 5d5506da031e933773614a11e8e5377a478870f6
-audit_task: MAIN_NAV_JOURNAL_V3_REAUDIT_02
-verdict: C_REJECT_REWORK_REQUIRED
+production_mode: FEATURE_PR
+production_pr: 27
+production_branch: feature/project-estimator-wizard-v1
+base_main: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
+target_head: cf856a30b2f9cdcb9d61373d3472fef31b9e7343
+implementation_report: audits/implementation/PR27_PROJECT_ESTIMATOR_WIZARD_cf856a30.md
+audit_task: PR27_PROJECT_ESTIMATOR_WIZARD_AUDIT_01
+pr_state: OPEN_DRAFT
+merge_performed: false
 browser_runtime: NOT_PERFORMED
-full_report: audits/history/MAIN_NAV_JOURNAL_V3_84b0da0de9029fb5f6182580dcd6b8185fda9fae_20260915-1935.md
 ```
 
-## VERIFIED CLOSURE / REMAINING BLOCKERS
+## IMPLEMENTATION STATE
 
 ```yaml
-prior_F01:
-  status: CLOSED_CORE_DEFECT
-  result: employee_FICA_no_longer_applied_to_service_revenue
-prior_F02:
-  status: INCOMPLETE
-  result: journal_is_exported_and_round_trip_string_restore_is_tested
-  blocker: journal_payload_content_schema_version_not_validated_before_restore
-new_blockers:
-  - F03_commercial_standalone_apply_bypasses_fail_closed_project_mode
-  - F04_month_quarter_prev_next_fixed_day_offsets_can_skip_periods
-  - F05_payroll_YTD_wage_bases_use_mutable_helper_name_as_employee_identity
+project_flow:
+  - compact_project_setup
+  - rooms_and_zones
+  - code_design_baseline
+  - live_final_overrides
+  - catalog_extras
+  - full_technical_calculator
+  - explicit_apply_to_job
+commercial_complete_rules_engine: false
+commercial_apply: FAIL_CLOSED
+pwa_cache: bruno-ac-v40
 ```
 
-## CI / FINAL DIFF
+## PREVIOUS AUDIT BLOCKERS — IMPLEMENTED, PENDING INDEPENDENT VERIFICATION
 
 ```yaml
-validated_run: 35040092200
-validated_commit: 5ea77335613929d19f84dad41afe1dd8dbb93bc6
-ci_result: SUCCESS
-final_target: 84b0da0de9029fb5f6182580dcd6b8185fda9fae
+F02:
+  previous: Journal backup payload not schema/version validated before restore
+  implementation: parse_and_validate_supported_Journal_schema_before_any_restore_writes
+F03:
+  previous: Commercial standalone calculator bypassed fail-closed Apply
+  implementation: authoritative_ac_calculator_apply_guard_plus_bridge_defense
+F04:
+  previous: Month/Quarter navigation used fixed 31/92 day offsets
+  implementation: calendar_aware_shiftPeriod_with_boundary_tests
+F05:
+  previous: payroll wage bases used mutable helper name
+  implementation: Journal_schema_v4_workers_and_year_plus_workerId_ledger
+```
+
+## CI
+
+```yaml
+validated_run: 35042103577
+validated_commit: ad1cb2ff96bf1eee78e79e84804afe7c0f4a118c
+result: SUCCESS
+final_target: cf856a30b2f9cdcb9d61373d3472fef31b9e7343
 post_ci_delta:
-  - DELETE .github/workflows/main-nav-journal-v3-validation.yml
-other_post_ci_changes: none_observed
-pwa_cache: bruno-ac-v39
+  - DELETE .github/workflows/pr27-project-estimator-validation.yml
+other_post_ci_changes: none_verified
 ```
 
-## AUDIT FINDINGS REQUIRING CORRECTION
+Passing validation covered project estimator core/integration, Journal payroll, full-app backup, financial integrity, calculator pricing, PR22 lifecycle integration, calculator review UX, Code Rule Registry and syntax.
 
-1. Validate `bruno-ac-service-journal-v2` JSON/schema/version before any full-backup restore writes; fail closed on malformed Journal payloads.
-2. Enforce Residential/Commercial project-mode guard in the authoritative calculator Apply path, including standalone `ac-calculator.html`.
-3. Replace fixed 31/92-day Journal Month/Quarter navigation with calendar period shifts and add boundary tests.
-4. Give helpers a stable employee/worker identity for per-employee SS/TWC/FUTA wage-base accumulation; names must be display-only identity.
+## KNOWN BOUNDARIES
 
-## BOUNDARIES
+- Browser/mobile runtime for exact PR27 target was NOT_PERFORMED.
+- Commercial is fail-closed, not a complete commercial code engine.
+- Supply/return counts are design recommendations, not claimed universal numeric code minimums.
+- Line-set and condensate developed lengths require field inputs and are not inferred from square footage.
+- Legacy same-name Journal worker history cannot always be reconstructed into exact historical identities; new entries use stable IDs.
+- Code-source navigation/focus behavior requires browser verification.
 
-- Browser/mobile runtime for this exact target was `NOT_PERFORMED`; do not infer browser acceptance from CI/static inspection.
-- PR #26 remains separate, open/draft/unmerged and was not mutated by this audit.
-- No production code, `main`, active PR, or merge was changed during audit.
+## AUDIT SAFETY
+
+```yaml
+main_modified_in_this_feature_cycle: false
+production_pr_merged: false
+pr27_draft: true
+audit_branch_contains_production_code: false
+```
 
 ## NEXT ACTION
 
-Implement the four P1 corrections in a separate production cycle, refresh `TASK_CURRENT.md` to the new exact production HEAD, then run a new independent exact-HEAD audit with browser runtime if available.
+Run `audits/TASK_CURRENT.md` as independent AUDIT ONLY against exact PR #27 HEAD `cf856a30b2f9cdcb9d61373d3472fef31b9e7343`. Do not mutate PR #27 or merge it. After the report, correct any blockers on the feature branch and repeat exact-HEAD audit as needed.
