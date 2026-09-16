@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var E=window.BrunoACCalculatorEngine;
-var STORAGE_KEY='bruno-ac-v1';
+var STORAGE_KEY='bruno-ac-v1',PROJECT_KEY='bruno-ac-project-plan-v1',CONTEXT_KEY='bruno-ac-project-context-v1';
 var state=null, scope=null, bom=[], selectedByKey={};
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -11,111 +11,40 @@ function pct(n){var x=finiteValue(n);return x===null?'—':(x*100).toLocaleStrin
 function priceSource(s){if(s==='catalog-customer-price')return 'Catalog Customer Price';if(s==='catalog-your-cost')return 'Catalog Your Cost';if(s==='customer-price-fallback')return 'Customer Price fallback';if(s==='invalid')return 'Invalid';return 'Manual review'}
 function toast(t){var x=$('toast');x.textContent=t;x.classList.add('show');setTimeout(function(){x.classList.remove('show')},2800)}
 function safeStateShape(s){return !!(s&&typeof s==='object'&&!Array.isArray(s)&&s.quote&&typeof s.quote==='object'&&Array.isArray(s.materialsUsed)&&Array.isArray(s.catalog))}
+function readJson(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch(e){return null}}
+function projectPlan(){var p=readJson(PROJECT_KEY);return p&&typeof p==='object'&&!Array.isArray(p)?p:null}
+function projectType(){var c=readJson(CONTEXT_KEY);return c&&c.type==='commercial'?'commercial':'residential'}
+function projectBlockedReason(){var p=projectPlan();if(projectType()==='commercial'||(p&&p.projectType==='commercial'))return 'Commercial project is fail-closed until the commercial code/design path is verified.';if(p&&p.schemaVersion>=2&&p.ready===false)return 'Project baseline contains required or below-minimum rows. Resolve them before Apply.';return ''}
+function projectExtras(){var p=projectPlan();return p&&Array.isArray(p.extras)?p.extras:[]}
+function appendProjectExtras(sc){if(!sc||!Array.isArray(sc.requirements))return;projectExtras().forEach(function(x,i){var qty=Number(x.qty);if(!x||!x.catalogId||!Number.isFinite(qty)||qty<=0)return;sc.requirements.push({key:'project-extra-'+String(x.id||i),qty:qty,units:String(x.unit||'ea'),label:String(x.label||'Project Catalog extra'),level:'scope',reason:'Added explicitly from Project Calculator Catalog search.',code:'Project override / Catalog',category:'',includeTokens:[String(x.label||'')],excludeTokens:[],preferredIds:[String(x.catalogId)],allowPackagedLength:false,compatibleSystems:[],selected:true,forceUnresolved:false,requiredLengthFt:0,customPart:''})})}
 function loadState(){
   var raw=null, parsed=null;
   try{raw=localStorage.getItem(STORAGE_KEY)}catch(e){}
   if(!raw){state={quote:{hvac:{}},materialsUsed:[],catalog:[]};toast('No current Bruno job found — preview only until a job exists');}
   else {
     try{parsed=JSON.parse(raw)}catch(e){alert('Current Bruno AC job data could not be parsed. Calculator will NOT overwrite it. Open Bruno AC and restore/import a valid backup first.');state=null;renderLocked();return false;}
-    if(!safeStateShape(parsed)){
-      if(parsed&&parsed.quote&&typeof parsed.quote==='object'&&!parsed.scope&&!parsed.bom){
-        if(!Array.isArray(parsed.materialsUsed))parsed.materialsUsed=[];
-        if(!Array.isArray(parsed.catalog))parsed.catalog=[];
-      }
-    }
-    var prod=String(parsed&&parsed.product||'');
-    var storageKey=String(parsed&&parsed.storageKey||'');
-    var source=String(parsed&&parsed.meta&&parsed.meta.source||'');
-    var hasJobMarker=!!(parsed&&(parsed.quote||parsed.materialsUsed||parsed.summary||parsed.catalog||parsed.personnel||parsed.laborEquip));
-    if(!parsed||parsed.scope||parsed.bom||parsed.type==='ac-calculator-v1'||parsed.type==='ac-calculator-v2'||parsed.type==='ac-calculator-plan'||(prod&&prod!=='bruno-ac')||/bruno-electric/i.test(storageKey)||/Bruno Electric/i.test(source)||!hasJobMarker){
-      alert('Stored data does not look like a valid Bruno AC job. Calculator will not overwrite it.');state=null;renderLocked();return false;
-    }
-    state=parsed;
-    if(!state.quote)state.quote={}; if(!state.quote.hvac)state.quote.hvac={};
-    if(!Array.isArray(state.materialsUsed))state.materialsUsed=[];
-    if(!Array.isArray(state.catalog))state.catalog=[];
+    if(!safeStateShape(parsed)){if(parsed&&parsed.quote&&typeof parsed.quote==='object'&&!parsed.scope&&!parsed.bom){if(!Array.isArray(parsed.materialsUsed))parsed.materialsUsed=[];if(!Array.isArray(parsed.catalog))parsed.catalog=[];}}
+    var prod=String(parsed&&parsed.product||''),storageKey=String(parsed&&parsed.storageKey||''),source=String(parsed&&parsed.meta&&parsed.meta.source||''),hasJobMarker=!!(parsed&&(parsed.quote||parsed.materialsUsed||parsed.summary||parsed.catalog||parsed.personnel||parsed.laborEquip));
+    if(!parsed||parsed.scope||parsed.bom||parsed.type==='ac-calculator-v1'||parsed.type==='ac-calculator-v2'||parsed.type==='ac-calculator-plan'||(prod&&prod!=='bruno-ac')||/bruno-electric/i.test(storageKey)||/Bruno Electric/i.test(source)||!hasJobMarker){alert('Stored data does not look like a valid Bruno AC job. Calculator will not overwrite it.');state=null;renderLocked();return false;}
+    state=parsed;if(!state.quote)state.quote={};if(!state.quote.hvac)state.quote.hvac={};if(!Array.isArray(state.materialsUsed))state.materialsUsed=[];if(!Array.isArray(state.catalog))state.catalog=[];
   }
-  syncFromJob();renderJobInfo();$('apply').disabled=false;return true;
+  syncFromJob();renderJobInfo();$('apply').disabled=!!projectBlockedReason();return true;
 }
 function renderLocked(){var jb=$('jobbar');if(jb)jb.innerHTML='<span class="pill danger">Data safety lock — Bruno job not loaded</span>';$('apply').disabled=true;}
-function syncFromJob(){
-  if(!state)return;
-  var h=(state.quote&&state.quote.hvac)||{},saved=(state.acCalculator&&state.acCalculator.inputs)||{};
-  var src=Object.assign({},E.defaultInputs(),saved);
-  if(h.systemType)src.systemType=h.systemType;if(h.jobKind)src.jobKind=h.jobKind;if(h.refrigerant)src.refrigerant=h.refrigerant;if(h.tonnageBtu)src.tonnage=h.tonnageBtu;if(h.haulAway)src.haulAway=String(h.haulAway).toLowerCase()==='yes';
-  if(!state.acCalculator&&src.systemType==='mini-split'){src.thermostat=false;src.includeFilterDrier=false;}
-  if(!state.acCalculator&&src.systemType==='package'){src.indoorLocation='other';}
-  setInputs(src);applyModeDefaults(false);
-}
-function setInputs(i){
-  ['sqft','systemType','jobKind','tonnage','refrigerant','indoorLocation','outdoorMount','lineSetFt','condensateFt','secondaryDrainFt','pumpSpaceClass','overflowProtection','ductMode','ductFt','supplyRegisters','returnGrilles','a2lRdsStatus','a2lOemPart','notes'].forEach(function(k){var el=$(k);if(el&&i[k]!=null)el.value=i[k]});
-  ['condensatePump','overflowDamageRisk','thermostat','includeElectricalAccessories','includeFilterDrier','a2lFieldPartRequired','haulAway','permitAllowance','includeRepairInstallScope'].forEach(function(k){var el=$(k);if(el)el.checked=!!i[k]});
-}
-function readInputs(){
-  var o={};
-  ['sqft','systemType','jobKind','tonnage','refrigerant','indoorLocation','outdoorMount','lineSetFt','condensateFt','secondaryDrainFt','pumpSpaceClass','overflowProtection','ductMode','ductFt','supplyRegisters','returnGrilles','a2lRdsStatus','a2lOemPart','notes'].forEach(function(k){var el=$(k);o[k]=el?el.value:''});
-  ['condensatePump','overflowDamageRisk','thermostat','includeElectricalAccessories','includeFilterDrier','a2lFieldPartRequired','haulAway','permitAllowance','includeRepairInstallScope'].forEach(function(k){var el=$(k);o[k]=!!(el&&el.checked)});
-  return o;
-}
-function renderJobInfo(){
-  if(!state)return renderLocked();var q=state.quote||{},h=q.hvac||{};
-  var html='<span class="pill '+(state.catalog.length?'ok':'warn')+'">Catalog: '+state.catalog.length+' items</span><span class="pill">Job materials: '+state.materialsUsed.length+'</span>';
-  if(q.customer)html+='<span class="pill">'+esc(q.customer)+'</span>';if(h.systemType)html+='<span class="pill">'+esc(h.systemType)+'</span>';if(h.tonnageBtu)html+='<span class="pill">'+esc(h.tonnageBtu)+'</span>';
-  $('jobbar').innerHTML=html;
-}
+function syncFromJob(){if(!state)return;var h=(state.quote&&state.quote.hvac)||{},saved=(state.acCalculator&&state.acCalculator.inputs)||{},src=Object.assign({},E.defaultInputs(),saved);if(h.systemType)src.systemType=h.systemType;if(h.jobKind)src.jobKind=h.jobKind;if(h.refrigerant)src.refrigerant=h.refrigerant;if(h.tonnageBtu)src.tonnage=h.tonnageBtu;if(h.haulAway)src.haulAway=String(h.haulAway).toLowerCase()==='yes';if(!state.acCalculator&&src.systemType==='mini-split'){src.thermostat=false;src.includeFilterDrier=false;}if(!state.acCalculator&&src.systemType==='package'){src.indoorLocation='other';}setInputs(src);applyModeDefaults(false);}
+function setInputs(i){['sqft','systemType','jobKind','tonnage','refrigerant','indoorLocation','outdoorMount','lineSetFt','condensateFt','secondaryDrainFt','pumpSpaceClass','overflowProtection','ductMode','ductFt','supplyRegisters','returnGrilles','a2lRdsStatus','a2lOemPart','notes'].forEach(function(k){var el=$(k);if(el&&i[k]!=null)el.value=i[k]});['condensatePump','overflowDamageRisk','thermostat','includeElectricalAccessories','includeFilterDrier','a2lFieldPartRequired','haulAway','permitAllowance','includeRepairInstallScope'].forEach(function(k){var el=$(k);if(el)el.checked=!!i[k]});}
+function readInputs(){var o={};['sqft','systemType','jobKind','tonnage','refrigerant','indoorLocation','outdoorMount','lineSetFt','condensateFt','secondaryDrainFt','pumpSpaceClass','overflowProtection','ductMode','ductFt','supplyRegisters','returnGrilles','a2lRdsStatus','a2lOemPart','notes'].forEach(function(k){var el=$(k);o[k]=el?el.value:''});['condensatePump','overflowDamageRisk','thermostat','includeElectricalAccessories','includeFilterDrier','a2lFieldPartRequired','haulAway','permitAllowance','includeRepairInstallScope'].forEach(function(k){var el=$(k);o[k]=!!(el&&el.checked)});return o;}
+function renderJobInfo(){if(!state)return renderLocked();var q=state.quote||{},h=q.hvac||{},html='<span class="pill '+(state.catalog.length?'ok':'warn')+'">Catalog: '+state.catalog.length+' items</span><span class="pill">Job materials: '+state.materialsUsed.length+'</span>';if(q.customer)html+='<span class="pill">'+esc(q.customer)+'</span>';if(h.systemType)html+='<span class="pill">'+esc(h.systemType)+'</span>';if(h.tonnageBtu)html+='<span class="pill">'+esc(h.tonnageBtu)+'</span>';$('jobbar').innerHTML=html;}
 function stashSelections(){bom.forEach(function(b){selectedByKey[b.key]=b.selected!==false})}
-function calculate(){
-  if(!state)return;
-  stashSelections();scope=E.buildScope(readInputs());bom=E.buildResolvedBom(state,scope);
-  bom.forEach(function(b){if(Object.prototype.hasOwnProperty.call(selectedByKey,b.key))b.selected=selectedByKey[b.key]});
-  renderBom();renderChecks();renderWarnings();updateModeUI();
-}
-function renderBom(){
-  var html='';
-  bom.forEach(function(b,idx){
-    var flags=[];if(b.manualDuplicate)flags.push('<span class="flag warn">manual duplicate</span>');if(!b.resolved)flags.push('<span class="flag danger">needs review</span>');if(b.financialInvalid)flags.push('<span class="flag danger">invalid price</span>');if(b.zeroPriceReview)flags.push('<span class="flag warn">$0 review</span>');if(b.matchMode==='packaged-length')flags.push('<span class="flag">packaged length</span>');
-    var rowClass=!b.resolved?'row-unresolved':(b.financialInvalid?'row-invalid-financial':(b.zeroPriceReview?'row-zero-review':''));
-    var mobilePricing='<div class="pricing-detail"><span>Customer <strong>'+money(b.customerUnitPrice)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.customerExtension)+'</strong><small>'+esc(priceSource(b.customerPriceSource))+'</small></span><span>Your Cost <strong>'+money(b.yourUnitCost)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.yourExtension)+'</strong><small>'+esc(priceSource(b.yourCostSource))+'</small></span><span>Margin <strong>'+money(b.materialMargin)+'</strong> / <strong>'+pct(b.materialMarginPct)+'</strong></span></div>';
-    html+='<tr class="'+rowClass+'"><td class="sel"><label class="tapcheck"><input type="checkbox" class="bomsel" data-i="'+idx+'" '+(b.selected?'checked':'')+'><span></span></label></td><td><strong>'+esc(b.label)+'</strong>'+flags.join('')+'<div class="muted">'+esc(b.reason)+'</div><div class="mobile-detail">'+esc(b.note||'')+'</div>'+mobilePricing+'</td><td class="col-level"><span class="status '+esc(b.level)+'">'+esc(b.level)+'</span></td><td class="num">'+esc(b.qty)+'</td><td>'+esc(b.units)+'</td><td class="col-match"><span class="'+(b.resolved?'resolved':'unresolved')+'">'+(b.resolved?'Catalog match':'Unresolved')+'</span><div>'+esc(b.item)+'</div><div class="muted">'+esc(b.part||'')+'</div><div class="muted">'+esc(b.note||'')+'</div></td><td class="num col-money">'+money(b.customerUnitPrice)+'<div class="muted">'+esc(priceSource(b.customerPriceSource))+'</div></td><td class="num col-money">'+money(b.customerExtension)+'</td><td class="num col-money">'+money(b.yourUnitCost)+'<div class="muted">'+esc(priceSource(b.yourCostSource))+'</div></td><td class="num col-money">'+money(b.yourExtension)+'</td><td class="num col-money">'+money(b.materialMargin)+'</td><td class="num col-money">'+pct(b.materialMarginPct)+'</td><td class="col-ref">'+esc(b.code||'')+'</td></tr>';
-  });
-  $('bomBody').innerHTML=html||'<tr><td colspan="13">No generated items.</td></tr>';updateTotals();
-}
-function updateTotals(){
-  var selected=bom.filter(function(b){return b.selected!==false});var blocked=E.blockingRows(selected),hard=E.hardBlockingRows(selected),pricing=E.calculateBomPricing(selected),zeros=blocked.filter(function(b){return b.zeroPriceReview&&!b.financialInvalid&&b.resolved});
-  $('statLines').textContent=selected.length;$('statResolved').textContent=selected.filter(function(b){return b.resolved}).length+'/'+selected.length;$('statCustomer').textContent=money(pricing.customerTotal);$('statYour').textContent=money(pricing.yourTotal);$('statMargin').textContent=money(pricing.marginDollar);$('statMarginPct').textContent=pct(pricing.marginPct);$('statWarnings').textContent=((scope&&scope.warnings)||[]).length;
-  var gate=$('applyGate');if(gate){if(hard.length){gate.textContent=hard.length+' selected item(s) are unresolved or have invalid financial data — correct before Apply';gate.className='gate warn'}else if(zeros.length){gate.textContent=zeros.length+' selected item(s) have valid $0 pricing — review/confirm before Apply';gate.className='gate warn'}else{gate.textContent='Ready to apply selected BOM';gate.className='gate ok'}}
-}
+function calculate(){if(!state)return;stashSelections();scope=E.buildScope(readInputs());appendProjectExtras(scope);bom=E.buildResolvedBom(state,scope);bom.forEach(function(b){if(Object.prototype.hasOwnProperty.call(selectedByKey,b.key))b.selected=selectedByKey[b.key]});renderBom();renderChecks();renderWarnings();updateModeUI();}
+function renderBom(){var html='';bom.forEach(function(b,idx){var flags=[];if(b.manualDuplicate)flags.push('<span class="flag warn">manual duplicate</span>');if(!b.resolved)flags.push('<span class="flag danger">needs review</span>');if(b.financialInvalid)flags.push('<span class="flag danger">invalid price</span>');if(b.zeroPriceReview)flags.push('<span class="flag warn">$0 review</span>');if(b.matchMode==='packaged-length')flags.push('<span class="flag">packaged length</span>');var rowClass=!b.resolved?'row-unresolved':(b.financialInvalid?'row-invalid-financial':(b.zeroPriceReview?'row-zero-review':''));var mobilePricing='<div class="pricing-detail"><span>Customer <strong>'+money(b.customerUnitPrice)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.customerExtension)+'</strong><small>'+esc(priceSource(b.customerPriceSource))+'</small></span><span>Your Cost <strong>'+money(b.yourUnitCost)+'</strong> × '+esc(b.qty)+' = <strong>'+money(b.yourExtension)+'</strong><small>'+esc(priceSource(b.yourCostSource))+'</small></span><span>Margin <strong>'+money(b.materialMargin)+'</strong> / <strong>'+pct(b.materialMarginPct)+'</strong></span></div>';html+='<tr class="'+rowClass+'"><td class="sel"><label class="tapcheck"><input type="checkbox" class="bomsel" data-i="'+idx+'" '+(b.selected?'checked':'')+'><span></span></label></td><td><strong>'+esc(b.label)+'</strong>'+flags.join('')+'<div class="muted">'+esc(b.reason)+'</div><div class="mobile-detail">'+esc(b.note||'')+'</div>'+mobilePricing+'</td><td class="col-level"><span class="status '+esc(b.level)+'">'+esc(b.level)+'</span></td><td class="num">'+esc(b.qty)+'</td><td>'+esc(b.units)+'</td><td class="col-match"><span class="'+(b.resolved?'resolved':'unresolved')+'">'+(b.resolved?'Catalog match':'Unresolved')+'</span><div>'+esc(b.item)+'</div><div class="muted">'+esc(b.part||'')+'</div><div class="muted">'+esc(b.note||'')+'</div></td><td class="num col-money">'+money(b.customerUnitPrice)+'<div class="muted">'+esc(priceSource(b.customerPriceSource))+'</div></td><td class="num col-money">'+money(b.customerExtension)+'</td><td class="num col-money">'+money(b.yourUnitCost)+'<div class="muted">'+esc(priceSource(b.yourCostSource))+'</div></td><td class="num col-money">'+money(b.yourExtension)+'</td><td class="num col-money">'+money(b.materialMargin)+'</td><td class="num col-money">'+pct(b.materialMarginPct)+'</td><td class="col-ref">'+esc(b.code||'')+'</td></tr>';});$('bomBody').innerHTML=html||'<tr><td colspan="13">No generated items.</td></tr>';updateTotals();}
+function updateTotals(){var selected=bom.filter(function(b){return b.selected!==false}),blocked=E.blockingRows(selected),hard=E.hardBlockingRows(selected),pricing=E.calculateBomPricing(selected),zeros=blocked.filter(function(b){return b.zeroPriceReview&&!b.financialInvalid&&b.resolved}),projectBlock=projectBlockedReason();$('statLines').textContent=selected.length;$('statResolved').textContent=selected.filter(function(b){return b.resolved}).length+'/'+selected.length;$('statCustomer').textContent=money(pricing.customerTotal);$('statYour').textContent=money(pricing.yourTotal);$('statMargin').textContent=money(pricing.marginDollar);$('statMarginPct').textContent=pct(pricing.marginPct);$('statWarnings').textContent=((scope&&scope.warnings)||[]).length;var gate=$('applyGate');if(gate){if(projectBlock){gate.textContent=projectBlock;gate.className='gate warn'}else if(hard.length){gate.textContent=hard.length+' selected item(s) are unresolved or have invalid financial data — correct before Apply';gate.className='gate warn'}else if(zeros.length){gate.textContent=zeros.length+' selected item(s) have valid $0 pricing — review/confirm before Apply';gate.className='gate warn'}else{gate.textContent='Ready to apply selected BOM';gate.className='gate ok'}}$('apply').disabled=!!projectBlock||hard.length>0;}
 function renderChecks(){var arr=(scope&&scope.checks)||[];$('codeChecks').innerHTML=arr.map(function(c){return '<div class="codecard"><span class="status '+esc(c.level)+'">'+esc(c.status)+'</span><strong>'+esc(c.title)+'</strong><div>'+esc(c.detail)+'</div><div class="muted">'+esc(c.code)+'</div></div>'}).join('')||'<p class="muted">No checks.</p>'}
 function renderWarnings(){var a=(scope&&scope.assumptions)||[],w=(scope&&scope.warnings)||[];$('assumptions').innerHTML=a.map(function(x){return '<li>'+esc(x)+'</li>'}).join('');$('warnings').innerHTML=w.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')||'<li>No current warnings.</li>'}
-function applyToJob(){
-  if(!state){alert('No valid Bruno AC job loaded.');return}if(!scope)calculate();
-  bom.forEach(function(b,i){var cb=document.querySelector('.bomsel[data-i="'+i+'"]');if(cb)b.selected=cb.checked});
-  var hard=E.hardBlockingRows(bom);
-  if(hard.length){var invalidNames=hard.map(function(b){return '• '+b.label+' ('+(!b.resolved?'unresolved':'invalid financial data')+')'}).join('\n');alert('Cannot Apply selected BOM until these rows are corrected:\n\n'+invalidNames);return;}
-  var zeroRows=E.blockingRows(bom).filter(function(b){return b.zeroPriceReview});
-  if(zeroRows.length){var zeroNames=zeroRows.map(function(b){return '• '+b.label}).join('\n');if(!confirm('These selected rows contain legitimate $0 pricing and require confirmation:\n\n'+zeroNames+'\n\nApply them as $0?'))return;}
-  var res=E.applyBomToJob(state,scope,bom);if(!res.ok){alert('Could not apply BOM:\n'+(res.errors||[]).join('\n'));return;}state=res.state;
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));toast('Saved '+res.added.length+' generated lines with Customer Price + Your Cost snapshots');renderJobInfo()}catch(e){alert('Could not save Bruno job: '+e.message)}
-}
-function exportPlan(){if(!scope)calculate();var blob=new Blob([JSON.stringify({product:'bruno-ac',type:'ac-calculator-plan',version:2,scope:scope,bom:bom},null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bruno-ac-calculator-plan-v2.json';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
-function applyModeDefaults(fromUser){
-  var kind=$('jobKind').value,sys=$('systemType').value;
-  if(kind==='repair'&&fromUser){$('includeRepairInstallScope').checked=false;$('lineSetFt').value=0;$('condensateFt').value=0;$('secondaryDrainFt').value=0;$('thermostat').checked=false;$('includeFilterDrier').checked=false;$('includeElectricalAccessories').checked=false;$('haulAway').checked=false;$('ductMode').value='existing';$('ductFt').value=0;}
-  if(sys==='mini-split'&&fromUser){$('thermostat').checked=false;$('includeFilterDrier').checked=false;}
-  if(sys==='package'&&fromUser){$('indoorLocation').value='other';}
-  updateModeUI();
-}
-function updateModeUI(){
-  var repair=$('jobKind').value==='repair';var pack=$('systemType').value==='package';
-  $('repairScopeWrap').classList.toggle('attention',repair&&!$('includeRepairInstallScope').checked);
-  $('indoorLocation').disabled=pack;
-  $('packageHint').hidden=!pack;
-  $('miniHint').hidden=$('systemType').value!=='mini-split';
-}
-function bind(){
-  $('calculate').addEventListener('click',calculate);$('apply').addEventListener('click',applyToJob);$('reload').addEventListener('click',function(){selectedByKey={};if(loadState())calculate();toast('Reloaded current Bruno job')});$('exportPlan').addEventListener('click',exportPlan);
-  $('bomBody').addEventListener('change',function(e){if(!e.target.classList.contains('bomsel'))return;var i=Number(e.target.getAttribute('data-i'));if(bom[i]){bom[i].selected=e.target.checked;selectedByKey[bom[i].key]=e.target.checked}updateTotals()});
-  document.querySelectorAll('input,select,textarea').forEach(function(el){el.addEventListener('change',function(){if(el.id==='jobKind'||el.id==='systemType')applyModeDefaults(true);calculate()})});
-}
+function applyToJob(){var projectBlock=projectBlockedReason();if(projectBlock){alert('Cannot Apply project BOM:\n\n'+projectBlock);return}if(!state){alert('No valid Bruno AC job loaded.');return}if(!scope)calculate();bom.forEach(function(b,i){var cb=document.querySelector('.bomsel[data-i="'+i+'"]');if(cb)b.selected=cb.checked});var hard=E.hardBlockingRows(bom);if(hard.length){var invalidNames=hard.map(function(b){return '• '+b.label+' ('+(!b.resolved?'unresolved':'invalid financial data')+')'}).join('\n');alert('Cannot Apply selected BOM until these rows are corrected:\n\n'+invalidNames);return;}var zeroRows=E.blockingRows(bom).filter(function(b){return b.zeroPriceReview});if(zeroRows.length){var zeroNames=zeroRows.map(function(b){return '• '+b.label}).join('\n');if(!confirm('These selected rows contain legitimate $0 pricing and require confirmation:\n\n'+zeroNames+'\n\nApply them as $0?'))return;}var res=E.applyBomToJob(state,scope,bom);if(!res.ok){alert('Could not apply BOM:\n'+(res.errors||[]).join('\n'));return;}state=res.state;try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));toast('Saved '+res.added.length+' generated lines with Customer Price + Your Cost snapshots');renderJobInfo()}catch(e){alert('Could not save Bruno job: '+e.message)}}
+function exportPlan(){if(!scope)calculate();var blob=new Blob([JSON.stringify({product:'bruno-ac',type:'ac-calculator-plan',version:2,scope:scope,bom:bom,projectPlan:projectPlan()},null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bruno-ac-calculator-plan-v2.json';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+function applyModeDefaults(fromUser){var kind=$('jobKind').value,sys=$('systemType').value;if(kind==='repair'&&fromUser){$('includeRepairInstallScope').checked=false;$('lineSetFt').value=0;$('condensateFt').value=0;$('secondaryDrainFt').value=0;$('thermostat').checked=false;$('includeFilterDrier').checked=false;$('includeElectricalAccessories').checked=false;$('haulAway').checked=false;$('ductMode').value='existing';$('ductFt').value=0;}if(sys==='mini-split'&&fromUser){$('thermostat').checked=false;$('includeFilterDrier').checked=false;}if(sys==='package'&&fromUser){$('indoorLocation').value='other';}updateModeUI();}
+function updateModeUI(){var repair=$('jobKind').value==='repair',pack=$('systemType').value==='package';$('repairScopeWrap').classList.toggle('attention',repair&&!$('includeRepairInstallScope').checked);$('indoorLocation').disabled=pack;$('packageHint').hidden=!pack;$('miniHint').hidden=$('systemType').value!=='mini-split';}
+function bind(){$('calculate').addEventListener('click',calculate);$('apply').addEventListener('click',applyToJob);$('reload').addEventListener('click',function(){selectedByKey={};if(loadState())calculate();toast('Reloaded current Bruno job')});$('exportPlan').addEventListener('click',exportPlan);$('bomBody').addEventListener('change',function(e){if(!e.target.classList.contains('bomsel'))return;var i=Number(e.target.getAttribute('data-i'));if(bom[i]){bom[i].selected=e.target.checked;selectedByKey[bom[i].key]=e.target.checked}updateTotals()});document.querySelectorAll('input,select,textarea').forEach(function(el){el.addEventListener('change',function(){if(el.id==='jobKind'||el.id==='systemType')applyModeDefaults(true);calculate()})});window.addEventListener('storage',function(e){if(e.key===PROJECT_KEY||e.key===CONTEXT_KEY)calculate()});}
 if(loadState()){bind();calculate()}else{bind();}
 })();
