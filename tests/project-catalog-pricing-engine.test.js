@@ -25,6 +25,15 @@ assert.strictEqual(support.pricing.yourUnitCost,100);
 const zero=core.resolve([{key:'x',label:'x',final_qty:2,unit:'ea',catalog_id:'z'}],[{id:'z',unitCost:10,yourCost:0}],{});
 assert.strictEqual(zero.rows[0].pricing.yourUnitCost,0);
 assert.strictEqual(zero.rows[0].pricing.yourCostSource,'catalog-your-cost');
+const zeroQty=core.resolve([{key:'x',label:'x',final_qty:0,unit:'ea',catalog_id:'z'}],[{id:'z',unitCost:10,yourCost:7}],{});
+assert.strictEqual(zeroQty.status,'ready','explicit zero quantity remains distinct and valid');
+assert.strictEqual(zeroQty.rows[0].pricing.customerExtended,0);
+const missingQty=core.resolve([{key:'x',label:'x',final_qty:null,unit:'ea',catalog_id:'z'}],[{id:'z',unitCost:10,yourCost:7}],{});
+assert.strictEqual(missingQty.status,'blocked','missing quantity must not silently multiply as zero');
+assert(missingQty.blockers[0].includes('missing_quantity'));
+const blankQty=core.resolve([{key:'x',label:'x',final_qty:'',unit:'ea',catalog_id:'z'}],[{id:'z',unitCost:10,yourCost:7}],{});
+assert.strictEqual(blankQty.status,'blocked');
+assert(blankQty.blockers[0].includes('missing_quantity'));
 const invalid=core.resolve([{key:'x',label:'x',final_qty:1,unit:'ea',catalog_id:'bad'}],[{id:'bad',unitCost:'abc',yourCost:1}],{});
 assert.strictEqual(invalid.status,'blocked');
 assert(invalid.blockers[0].includes('invalid_or_missing_customer_price'));
@@ -37,11 +46,9 @@ assert.deepStrictEqual(unresolved.unresolved,['unknown']);
 const bound=core.resolve([{key:'unknown',label:'u',final_qty:2,unit:'ea'}],catalog,{unknown:'ac-pd-06'});
 assert.strictEqual(bound.status,'ready');
 assert.strictEqual(bound.rows[0].catalog_resolution_source,'binding');
-// A known ID is never selected merely because a row key used to have a hard-coded default.
 const noUnsafeDefault=core.resolve([{key:'equipment-support',label:'Roof support',attributes:{mount:'roof'},final_qty:1,unit:'ea'}],[{id:'ac-pd-05',bomKeys:['equipment-support'],attributes:{mount:'ground'},unitCost:50,yourCost:40}],{});
 assert.strictEqual(noUnsafeDefault.status,'provisional');
 assert.deepStrictEqual(noUnsafeDefault.unresolved,['equipment-support']);
-// Multiple compatible products remain operator-resolved rather than silently picking one.
 const multiple=core.resolve([{key:'equipment-support',label:'Pad',attributes:{mount:'ground'},final_qty:1,unit:'ea'}],[{id:'p1',bomKeys:['equipment-support'],attributes:{mount:'ground'},unitCost:50,yourCost:40},{id:'p2',bomKeys:['equipment-support'],attributes:{mount:'ground'},unitCost:60,yourCost:45}],{});
 assert.strictEqual(multiple.status,'provisional');
 assert.deepStrictEqual(multiple.multiple,['equipment-support']);
