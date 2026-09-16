@@ -1,71 +1,51 @@
 # BRUNO AC WORKSPACE HANDOFF
 
 ```yaml
-handoff_version: 40
+handoff_version: 41
 workspace: audits/WORKSPACE.md
 protocol: audits/PROTOCOL.md
 context: audits/CONTEXT.md
 current_task: audits/TASK_CURRENT.md
-master_plan: audits/HVAC_LIVE_CALCULATOR_MASTER_PLAN.md
-execution_state: audits/HVAC_LIVE_CALCULATOR_EXECUTION_STATE.md
+master_chain: audits/MASTER_PLAN_CHAIN.md
 latest_report_alias: audits/LATEST_AUDIT.md
-history_dir: audits/history
-implementation_report_dir: audits/implementation
-state: M01_A_ACCEPTED_CLOSING
+state: M01_CLOSED_NEXT_MASTER_AWAITING_USER_APPROVAL
 ```
 
-## CURRENT PRODUCTION TARGET
+## LAST CLOSED MASTER
 
 ```yaml
-production_mode: DIRECT_MAIN
-production_branch: main
-base_accepted_head: 9e05636fb3bbc26c0b60ef4624753539e728bd87
-accepted_head: 7c89b706546e4d2e465405544dc398220e664db9
-latest_independent_verdict: A_ACCEPT
-latest_report: audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_7c89b706546e4d2e465405544dc398220e664db9_20260916-REAUDIT.md
+master_id: HVAC_LIVE_CALCULATOR_MASTER_01
+status: CLOSED_A_ACCEPT
+accepted_main_head: 7c89b706546e4d2e465405544dc398220e664db9
+closure: audits/HVAC_LIVE_CALCULATOR_MASTER_01_CLOSURE.md
+final_audit_report: audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_7c89b706546e4d2e465405544dc398220e664db9_20260916-REAUDIT.md
+final_verdict: A_ACCEPT
+P0: 0
+P1: 0
+P2: 0
 full_regression_run: 35134969943
 final_pages_run: 35135027447
 pwa_cache: bruno-ac-v59
 browser_mobile_runtime: NOT_PERFORMED
 ```
 
-## MASTER STATUS
+The prior B-audit findings were corrected, regression-tested, independently re-audited and accepted. M01 is closed; no further production work is authorized under it.
+
+## NEXT PROPOSED MASTER
 
 ```yaml
-master_id: HVAC_LIVE_CALCULATOR_MASTER_01
-S00: DONE
-S01: DONE
-S02: DONE
-S03: DONE
-S04: DONE
-S05: DONE
-S06: DONE
-S07: DONE
-S08: DONE
-S09: DONE
-S10: DONE
-S11: DONE
-S12: DONE
-S13: DONE_A_ACCEPT
-master_close_authorized: true
+master_id: PROJECT_FULL_AUDIT_MASTER_01
+file: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
+status: PROPOSED_AWAITING_USER_APPROVAL
+execution_authorized: false
+starting_accepted_head: 7c89b706546e4d2e465405544dc398220e664db9
 ```
 
-## FINAL AUDIT
+Scope sequence:
+`baseline/inventory -> architecture audit/remediation -> mathematics audit/remediation -> regulatory audit/remediation -> ghosts audit/remediation -> test-quality hardening -> full regression -> final independent audit`.
 
-```yaml
-P0: 0
-P1: 0
-P2: 0
-verdict: A_ACCEPT
-audited_head: 7c89b706546e4d2e465405544dc398220e664db9
-report: audits/history/MAIN_HVAC_LIVE_CALCULATOR_M01_7c89b706546e4d2e465405544dc398220e664db9_20260916-REAUDIT.md
-browser_mobile_runtime: NOT_PERFORMED
-```
+This consolidated plan supersedes the former separate queued codebase/math/regulatory masters. Do NOT begin P00 or mutate production under this new master until explicit user approval is received.
 
-The prior B-audit findings were corrected and independently re-audited. Catalog matching no longer uses hard-coded authoritative fallback IDs; impossible envelope opening geometry blocks; extended snapshot/import nested validation is strict; load source provenance is residential/commercial aware. Full regression CI and exact final Pages deployment succeeded.
+## CURRENT ACTION
 
-Known accepted limitation: automatic multi-system equipment optimization/splitting is not implemented; manual override can carry `systemCount > 1`. No product claim should imply automatic multi-system design until implemented.
-
-## NEXT GOVERNANCE ACTION
-
-Close `HVAC_LIVE_CALCULATOR_MASTER_01` at accepted HEAD `7c89b706546e4d2e465405544dc398220e664db9`, create consolidated `PROJECT_FULL_AUDIT_MASTER_01`, update `MASTER_PLAN_CHAIN.md`, and stop. The new master must remain `PROPOSED_AWAITING_USER_APPROVAL` and must not be executed before explicit user approval.
+Return the M01 completion summary and the proposed `PROJECT_FULL_AUDIT_MASTER_01` structure to the user for approval. If approved, update TASK_CURRENT/plan authorization and begin P00. If not approved, remain idle at accepted HEAD.
