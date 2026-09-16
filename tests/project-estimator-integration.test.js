@@ -33,7 +33,7 @@ assert(wizard.includes("s.src='./project-history-core.js'"));
 assert(css.includes('.pew-price-strip'));
 assert(workspaceCss.includes('.letterhead-strip select'));
 assert(workspaceCss.includes('.sj4-tax:not([open])'));
-assert(sw.includes("bruno-ac-v44"));
+assert(sw.includes("bruno-ac-v45"));
 assert(sw.includes('freshAsset'));
 assert(sw.includes("./project-history-core.js"));
 assert(sw.includes("./project-estimator-wizard.js"));
