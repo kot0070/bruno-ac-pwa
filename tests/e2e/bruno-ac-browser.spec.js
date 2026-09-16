@@ -64,10 +64,10 @@ test('real workspace shell boots with visible user controls', async ({ page }) =
   await expect(visibleGroup(page, 'journal')).toBeVisible();
   await expect(visibleGroup(page, 'job')).toBeVisible();
   await expect(page.locator('#live-totals')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('#btn-reset')).toBeVisible();
 
   const menu = await openOtherMenu(page);
   await expect(menu.locator('#btn-blank')).toBeVisible();
-  await expect(menu.locator('#btn-reset')).toBeVisible();
   await expect(menu.locator('#btn-export-app')).toBeVisible();
   await expect(menu.locator('#btn-import-app')).toBeAttached();
 });
