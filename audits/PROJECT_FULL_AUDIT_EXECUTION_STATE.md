@@ -5,9 +5,9 @@ master_plan: audits/PROJECT_FULL_AUDIT_MASTER_PLAN.md
 master_id: PROJECT_FULL_AUDIT_MASTER_01
 execution_mode: DIRECT_MAIN + STRICT_SEQUENTIAL + AUTONOMOUS
 status: ACTIVE
-current_stage: P03
-last_completed_stage: P02
-next_stage_after_current: P04
+current_stage: P04
+last_completed_stage: P03
+next_stage_after_current: P05
 starting_accepted_main_head: 7c89b706546e4d2e465405544dc398220e664db9
 main_head: 867eeed47d8e2ea106922b2455a432da9ee8a217
 browser_mobile_runtime: NOT_PERFORMED
@@ -19,9 +19,9 @@ browser_mobile_runtime: NOT_PERFORMED
 |---|---|---|---|---|
 | P00 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 7c89b706546e4d2e465405544dc398220e664db9 | `audits/PROJECT_FULL_AUDIT_P00_INVENTORY.md` |
 | P01 | DONE_WITH_FINDINGS | 7c89b706546e4d2e465405544dc398220e664db9 | 7c89b706546e4d2e465405544dc398220e664db9 | `audits/PROJECT_FULL_AUDIT_P01_ARCHITECTURE.md`; P0=0/P1=3/P2=2 |
-| P02 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 867eeed47d8e2ea106922b2455a432da9ee8a217 | CI `35137010234` SUCCESS; Pages `35137121048` SUCCESS; PWA v60; temp workflow removed |
-| P03 | ACTIVE | 867eeed47d8e2ea106922b2455a432da9ee8a217 | — | formula/math audit in progress |
-| P04 | NOT_STARTED | — | — | — |
+| P02 | DONE | 7c89b706546e4d2e465405544dc398220e664db9 | 867eeed47d8e2ea106922b2455a432da9ee8a217 | CI `35137010234` SUCCESS; Pages `35137121048` SUCCESS; PWA v60 |
+| P03 | DONE_WITH_FINDINGS | 867eeed47d8e2ea106922b2455a432da9ee8a217 | 867eeed47d8e2ea106922b2455a432da9ee8a217 | `audits/PROJECT_FULL_AUDIT_P03_MATHEMATICS.md`; P0=0/P1=3/P2=1 |
+| P04 | ACTIVE | 867eeed47d8e2ea106922b2455a432da9ee8a217 | — | math remediation in progress |
 | P05 | NOT_STARTED | — | — | — |
 | P06 | NOT_STARTED | — | — | — |
 | P07 | NOT_STARTED | — | — | — |
@@ -30,34 +30,23 @@ browser_mobile_runtime: NOT_PERFORMED
 | P10 | NOT_STARTED | — | — | — |
 | P11 | NOT_STARTED | — | — | — |
 
-## P02 RECORD
+## P03 RECORD
 
 ```yaml
-status: DONE
-started_from_main_HEAD: 7c89b706546e4d2e465405544dc398220e664db9
-validated_commit: 8381934f38e1e5578e55e8f015a7f855f2b86bd9
+status: DONE_WITH_FINDINGS
+started_from_main_HEAD: 867eeed47d8e2ea106922b2455a432da9ee8a217
 completed_main_HEAD: 867eeed47d8e2ea106922b2455a432da9ee8a217
-changed_files:
-  - financial-integrity-core.js
-  - service-journal-ux.js
-  - app-backup-bridge.js
-  - sw.js
-  - tests/storage-safety.test.js
-  - tests/service-journal-ux.test.js
-  - tests/app-backup-bridge.test.js
-  - tests/project-estimator-integration.test.js
-implementation_summary: fail-closed corrupt primary Job and Journal handling; rescue/lock semantics; exact transactional full-app restore with rollback and known-key validation; visible Journal persistence failure; PWA v60
-ci_run: 35137010234
-ci_result: SUCCESS
-pages_run: 35137121048
-pages_result: SUCCESS
-temporary_validation_workflow: REMOVED
+changed_files: []
+findings:
+  P1:
+    - equipment cooling oversize bound incorrectly based on max(cooling, heating)
+    - missing BOM final quantity silently prices as zero
+    - malformed explicit Journal numerics normalize to zero/clamped values
+  P2:
+    - equipment override capacity semantics ambiguous with systemCount > 1
+report: audits/PROJECT_FULL_AUDIT_P03_MATHEMATICS.md
 browser_mobile_runtime: NOT_PERFORMED
-known_limitations:
-  - dynamic enhancement-loader failure banner remains P2 debt for later ghost/runtime stages
-  - main inline monolith remains a maintainability risk, not rewritten in this remediation
-regressions_checked: financial, Apply/Re-Apply lifecycle, HVAC E2E, history/import, Journal logic+DOM, backup transaction, project one-surface DOM, syntax
-next_stage_authorized: P03
+next_stage_authorized: P04
 ```
 
 ## HARD RULE
