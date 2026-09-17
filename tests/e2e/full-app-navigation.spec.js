@@ -5,8 +5,13 @@ function visibleGroup(page, group) {
 }
 
 async function waitForStableWorkspace(page) {
-  await page.waitForFunction(() => document.body && document.body.classList.contains('phase5-workspace-ready'), null, { timeout: 20000 });
+  await page.waitForFunction(() => {
+    const ready = document.body && document.body.classList.contains('phase5-workspace-ready');
+    const swReady = !('serviceWorker' in navigator) || !!navigator.serviceWorker.controller;
+    return ready && swReady;
+  }, null, { timeout: 20000 });
   await expect(page.locator('body')).toHaveClass(/phase5-workspace-ready/);
+  await page.waitForTimeout(300);
 }
 
 async function openUserSurface(page, group, tab) {
