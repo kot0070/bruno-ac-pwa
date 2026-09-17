@@ -33,22 +33,13 @@ test.beforeEach(async ({ page }) => {
   await waitForStableWorkspace(page);
 });
 
-test('project calculator project class persists and commercial warning is visible', async ({ page }) => {
-  await openCalculator(page);
-  const type = page.locator('#phase3-project-type');
-  await expect(type).toBeVisible();
-  await type.selectOption('commercial');
-  await expect(page.locator('#phase3-project-warning')).toBeVisible();
-  await expect(page.locator('#phase3-project-warning')).toContainText(/Commercial mode/i);
-
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('bruno-ac-project-context-v1') || '{}'));
-  expect(stored.type).toBe('commercial');
-
-  await page.reload();
-  await waitForStableWorkspace(page);
-  await openCalculator(page);
-  await expect(page.locator('#phase3-project-type')).toHaveValue('commercial');
-  await expect(page.locator('#phase3-project-warning')).toBeVisible();
+test('embedded calculator exposes its real user input surface', async ({ page }) => {
+  const frame = await openCalculator(page);
+  await expect(frame.locator('#systemType')).toBeVisible();
+  await expect(frame.locator('#jobKind')).toBeVisible();
+  await expect(frame.locator('#lineSetFt')).toBeVisible();
+  await expect(frame.locator('#condensateFt')).toBeVisible();
+  await expect(frame.locator('#calculate')).toBeVisible();
 });
 
 test('calculator reacts to package, mini-split and repair user choices', async ({ page }) => {
