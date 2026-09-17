@@ -9,6 +9,7 @@ production_branch: main
 audit_branch: audit/pr22-603cbca
 implementation_branch: e2e/full-app-browser-e2e-master
 starting_accepted_main_head: c410f9d12ca5c0e4c0fdf0e2f36569af73657039
+current_implementation_head: b9f7d497003fd70e296f14dcf4502c763654a76e
 accepted_main_head: PENDING
 final_verdict: PENDING
 ```
@@ -78,8 +79,8 @@ Source review, unit tests, JSDOM, hidden DOM controls, or direct localStorage mu
 
 ### FUF-001 — expanded E2E service-worker stabilization race
 
-Status: CORRECTIVE_LOOP_IN_PROGRESS
-Classification: TEST_HARNESS_DEFECT / NOT_YET_PRODUCT_DEFECT
+Status: CORRECTED_PENDING_GREEN_REVALIDATION
+Classification: TEST_HARNESS_DEFECT / NOT_PRODUCT_DEFECT
 Evidence:
 - Browser E2E run `35164811205` failed across navigation/calculator/runtime specs.
 - Failure patterns included disappearing top-level navigation locators, calculator iframe locators resolving against `/`, and a page/context closure during click.
@@ -88,9 +89,38 @@ Evidence:
 Correction:
 - `full-app-navigation.spec.js` commit `45cac8f92339bf4afcbe55fc37d8f5ac0f4fec06`
 - `full-app-runtime-diagnostics.spec.js` commit `b43aef62b9255086f8fce955c1f8792aea902e33`
-- `full-app-calculator.spec.js` commit `1580e112b2f1925da9cf8495abb45a3e112cf5d3`
-- Revalidation run: `35175552052` (pending at time of this update)
+- `full-app-calculator.spec.js` stabilization commit `1580e112b2f1925da9cf8495abb45a3e112cf5d3`
+
+### FUF-002 — hidden project-type control incorrectly treated as user-facing
+
+Status: CORRECTED_PENDING_GREEN_REVALIDATION
+Classification: TEST_ASSUMPTION_DEFECT / NOT_PRODUCT_DEFECT
+Evidence:
+- New calculator coverage reintroduced a visibility assertion against `#phase3-project-type`.
+- Prior accepted M03 runtime work had already established this control is intentionally hidden in the current user surface and must not be counted as a user-facing workflow.
+Correction:
+- Replaced the scenario with visible embedded calculator input-surface coverage.
+- Commit `076df6cb975125afc5b71969734d55eb0a7c826f`.
+
+### FUF-003 — audit artifact present on implementation branch
+
+Status: CORRECTED
+Classification: GOVERNANCE / BRANCH_HYGIENE
+Evidence:
+- Compare against accepted `main` showed `audits/FULL_APP_BROWSER_E2E_MASTER_PLAN.md` on the implementation branch.
+Correction:
+- Removed from `e2e/full-app-browser-e2e-master` in commit `b25eb99889abe0b801b725911e5821c26a9cbc11`.
+- Canonical Master state is retained only on `audit/pr22-603cbca`.
+
+### FUF-004 — stale E2E corrective runs consume CI before latest HEAD
+
+Status: CORRECTED_PENDING_VALIDATION
+Classification: CI_HARDENING
+Correction:
+- Added workflow concurrency keyed by workflow/ref with `cancel-in-progress: true`.
+- Commit `b9f7d497003fd70e296f14dcf4502c763654a76e`.
+- Latest Browser E2E run for this HEAD: `35175982937` (IN_PROGRESS at time of this update).
 
 ## Current state
 
-The Master remains ACTIVE. No final product defect is claimed from FUF-001 until the corrected harness is rerun. No `A_ACCEPT` may be issued until all applicable gates pass on exact final production HEAD.
+The Master remains ACTIVE. Implementation changes have not been merged to production. No `A_ACCEPT` may be issued until the current harness is green, deeper connected user-flow coverage is completed, and exact final production HEAD has green Browser E2E plus Pages evidence.
